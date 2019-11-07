@@ -1,0 +1,42 @@
+PRO READIMG,DATA,WAVE,ICAMNO,IMGNO,ITIME,NW,NS,PAR,HEADER
+;+
+;
+; Altered for IDL v2.0.7, 05-JUL-1990 jdn @ stsci
+; to read iue line-by-line file
+;-
+NPAR   = 10
+PAR    = FLTARR(NPAR)
+HEADER = '' & for i=1,80 do header = header + ' '
+ICAMNO = LONARR(1)
+IMGNO  = LONARR(1)
+ITIME  = LONARR(1)
+NW     = INTARR(2)
+NS     = INTARR(2)
+FILE   = ' '
+READ,'Enter data file name ',FILE
+OPENR, 1, FILE + '/UNFORMATTED'
+FORRD, 1, HEADER
+FORRD, 1, PAR
+FORRD, 1, ICAMNO, IMGNO, ITIME, NW, NS
+FMT1 = '$(1X,A8,I9)'
+FMT2 = '$(1X,A8,F9.3)'
+FMT3 = '$(1X,A8,A70)'
+PRINT, ' '
+PRINT, FMT3, 'HEADER =', STRMID(HEADER,0,70)
+PRINT, FMT1, 'ICAMNO =', ICAMNO
+PRINT, FMT1, 'IMGNO  =', IMGNO
+PRINT, FMT1, 'TIME   =', ITIME
+PRINT, FMT1, 'NW     =', NW(0)
+PRINT, FMT1, 'NS     =', NS(0)
+PRINT, FMT2, 'Z      =', PAR(0)
+WAVE = FLTARR( NW(0) )
+TEST = FLTARR( NW(0) )
+DATA = FLTARR( NW(0), NS(0) )
+FORRD, 1, WAVE
+FOR I = 0, NS(0)-1 DO BEGIN
+FORRD, 1, TEST
+DATA(0,I)=TEST
+ENDFOR
+CLOSE, 1
+RETURN
+END

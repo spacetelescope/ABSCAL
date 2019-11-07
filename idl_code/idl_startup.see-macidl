@@ -1,0 +1,29 @@
+; 97feb27 - startup file for unix
+;-
+; 02aug21-tidbit to change !path='/home/lindler:'+!path
+
+astrolib		; SET UP ASTROLIB UTILS. (see /data/rcbsun3/stispro)
+DEFSYSV, '!prelaunch', 0
+DEFSYSV, '!DUMP', 0
+DEFSYSV, '!noprint', 0	; for bins.pro in stdplt.pro
+
+defsysv,'!ang','!SA!R!E _ !N'
+defsysv,'!ang2','!SA!R!U!9 % !N'
+;  !Xtitle='!17WAVELENGTH ('+!ang+')'
+;  !Xtitle='!3WAVELENGTH ('+!ang2+'!3)'
+;!ang works with a few fonts, including my favorite, !17.....
+;!ang2 works with all fonts, but requires that you reset the font immediately
+;     after the call to !ang2. and !p.font=-1 is required.
+if !d.name eq 'X' then DEVICE,RETAIN=2  ; need for PC
+!p.noclip=0             ; to keep plot in box..use =1 to go out of box
+!x.style=1
+SETUP_KEYS,/VT200
+DEFINE_KEY,'DO','RETALL',/TERM
+DEFINE_KEY,'HELP','HELP',/TERM    
+
+prompt,'ACS> '
+!edit_input=500         ;97sep12 to recall 500 command lines.
+print,'executed special bohlin idl startup'
+cinit                   ; for cdel to work
+device,true=32		; for color at home per tbrown 02jun14
+device,decompose=0	; """"""""""""""""""""""""""""""""""

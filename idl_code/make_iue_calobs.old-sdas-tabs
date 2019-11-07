@@ -1,0 +1,270 @@
+pro make_iue_calobs,filespec
+;+
+;			make_iue_calobs
+;
+; procedure to convert iue ascii file to CALOBS table file with WD
+; correction applied (FLXCOR)
+;
+; CALLING SEQUENCE:
+;	make_iue_calobs,filespec
+;
+; INPUTS:
+;	filespec - filespec for ascii merge files
+;
+; OUTPUTS:
+;	a bunch of ascii tables with names placed in current directory
+;		<starname>_IUE.TAB
+;
+; 
+; EXAMPLE:
+;	
+;	make_iue_calobs,'merge*.mrg' 
+;
+; HISTORY:
+;	Aug 26, 1988 changed wavelengths from air to vacuum.
+;		Hartig wants FOS to be vacuum and Turshek says
+;		that is the modern astronomical standard.
+;
+;	MAR 23, 1989 put a lower limit of 3% on ralphs sigmas
+;		and changed computation of sigma for average from
+;		sqrt to fourth root.
+;	Feb 22, 1990 changed to new table format, added air to vacumm
+;		wavelength correction
+;	May 22, 1990 changed to leave wavelengths in air above 2000 A
+;	Jun, 1, 1995 Modified from IUETAB
+;			Changed to read ascii files instead of SDAS images
+;			added flxcor and modified to use new merge header
+;			formats.
+;	Oct 5, 1995 added date keyword
+;	99jul13 - fix extra HISTORY word added when input is from sdas_ascii
+;	99jul13 - mystery/stupid why i wanted air WL on 90may22????
+;-
+;-----------------------------------------------------------------------------
+;
+; find files to process
+;
+    filelist = findfile(filespec)
+;
+; loop on files
+;
+    for ifile=0,n_elements(filelist)-1 do begin
+	file = filelist(ifile)
+
+;
+; read input file
+;
+	rd,file,0,x
+;
+; get header
+;
+        st = ''
+        header = strarr(1000)
+        nheader = 0
+        close,1 & openr,1,file
+        readf,1,st
+;
+; lines to delete from input ascii header
+;
+	badst = ['OBS DATE=','NET/TIME','RECORDS FOUND','EXP. TIME(sec)', $
+		 'POSITION IUE TAPE','POINTS IN SPECTRUM']
+	nbadst = n_elements(badst)
+
+        while strmid(st,1,3) ne '###' do begin
+;
+; should we ignore it
+;
+		for k=0,nbadst-1 do if strpos(st,badst(k)) ge 0 then goto,nextl
+		header(nheader) = strmid(st,0,71)
+		if (strmid(st,0,7) eq 'HISTORY') then 			$
+                        header(nheader) = strmid(st,8,71)	; 99jul13
+		nheader = nheader+1
+nextl:
+                readf,1,st
+        end
+;
+; read target name
+;
+        target='' & readf,1,target              ;target name
+	target = strtrim(target,2)
+	target = gettok(target,' ')		; 99jul13 - rcb
+        close,1
+;
+; extract information from header
+;
+	nspeclw = 0
+	nspecsw = 0
+	wmerge = 0
+	for i=0,nheader-1 do begin
+;		if strmid(header(i),0,7) eq ' SUM OF' then begin
+		if strmid(header(i),0,6) eq 'SUM OF' then begin	; 99jul13
+			pos = strpos(header(i),'CAMERA')
+			if pos lt 0 then begin
+				print,'ERROR - CAMERA Not Found *************'
+				goto,nextfile
+			end
+
+			camera = fix(strtrim(strmid(header(i),pos+6,3)))
+			nspec = fix(strmid(header(i),7,3)) + $
+				fix(strmid(header(i),17,4))
+			if camera le 2  then nspeclw = nspeclw+nspec $
+					else nspecsw = nspecsw+nspec
+		end
+		if strmid(header(i),0,11) eq 'MERGE POINT' then $
+				wmerge = float(strmid(header(i),13,7))
+	end
+	if wmerge le 0 then wmerge=sxpar(header,'wmerge')	; 99jul13
+	if wmerge le 0 then stop				; idiot ck.
+;
+; read data
+;
+	wave=x(*,0)
+	dataqual=x(*,1)
+	gross=x(*,2)
+	back=x(*,3)
+	netrate=x(*,4)
+	flux=x(*,5)
+	exptime=x(*,6)
+	error=x(*,7)>0.03		;23-mar-89 per BOHLIN (min. 3% error)
+;
+; apply WD corrections
+;
+	flux = flxcor(wave,flux)
+;
+; determine wmerge for case of no lw or sw spectra
+;
+	if nspeclw eq 0 then wmerge = max(wave)+0.1
+	if nspecsw eq 0 then wmerge = min(wave)-0.1
+;
+; use null values outside calibrated wavelength range added 3/23/89
+; also change crap to null values
+;
+	maxwave=3350
+	null=where((wave le 1147.5) or (wave ge 3350) or (flux lt 0) ,n_null)
+
+
+;
+; compute statistical error
+;
+	error=error*flux
+	syserror=flux*0.03
+	isw=where(wave lt wmerge,nsw)
+	maxexpsw = 0.0
+	if nsw gt 0 then begin
+		maxexpsw=max(exptime(isw))
+		error(isw)=error(isw)/(((nspecsw*exptime(isw)/maxexpsw)>1)^0.25)
+	end
+	ilw=where(wave ge wmerge,nlw)
+	maxexplw = 0.0
+	if nlw gt 0 then begin	
+		maxexplw=max(exptime(ilw))
+		error(ilw)=error(ilw)/(((nspeclw*exptime(ilw)/maxexplw)>1)^0.25)
+	end
+;
+; insert nulls
+;
+	if n_null gt 0 then begin
+		flux(null)=1.6e38
+		error(null)=1.6e38
+		syserror(null)=1.6e38
+	end
+;
+; create table
+;
+	n=n_elements(wave)
+	tab_create,tcb,tab
+	h=strarr(50)
+	h(0)='END'
+	tab_put,'WAVELENGTH',wave,tcb,tab
+	tab_modcol,tcb,'WAVELENGTH','ANGSTROMS'
+	sxaddpar,h,'descr1','Central wavelength'
+;
+	tab_put,'FLUX',flux,tcb,tab
+	tab_modcol,tcb,'FLUX','FLAM'
+	sxaddpar,h,'descr2','Absolute calibrated net spectrum ergs/sec/cm**2/Ang.'
+;
+	tab_put,'STATERROR',error,tcb,tab
+	tab_modcol,tcb,'STATERROR','FLAM'
+	sxaddpar,h,'descr3','Statistical error of flux measurement (FLAM)'
+;
+	tab_put,'SYSERROR',syserror,tcb,tab
+	tab_modcol,tcb,'SYSERROR','FLAM'
+	sxaddpar,h,'descr4','systematic error of flux measurements (FLAM)'
+;
+	tab_put,'FWHM',flux*0+6.0,tcb,tab
+	tab_modcol,tcb,'FWHM','ANGSTROMS'
+	sxaddpar,h,'descr5','FWHM spectral resolution'
+;
+	tab_put,'DATAQUAL',dataqual,tcb,tab
+	sxaddpar,h,'descr6','IUE data quality (epsilon) flag'
+;
+	tab_put,'GROSS',gross,tcb,tab
+	tab_modcol,tcb,'GROSS','FN'
+	sxaddpar,h,'descr7','Gross spectrum in IUE flux numbers (FN)'
+;
+	tab_put,'BACK',back,tcb,tab
+	tab_modcol,tcb,'BACK','FN'
+	sxaddpar,h,'descr8','Background spectrum in IUE flux numbers (FN)'
+;
+	tab_put,'NETRATE',netrate,tcb,tab
+	tab_modcol,tcb,'NETRATE','FN/SEC'
+	sxaddpar,h,'descr9','Net spectrum in IUE flux numbers (FN) per second'
+;
+	TAB_PUT,'TOTEXP',exptime,tcb,tab
+	tab_modcol,tcb,'TOTEXP','SEC'
+	sxaddpar,h,'descr10','Total exposure time'
+;
+; add more keywords
+;
+	sxaddpar,h,'descrip','IUE Spectrophotometry on WD flux scale'
+	sxaddpar,h,'dbtable','CRSPECOBS','IDM table name'
+	sxaddpar,h,'targetid',target,'standard STScI name of target'
+	sxaddpar,h,'obsmode','IUE','instrument'
+	sxaddpar,h,'airmass',0.0,'mean airmass of the observation'
+	sxaddpar,h,'source', $
+		'Bohlin, et al (1990),ApJS, 73, 413'
+	stime = strmid(!stime,0,11)
+	sxaddpar,h,'date',stime
+	sxaddpar,h,'comment','Normal MRGPT subroutine output'
+;
+; add old history
+;
+	sxaddhist,header(0:nheader-1),h
+;
+; add some more keyword information
+;
+	sxaddpar,h,'wmin',min(wave),'Minumum Wavelength'
+	sxaddpar,h,'wmax',max(wave),'Maximum Wavelength'
+	sxaddpar,h,'nspecsw',nspecsw,'Number of SWP spectra averaged'
+	sxaddpar,h,'nspeclw',nspeclw,'Number of LW spectra averaged'
+	sxaddpar,h,'maxexpsw',maxexpsw,'Maximum exposure time for SWP'
+	sxaddpar,h,'maxexplw',maxexplw,'Maximum exposure time for LW'
+	sxaddpar,h,'wmerge',wmerge,'LW/SW merge point'
+;
+; add some more garbage to header
+;
+	sxaddhist,' Statistical error computed as:',h
+	sxaddhist,'     sig / ( n * t / maxt)**0.25',h
+	sxaddhist,'   where: sig - standard deviation of average with',h
+	sxaddhist,'              a lower limit of 3% of the flux',h
+	sxaddhist,'        n - number of spectra averaged',h
+	sxaddhist,'        t - total exposure time for the data point',h
+	sxaddhist,'        maxt - maximum exposure time (all data points)',h
+	sxaddhist,' Systematic error set to FLUX*0.03',h
+	sxaddhist,' FWHM set to 6 Angstroms for all points',h
+	sxaddhist,' All wavelengths are in air above 2000 Angstroms',h	
+	sxaddhist,' IUE Fluxes corrected to WD scale with FLXCOR.PRO: '+STIME,h
+	sxaddhist,' Written by MAKE_IUE_CALOBS.pro  '+STIME,h
+;
+; write table
+;
+	name = target
+        spos=strpos(name,'+')
+        if spos gt 0 then strput,name,'_',spos  ; replace + with _
+        spos=strpos(name,'-')
+        if spos gt 0 then strput,name,'_',spos  ; replace - with _
+	name = name + '_IUE'
+	tab_write,name,tcb,tab,h
+nextfile:
+    end
+return
+end

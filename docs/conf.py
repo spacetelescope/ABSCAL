@@ -30,13 +30,7 @@ import sys
 import datetime
 from importlib import import_module
 
-try:
-    from sphinx_astropy.conf.v1 import *  # noqa
-except ImportError:
-    print('ERROR: the documentation requires the sphinx-astropy package to be installed')
-    sys.exit(1)
-
-# Get configuration information from setup.cfg
+t# Get configuration information from setup.cfg
 from configparser import ConfigParser
 conf = ConfigParser()
 
