@@ -46,12 +46,9 @@ from astropy.table import Table, Column
 from astropy.time import Time
 from copy import deepcopy
 
+from abscal.common.exposure_data_table import ExposureTable
 from abscal.common.standard_stars import starlist, find_standard_star_by_name
 from abscal.common.utils import absdate
-
-def scan_rate_formatter(scan_rate):
-    scan_rate_str = "{:6.4f}".format(scan_rate)
-    return "{:<9}".format(scan_rate_str)
 
 def make_dates(date_string_or_rows, idl_strict):
     """
@@ -166,7 +163,7 @@ def get_target_name(header):
     return name
 
 
-def create_table(directories, file_template, obs_types={}, **kwargs):
+def create_table(paths, file_template, **kwargs):
     """
     Uses glob to search all directories in `directories` for files matching
     `file_template`, and creates an astropy table containing metadata based on
@@ -180,52 +177,36 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
         A template for the files to be looked at. All files in the input 
         directories that match `file_template` must be WFC3 imaging files.
         Examples of templates include 'i*flt.fits', 'i*drz.fits', 'i*ima.fits'.
-    obs_types : dict, optional, default {}
-        A dictionary of observation types, allowing you to select which
-        observation types to use. In particular, you are able to set any of
-        three keys to either true or false. If a key is not present, its value
-        will be assumed to be True.
-            scan : whether to include observations with scan rate > 0
-            stare_grism : whether to include stare observations with grism.
-            stare : whether to include stare observations with filter.
+    kwargs : dict
+        A dictionary of optional keywords. Currently checked keywords are:
+            in_file : string or None
+                If set, this file will be added to the metadata table before
+                any other processing is done.
+            handle_duplicates : str
+                How to handle duplicate entries (entries with the same
+                ipppssoot)
+            compat : bool
+                Whether to operate in strict IDL compatibility mode
     
     Returns
     -------
-    metadata : astropy Table
+    data_table : astropy Table
         A table containing an entry for each input file and necessary metadata
         obtained from the FITS header of that file.
     """
+    in_file = kwargs.get('in_file', None)
+    duplicates = kwargs.get('duplicates', 'both')
     idl_strict = kwargs.get('compat', False)
-
-    columns = ['root', 'mode', 'aperture', 'type', 'target', 'img_size', 'date',
-               'time', 'propid', 'exptime', 'postarg', 'scan_rate', 'notes']
-    column_names = {
-                    'img_size': "IMG SIZE",
-                    'postarg': "POSTARG X,Y",
-                    'scan_rate': "SCAN_RAT",
-                    "aperture": "APER"
-                   }
-    if idl_strict:
-        column_formats = {
-                            "root": "<10",
-                            "mode": "<7",
-                            "aperture": "<15",
-                            "type": "<5",
-                            "target": "<12",
-                            "img_size": "<9",
-                            "date": "<8",
-                            "time": "<8",
-                            "propid": "<6",
-                            "exptime": "7.1f",
-                            "postarg": ">14",
-                            "scan_rate": scan_rate_formatter
-                         }
-    file_data = []
     
-    start_time = datetime.datetime.now().strftime("%d-%b-%Y %H:%M:%S.%f")
 
-    for directory in directories:
-        all_files = glob.glob(os.path.join(directory, file_template))
+    data_table = ExposureTable(search_str=file_template,
+                               search_dirs=directories,
+                               table=in_file,
+                               idl_mode=idl_strict,
+                               duplicates=duplicates)
+
+    for path in paths:
+        all_files = glob.glob(os.path.join(path, file_template))
         
         for file_name in all_files:
             loc = "START"
@@ -241,46 +222,25 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
                     phdr = fits_file[0].header
                     
                     file_metadata['notes'] = ''
-                    file_metadata['mode'] = phdr['filter'].upper()
+                    file_metadata['filter'] = phdr['filter'].upper()
                     file_metadata['target'] = get_target_name(phdr)
-                    file_metadata['type'] = phdr['imagetyp']
-                    # ***MAYBE*** seems unused?
-#                     instr = phdr["INSTRUME"].strip()
+                    file_metadata['exposure_type'] = phdr['imagetyp']
                     if "TEXPTIME" not in phdr or phdr["TEXPTIME"] == 0:
                         file_metadata['exptime'] = phdr['exptime']
                     else:
                         file_metadata['exptime'] = phdr["texptime"]
                     loc = "PARSING DATE"
-                    obs_date = Time(phdr['date-obs'])
-                    loc = 'FORMATTING DATE'
-                    obs_date.format = 'datetime'
-                    loc = "PARSED DATE"
-                    if idl_strict:
-                        file_metadata['date'] = obs_date.strftime('%y-%m-%d')
-                        m1 = "{:6.1f}".format(phdr["POSTARG1"])
-                        m2 = "{:6.1f}".format(phdr["POSTARG2"])
-                        file_metadata['postarg'] = "{}, {}".format(m1, m2)
-                        naxis1 = fits_file[1].header["NAXIS1"]
-                        naxis2 = fits_file[1].header["NAXIS2"]
-                        img_size_str = "{:4d}x{:4d}".format(naxis1, naxis2)
-                        file_metadata['img_size'] = img_size_str
-                        file_metadata['aperture'] = phdr['aperture'][:15]
-                    else:
-                        file_metadata['date'] = obs_date
-                        m1 = phdr['POSTARG1']
-                        m2 = phdr['POSTARG2']
-                        file_metadata['postarg'] = (m1, m2)
-                        naxis1 = fits_file[1].header["NAXIS1"]
-                        naxis2 = fits_file[1].header["NAXIS2"]
-                        file_metadata['img_size'] = (naxis1, naxis2)
-                        file_metadata['aperture'] = phdr['aperture']
-                    file_metadata['time'] = phdr["time-obs"]
-                    file_metadata['propid'] = phdr["proposid"]
-                    # ***MAYBE*** seems unused?
-#                     gain = phdr["CCDGAIN"]
-#                     if gain == 0:
-#                         gain = phdr["CCDGAIN4"]
-#                     amp = ' '
+
+                    date = phdr['date-obs']
+                    time = phdr['time-obs']
+                    date_str = "{}T{}".format(date, time)
+                    file_metadata['date'] = Time(date_str)
+                    file_metadata['postarg1'] = phdr['POSTARG1']
+                    file_metadata['postarg2'] = phdr['POSTARG2']
+                    file_metadata['xsize'] = fits_file[1].header["NAXIS1"]
+                    file_metadata['ysize'] = fits_file[1].header["NAXIS2"]
+                    file_metadata['aperture'] = phdr['aperture']
+                    file_metadata['proposal'] = phdr["proposid"]
                     
                     spt_file_name = base_name.replace(file_ext, 'spt')
                     spt_file = os.path.join(file_path, spt_file_name)
@@ -293,8 +253,8 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
                                 file_metadata['scan_rate'] = rate
                             else:
                                 file_metadata['scan_rate'] = 0.
-                                msg = " SPT header had no SCAN_RAT keyword."
-                                file_metadata['notes'] += msg
+                                msg = "SPT header had no SCAN_RAT keyword."
+                                file_metadata['notes'] += " {}".format(msg)
                             pstrtime = spt_hdr0['PSTRTIME']
                             delta_from_epoch = absdate(pstrtime) - 2000.
                     else:
@@ -305,15 +265,16 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
                         pstrtime = expstart.datetime.strftime("%Y.%j:%H:%M:%S")
                         delta_from_epoch = absdate(expstart) - 2000.
                         file_metadata['scan_rate'] = 0.
-                        new_note = file_metadata['notes'] + ' ' + msg
-                        file_metadata['notes'] = new_note
+                        file_metadata['notes'] += " {}".format(msg)
                 
                 loc = "ASSEMBLING WRITE DATA"
                 new_target = (file_metadata['target'], 'Updated by wfcdir.py')
-                standard_star = find_standard_star_by_name(file_metadata['target'])
+                standard_star = find_standard_star_by_name(new_target[0])
                 if standard_star is not None:
-                    epoch_ra, epoch_dec = standard_star['ra'], standard_star['dec']
-                    pm_ra, pm_dec = standard_star['pm_ra'], standard_star['pm_dec']
+                    epoch_ra = standard_star['ra']
+                    epoch_dec = standard_star['dec']
+                    pm_ra = standard_star['pm_ra']
+                    pm_dec = standard_star['pm_dec']
                     delta_ra = pm_ra + delta_from_epoch/1000.
                     delta_dec = pm_dec + delta_from_epoch/1000.
                     corrected_ra = epoch_ra + delta_ra/3600.
@@ -321,9 +282,10 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
                     new_ra = (corrected_ra, 'Updated for PM by wfcdir.py')
                     new_dec = (corrected_dec, 'Updated for PM by wfcdir.py')
                 else:
-                    new_target = (file_metadata['target'], "{} not a WFC3 standard star".format(file_metadata['target']))
-                    new_ra = (phdr["RA_TARG"], "{} not a WFC3 standard star".format(file_metadata['target']))
-                    new_dec = (phdr["DEC_TARG"], "{} not a WFC3 standard star".format(file_metadata['target']))
+                    msg = file_metadata['target'] + " not a WFC3 standard star" 
+                    new_target = (file_metadata['target'], msg)
+                    new_ra = (phdr["RA_TARG"], msg)
+                    new_dec = (phdr["DEC_TARG"], msg)
                 new_pstrtime = (pstrtime, "Added by wfcdir.py")
                 loc = "WRITING NEW FILE"
                 with fits.open(file_name, mode="update") as fits_file:
@@ -335,157 +297,112 @@ def create_table(directories, file_template, obs_types={}, **kwargs):
                     
             except Exception as e:
                 print("{}: {} {}".format(file_name, e, loc))
-                for key in columns:
+                for key in data_table.columns:
                     if key not in file_metadata:
                         print("\t\t{} missing".format(key))
-                new_note = "{} ERROR: Exception {} while processing."
-                file_metadata['notes'] = new_note.format(file_metadata['notes'], str(e))
+                msg = "ERROR: Exception {} while processing.".format(str(e))
+                file_metadata['notes'] += " {}".format(msg)
             
-            file_data.append(file_metadata)
-    
-    if len(file_data) == 0:
+            data_table.add_exposure(file_metadata)
+
+    if data_table.n_exposures == 0:
         error_str = "wfcdir error: no files found for filespec {}"
         raise ValueError(error_str.format(file_template))
     
-#     max_aper = max([len(a) for a in get_data(file_data, 'aper')])
-#     column_formats['aper'] = '<{}'.format(max_aper)
-
-    target_table = Table()
-    for column in columns:
-        data = get_data(file_data, column)
-        name = column_names.get(column, column.upper())
-        if idl_strict and column in column_formats:
-            format = column_formats[column]
-            new_column = Column(data=data, name=name, format=format)
-        else:
-            new_column = Column(data=data, name=name)
-        target_table[column] = new_column
-    table_comments = []
-    table_comments.append('WFCDIR {}'.format(start_time))
-    for directory in directories:
-        table_comments.append('SEARCH FOR {}'.format(os.path.join(directory, file_template)))
-    target_table.meta['comments'] = table_comments
-    target_table.sort(['target', 'date', 'time'])
-    target_table.sort(['root'])
-    
-    scan_table = deepcopy(target_table)
-    scan_table.remove_rows(scan_table['scan_rate'] <= 0.)
-    
-    stare_table = deepcopy(target_table)
-    stare_table.remove_rows(stare_table['scan_rate'] > 0.)
-    
-    filter_table = deepcopy(stare_table)
-    filter_table.remove_rows([mode[0] == 'G' for mode in filter_table['mode']])
-
-    grism_table = deepcopy(stare_table)
-    grism_table.remove_rows([mode[0] == 'F' for mode in grism_table['mode']])
-    grism_check_table = deepcopy(grism_table)
-    
-    for row in grism_check_table:
-        # Get the ipppss (so program+visit) from ipppssoot
-        root = row['root'][:6]
-        if idl_strict:
-            date_string = "{} {}".format(row['date'], row['time'])
-        else:
-            date_string = row['date'].strftime("%Y-%m-%d")
-            date_string += " {}".format(row['time'])
-        time = make_dates(date_string, idl_strict)
-        
-        # Only check filter exposures that are part of the same visit
-        check_mask = [r[:6] == root for r in filter_table['root']]
-        check_table = filter_table[check_mask]
-        if len(check_table) > 0:
-            check_dates = make_dates(check_table, idl_strict)
-            check_times = [abs(time - t) for t in check_dates]
-            mininum_time_index = check_times.index(min(check_times))
-            minimum_time_row = check_table[mininum_time_index]
-            if minimum_time_row['root'] not in grism_table['root']:
-                grism_table.add_row(minimum_time_row)
-        else:
-            # No corresponding filter for this grism exposure
-            # Find the row with the same root value, and add a note.
-            row_mask = [r == row['root'] for r in final_grism_table['root']]
-            new_note = " No corresponding filter exposure found."
-            grism_table[row_mask]["note"] += new_note
-    
-    grism_table.sort(['root'])
-    
-    return target_table, filter_table, grism_table, scan_table
+    data_table.sort_data(['root'])
+    return data_table
 
 
 def main():
 
-    template_help = "The file template to match, or the directory to search "
+    template_help = "The file template to match, or the path to search "
     template_help += "and the file template to match within that directory. "
-    template_help += "If the '-d' option is used to specify one or more input "
-    template_help += "directories, then file file template will be joined to "
-    template_help += "each input directory."
+    template_help += "If the '-p' option is used to specify one or more input "
+    template_help += "paths, then file file template will be joined to "
+    template_help += "each input path."
     
-    dir_help = "A comma-separated list of input directories. This need not be "
-    dir_help += "specified if there is only one input directory, and if that "
-    dir_help += "directory is specified in the template argument."
+    path_help = "A comma-separated list of input paths. This need not be "
+    path_help += "specified if there is only one input path, and if that "
+    path_help += "path is specified in the template argument."
     
-    out_help = "Output metadata file. The default value is the file name "
-    out_help += "created by the original wfcdir.pro"
+    in_help = "Optional input table file. If provided, the program will begin "
+    in_help += "by reading the input table and adding all of its exposures to "
+    in_help += "the metadata table. See the duplicates flag for options on "
+    in_help += "processing duplicate entries."
+    
+    out_help = "Output metadata file. The default value is dirtemp_<item>.log "
+    out_help += "where item is 'all' for all files, 'grism' for grism files "
+    out_help += "(and associated filter images), 'filter' is filter files, and "
+    out_help += "'scan' is all scan-mode files."
+    
+    dup_help = "How to handle duplicate entries (entries defined as "
+    dup_help += "duplicates if they have the same ipppssoot). Valid values are "
+    dup_help += "'both' (keep both), 'preserve' (keep first), 'replace' (keep "
+    dup_help += "second), and 'neither' (delete both). Duplicates should only "
+    dup_help += "be an issue if an input table is specified."
     
     compat_help = "Activate strict compatibility mode. In this mode, the "
     compat_help += "script will produce output that is as close as possible to "
     compat_help += "indistinguishable from wfcdir.pro"
 
+    verbose_help = "Print diagnostic information while running."
+
     description_str = 'Build metadata table from input files.'
     parser = argparse.ArgumentParser(description=description_str)
     parser.add_argument('template', help=template_help)
-    parser.add_argument('-d', '--directories', dest='directories', 
-                        help=dir_help)
+    parser.add_argument('-p', '--paths', dest='paths', 
+                        help=path_help)
+    parser.add_argument('-i', '--input', dest='in_file', help=in_help,
+                        default=None)
     parser.add_argument('-o', '--output', dest='out_file', help=out_help,
                         default='dirtemp.log')
-    parser.add_argument('-s', '--strict_compat', dest="compat", 
+    parser.add_argument('-d', '--duplicates', dest='duplicates', help=dup_help,
+                        default='both')
+    parser.add_argument('-c', '--strict_compat', dest="compat", 
                         action='store_true', default=False, help=compat_help)
+    parser.add_argument('-v', '--verbose', dest="verbose",
+                        action='store_true', default=False, help=verbose_help)
 
     res = parser.parse_args()
     
-    if res.directories is not None: 
-        if "," in res.directories:
-            res.directories = res.directories.split(",")
+    if res.paths is not None: 
+        if "," in res.paths:
+            res.paths = res.paths.split(",")
         else:
-            res.directories = [res.directories]
+            res.paths = [res.paths]
     else:
-        res.directories = []
+        res.paths = []
     
     if res.template is None:
         res.template = "i*flt.fits"
     
-    if os.path.sep in res.template and len(res.directories) == 0:
+    if os.path.sep in res.template and len(res.paths) == 0:
         (template_path, template_value) = os.path.split(res.template)
-        res.directories.append(template_path)
+        res.paths.append(template_path)
         res.template = template_value
     
-    if len(res.directories) == 0:
-        res.directories.append(os.getcwd())
+    if len(res.paths) == 0:
+        res.paths.append(os.getcwd())
     
-    tables = create_table(res.directories, res.template, compat=res.compat)
-    all_table, scan_table, filter_table, grism_table = tables
+    table = create_table(res.paths, 
+                         res.template, 
+                         in_file=res.in_file,
+                         handle_duplicates=res.duplicates,
+                         compat=res.compat)
     
     base_file, file_ext = os.path.splitext(res.out_file)
     
     table_types = ["all", "filter", "grism", "scan"]
-    for table, table_type in zip(tables, table_types):
-        if len(table) > 0:
-            table_fname = "{}_{}{}".format(base_file, table_type, file_ext)
-            if res.compat:
-                table.remove_column('notes')
-                ascii.write(table,
-                            output=table_fname,
-                            format='fixed_width',
-                            delimiter=' ',
-                            delimiter_pad=None,
-                            bookend=False,
-                            overwrite=True)
-            else:
-                ascii.write(table, 
-                            output=table_fname, 
-                            format='ipac', 
-                            overwrite=True)
+    table_filters = {
+                        "all": [],
+                        "filter": ["stare", "filter"],
+                        "grism": ["stare", "grism"],
+                        "scan": ["scan"]
+                    }
+    for table_type in table_types:
+        filters = table_filters[table_type]
+        table_fname = "{}_{}{}".format(base_file, table_type, file_ext)
+        table.write_table(table_fname, res.compat, filters=filters)
 
 
 if __name__ == "__main__":
