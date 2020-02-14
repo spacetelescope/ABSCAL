@@ -17,6 +17,7 @@ pro wfc_wavecal,hdr,zxposin,zyposin,x,wave,angle,wav1st
 ; HISTORY 2013May20: Update for measures of +1st 10833 from 0-read ima
 ;	2018Apr26 - mod for subarrays to do WLs on sub-arr size.
 ;	2018jun23 - add wfcwlfix here per calwfc_spec_wave
+;	2020feb4  - add targname to wfcwlfix.pro for Jesus 15816 w/ 2 targ/image
 ;-
 filter = strtrim(sxpar(hdr,'filter'))
 x=indgen(1014)				; indices of image x size (was 1014)
@@ -130,7 +131,10 @@ case filter of
 	endcase
 ; 2018jun23 - try moving wfcwlfix here instead of in calwfc_spec.pro
 root=strtrim(sxpar(hdr,'rootname'),2)
-offset=wfcwlfix(root)				; offset in Ang
+targwlfix='
+targname=sxpar(hdr,'targname')
+if strpos(targname,'GAIA') ge 0 then targwlfix=targname
+offset=wfcwlfix(root+targwlfix)	; offset in Ang
 wave=wave+offset
 wav1st=wav1st+offset
 

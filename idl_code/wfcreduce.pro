@@ -36,6 +36,7 @@ pro wfcREDUCE,FILE,GRAT,aper,STAR,OUT=FILENAME,factor=fudge,merge=merge
 GRAT=STRUPCASE(GRAT)
 if n_params(0) gt 3 then STAR=STRUPCASE(STAR)
 st=''
+!p.font=-1
 !y.style=1  &  !x.style=1
 !P.NOCLIP=1
 hdr1=["SYS-ERROR is a broadband 1% INTERNAL repeatability of WFC3 fluxes.", $

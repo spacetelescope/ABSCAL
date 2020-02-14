@@ -76,7 +76,8 @@ if keyword_set(tcor) then begin
 	    net=net/tmcorr
 	    err=err/tmcorr
 	    print,'Net corr for loss rate & time=',lossrate,time,' by',	$
-	     tmcorr,' Linearity corr=',lincor,form='(a,f8.5,f7.1,a,f7.4,a,f6.3)'
+	    	tmcorr,' Avg Linearity corr=',avg(lincor),		$
+	     			form='(a,f8.5,f7.1,a,f7.4,a,f6.3)'
 	    endif
 	endif
 

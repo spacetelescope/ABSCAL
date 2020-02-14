@@ -69,6 +69,7 @@
 ;	dirimg - flag to use direct image for wavecal, instead of default z-ordr
 ;	dirimnam-direct image name. 2015may4
 ;	noprnt-to avoid garbage pointing & WL info in scanned data headers.
+;	/target - name for the target that is in dir log file. 2020feb4
 
 ; OUTPUT FILE:
 ;	Results are placed into an output FITS binary table with name:
@@ -102,7 +103,7 @@
 ;	06jan9 - RCB subtract the scaled grism flat to remove contin contrib.
 ;	06feb28- RCB add mean bkg to header from wfc_flatscal & subtr bkg
 ;		continuum.
-;	06aug08- DJL added effective exposure time for each extracted flux value.
+;	06aug08- DJL added effective exposure time for each extracted flux value
 ;	    Modified output GROSS and BACK to be extractions from the raw image.
 ;	06aug18 - DJL - modified to flat field sky image with sky flat and
 ;		extract the flat fielded sky background which is included
@@ -126,7 +127,15 @@
 ;	2018jun26 -implement Pirzkal ISR 2016-15 WL solution in CALWFC_SPEC_WAVE
 ;	2018jul19-repair also dq=8, unstable: Big help-fixes most of the big
 ;			dropouts.
+;	2020feb - Add target name to input & call wfcread instead of fits_read
+;		to do coord corr. & replace that func in wfcdir for multiple
+;		targets on an image.
+;	2020feb4 - switch from cntrd to gcntrd for Z-ord fit
 ;========================================================  CALWFC_SPEC_WAVE
+
+; ##### 2020feb4 - If ever have 2 spectra on same img that need this AXE code, 
+;	then need to add targname to WFCWLFIX.PRO ###########
+
 ;
 ; Routine to compute wavelength vector and column numbers to extract
 ;
@@ -402,9 +411,11 @@ pro calwfc_spec,file,xco,yco,xerr,yerr,wave,flux,errf,epsf,		$
 	imagefile=imagefile, display=display, trace=trace,		$
 	subdir = subdir, star=star, before=before,flatfile=flatfile,	$
 	slope=slope,Ubdist=Ubdist, Lbdist=Lbdist, 			$
-	crval1=crval1, crval2=crval2,dirimg=dirimg,dirimnam=dirimnam
+	crval1=crval1, crval2=crval2,dirimg=dirimg,dirimnam=dirimnam,	$
+	target=target
 st=''
 !x.style=1  &  !y.style=1
+!p.font=-1
 if not keyword_set(flatfile) then flatfile=''		;2015jul-Use default FF
 ;
 if n_params(0) eq 0 then begin
@@ -454,7 +465,10 @@ if n_elements(ywidth) eq 0 then $
 ;
 ; Read data and flag any bad pixels not already flagged
 ;
-fits_read,file,image,h, extname='SCI'
+;2020feb4-replace reading of header w/ wfcread, which will corr coord, as needed
+;fits_read,file,image,h, extname='SCI'
+wfcread,file,target,image,h, extname='SCI'
+
 filter = strtrim(sxpar(h,'filter'))
 print,'calwfc_spec Processing file '+filter+' '+file
 siz=size(image)
@@ -529,7 +543,7 @@ if scnrat gt 0 then begin		; start trailed processing
 ;find zero order @ y=559. SCANNED ONLY, as locates Z-order in 1-D (X) only.
 	ycmean=559  &  ytop=926		;G141 means from scnoffset.pro
 	xzappr=303.6+ 7.336*xpostarg  ;G141 scnoffset 0-ord pos @y=558.8
-	if filter eq 'G102' then zxappr=000
+	if filter eq 'G102' then xzappr=000	; 2020jan zx-->xz
 	bn=rebin(image(*,559-20:559+20),1014,1)	; binned spectrum @y=559
 	plot,bn,xr=[xzappr-60,xzappr+60]
 	oplot,[xzappr,xzappr],[0,1e4],line=2
@@ -715,7 +729,9 @@ if xc lt 4 or xc gt 998 or keyword_set(dirimg) then begin
 	xpos = indmx mod ns
 	ypos = indmx/ns
 	print,'1st Z-ord centroid from astrom+ Petro starts at',xc,yc
-	cntrd,sbimg,xpos,ypos,xc,yc,2
+;	cntrd,sbimg,xpos,ypos,xc,yc,2	;uses derivatives
+; 2010feb4-try Gaussian fit for ie3f10caq sat Z-ord., which fails w/ cntrd
+	gcntrd,sbimg,xpos,ypos,xc,yc,2
 	if xc(0) lt 0 then begin		; peak too close to edge
 		print,'Use approx position in 31x31 sbimg='+	$
 				string([xpos,ypos],'(2i3)')
@@ -818,24 +834,24 @@ if root eq 'ibuc05axq' then image(548,555)=75			;G102 GRW deadpx
 if root eq 'ic5z09hkq' then image(548,555)=49			;G102 GRW deadpx
 if root eq 'ich319oeq' then image(534,562)=683			;G141 GRW deadpx
 if root eq 'ibll92fpq' then image(548,555)=45			;G141 GRW deadpx
-if root eq 'ibbt03f6q' then image(502:503,168)=178		;G102 gd71 deadpx
-if root eq 'ibbt03f6q' then image(502:503,169)=150		;G102 gd71 deadpx
-if root eq 'ibbt03f6q' then image(501:503,170)=27		;G102 gd71 deadpx
-if root eq 'ibbt04hwq' then image(501:503,169)=35		;G141 gd71 deadpx
-if root eq 'ibbt04hwq' then image(501:503,170)=115		;G141 gd71 deadpx
-if root eq 'ibbt04hwq' then image(501:503,171)=52		;G141 gd71 deadpx
-if root eq 'ibbt04hwq' then image(501:503,172)=20		;G141 gd71 deadpx
-if root eq 'ibwq1bldq' then image(111,816)=45			;G141 gd153 deadpx
-if root eq 'ibwq1bldq' then image(95:96,818)=82			;G141 gd153 deadpx
-if root eq 'ibwq1bldq' then image(95:97,819)=15			;G141 gd153 deadpx
-if root eq 'ibwq1aszq' then image(453:454,182)=94		;G102 gd153 deadpx
-if root eq 'ibwib6m8q' then image(924:925,183)=830		;G102 p330e deadpx
-if root eq 'ibwib6m8q' then image(922:925,184)=160		;G102 p330e deadpx
-if root eq 'ibwib6m8q' then image(980,184)=625			;G102 p330e deadpx
-if root eq 'ibwib6m8q' then image(878,182)=250			;G102 p330e deadpx
-if root eq 'ic6903y8q' then image(927,136)=334			;G102 g191 deadpx
-if root eq 'ic6903y8q' then image(929,137)=63			;G102 g191 deadpx
-if root eq 'ic6901x2q' then image(877,960)=250  		;G141 g191 deadpx
+if root eq 'ibbt03f6q' then image(502:503,168)=178		;G102 gd71deadpx
+if root eq 'ibbt03f6q' then image(502:503,169)=150		;G102 gd71deadpx
+if root eq 'ibbt03f6q' then image(501:503,170)=27		;G102 gd71deadpx
+if root eq 'ibbt04hwq' then image(501:503,169)=35		;G141 gd71deadpx
+if root eq 'ibbt04hwq' then image(501:503,170)=115		;G141 gd71deadpx
+if root eq 'ibbt04hwq' then image(501:503,171)=52		;G141 gd71deadpx
+if root eq 'ibbt04hwq' then image(501:503,172)=20		;G141 gd71deadpx
+if root eq 'ibwq1bldq' then image(111,816)=45			;G141gd153deadpx
+if root eq 'ibwq1bldq' then image(95:96,818)=82			;G141gd153deadpx
+if root eq 'ibwq1bldq' then image(95:97,819)=15			;G141gd153deadpx
+if root eq 'ibwq1aszq' then image(453:454,182)=94		;G102gd153deadpx
+if root eq 'ibwib6m8q' then image(924:925,183)=830		;G102p330edeadpx
+if root eq 'ibwib6m8q' then image(922:925,184)=160		;G102p330edeadpx
+if root eq 'ibwib6m8q' then image(980,184)=625			;G102p330edeadpx
+if root eq 'ibwib6m8q' then image(878,182)=250			;G102p330edeadpx
+if root eq 'ic6903y8q' then image(927,136)=334			;G102 g191deadpx
+if root eq 'ic6903y8q' then image(929,137)=63			;G102 g191deadpx
+if root eq 'ic6901x2q' then image(877,960)=250  		;G141 g191deadpx
 if root eq 'ic6901x2q' then image(877,961)=728  		;G141 g191 hotpx
 if root eq 'icqw01b5q' then image(185,119)=168  	;G102gd71 deadpx dq=8
 if root eq 'icrw12l9q' then image(372,260)=1910  	;G141VB8 deadpx dq=32
@@ -1000,7 +1016,7 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 		oplot,xfound(good),fit,th=2
 		oplot,x,yapprox,line=2,th=2
 		xyouts,.7,.15,'Angle ='+string(angle,'(f5.2)'),chars=2,/norm
-		xyouts,.15,.85,'Dash is approx location of orders',/norm
+		xyouts,.18,.85,'Dash is approx location of orders',/norm
 		xyouts,.18,.75,filter,chars=2.2,/norm
 		print,filter,' Meas. Angle=',angle
 		endif
@@ -1096,17 +1112,36 @@ if nup lt nsb/5 then sback=lofit
 
 if keyword_set(trace) then begin
 	window,0
+	!ytitle='Background'
 	plot,xbf(goodlo),sbacklo(goodlo),psym=-4,yr=[-1,1]
 	oplot,lofit
 	oplot,xbf(goodup),sbackup(goodup),lin=1,psym=-6
 	oplot,upfit,lin=2
 	oplot,sback,th=4
 	xyouts,.15,.15,targ+' '+filter+' '+root,/norm
-	help,nlo,nup,loerr,uperr
-	if nlo lt nsb/5 and nup lt nsb/5 then stop	; not enough points to fit
+	help,nlo,nup,loerr,uperr,goodlo,goodup
+
+; 2020jan
+	if loerr gt 0.5 or uperr gt 0.5 then begin
+		plot,xbf(goodlo),sbacklo(goodlo),psym=-4
+		oplot,lofit
+		oplot,xbf(goodup),sbackup(goodup),lin=1,psym=-6
+		oplot,upfit,lin=2
+		oplot,sback,th=4
+		xyouts,.15,.15,targ+' '+filter+' '+root,/norm
+		xyouts,.18,.85,'Low:diam,line,fit-line',/norm
+		xyouts,.18,.88,'Upp:squar,dots,fit-dash',/norm
+		xyouts,.18,.8,'Final Bkg:Thick',/norm
+		endif
+
+	if nlo lt nsb/5 and nup lt nsb/5 then stop	;not enough points tofit
 	read,st
 	endif
-if abs(avg(sback)) gt 2 then stop
+;if abs(avg(sback)) gt 3 then begin			;2020feb4 - was 2
+if avg(sback) gt 3 then begin			;2020feb4-neg. Bkg is OK
+	print,'WARNING: High Bkg=',avg(sback)
+	if keyword_set(trace) then  stop
+	endif
 
 ;if root eq 'ibwi08mkq' then stop
 ;
@@ -1211,7 +1246,7 @@ for i=0,ns-1 do begin				; col by col, whole img
 		end
   		tot = tot + frac1*image(x(i),iy1)+frac2*image(x(i),iy2)
   		var = var + frac1*err(x(i),iy1)^2 +frac2*err(x(i),iy2)^2
-		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)	+ $
+		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)+$
 				frac2*time(x(i),iy2)*(image(x(i),iy2)>0)
 		time_weight = time_weight + frac1*(image(x(i),iy1)>0)	+ $
 			frac2*(image(x(i),iy2)>0)
@@ -1236,7 +1271,10 @@ sxaddpar,h,'lbdist',lbdist
 sxaddpar,h,'bmedian',bmedian
 sxaddpar,h,'bmean1',bmean1
 sxaddpar,h,'bmean2',bmean2
-offset=wfcwlfix(root)				; offset in Ang
+
+targwlfix='
+if strpos(targ,'GAIA') ge 0 then targwlfix=targ
+offset=wfcwlfix(root+targwlfix)				; offset in Ang
 sxaddpar,h,'wloffset',offset
 ;2018jun23 -  move to top & put in wfc_wavecal.pro	wave=wave+offset
 sxaddpar,h,'Angle',angle,'Found angle of spectrum wrt X-axis'
@@ -1281,10 +1319,12 @@ if strpos(file,'icqw02') ge 0 then begin ;GD71 G141 contam by another star.
 	endif
 if keyword_set(trace) then begin		; plot result
 	window,2
+	!xtitle='Wavelength'
+	!ytitle='Net, Bkg:thick dash, Sky:thick dots'
 	plot,wave,flux
 	oplot,wave,gross,lin=1
-	oplot,wave,sback
-	oplot,wave,sky_back,th=2
+	oplot,wave,sback,th=4,lin=2
+	oplot,wave,sky_back,th=2,lin=1
 	read,st
 	endif
 ;

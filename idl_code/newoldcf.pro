@@ -14,6 +14,7 @@ pro newoldcf,filespec
 ;		before making hgt=11 default in dat/
 ; newoldcf,''  to do all files in doc/new.names (assumes input is in /deliv)
 ;		and do the skipmrg edit below to cf. w/ new .mrg files
+; newoldcf,'sirius_stis_003', run in calspec, & comment skipmrg
 ; 2017may - 'all' & comment skipmrg below to cf new mrg w/ current calspec
 ;		(misses new stars, but see them AFTER making the deliv. files.)
 ; newoldcf,'all'  to do all CALSPEC stars & run in calspec dir
@@ -93,7 +94,7 @@ for ifil=0,nfils-1 do begin
 		 '00'+string(ver-2,'(i1)')+'*.')
 		oldfil=findfile(oldfil)  &  oldfil=oldfil(0)
 		endif
-; ff sort of works, but NG on details. See above.
+; ff sort of works, but NG on details. See above. delete-see skipmrg below
 ;	if strpos(fils(ifil),'.mrg') gt 0 then begin		; 2019aug22
 ;		oldfil=findfile('~/calspec/'+name+'*stis*')
 ;		dumind=where(strpos(oldfil,'_01') gt 0,nproblem)
@@ -101,12 +102,16 @@ for ifil=0,nfils-1 do begin
 ;		else oldfil=oldfil(-1)
 ;		endif
 ; ###change: UNcom 2 lines to cf new files in /deliv to old ver in calspec
-	star=gettok(name,'_')			; comment to cf. *.mrg files
-	oldfil=findfile(star+'*_0*')  &  oldfil=oldfil(-1)
+;	star=gettok(name,'_')			; comment to cf. *.mrg files
+;	oldfil=findfile(star+'*_0*')  &  oldfil=oldfil(-1)
 ; end change
 ; ###change: to cf current calspec w/ new NICMOS or STIS .mrg files:
-	goto,skipmrg	; normally UN-comment to cf calspec versions
+;normal:	goto,skipmrg	; normally UN-comment to cf calspec versions
        oldfil=fils(ifil)		; old=latest calspec to cf to *.mrg
+       
+; ###change - temp total change for Sirius:
+;;;	oldfil='sirius_stis_001.fits'
+       
        star=strmid(name,0,5)+'*'	; & ff needed for odd & long names
        if strpos(star,'agk') ne 0 and strpos(star,'grw') ne 0		$
 							then remchar,star,'_'

@@ -11,7 +11,7 @@ PRO SSREADfits,NAME,hdr,WAVE,FLUX,error,syserr,eps,totex,fwhm
 ;	hdr  - header
 ;	wave - wavelengths
 ;	flux - flux
-;	error - statistical error
+;	error - statistical error (or continuum for models)
 ;	syserr - systematic error (3% of iue flux)
 ;	eps - data qual (if IUE)
 ;	totex - total exp time (if IUE)
@@ -32,13 +32,9 @@ PRO SSREADfits,NAME,hdr,WAVE,FLUX,error,syserr,eps,totex,fwhm
 	if strpos(namelow,'_mod') ge 0 or strpos(namelow,'fake') ge 0	$
 								then begin
 		wave=wn  &  flux=fn
-; 2019jun21 - no contin. for WDs
-		if strpos(namelow,'_mod') ge 0 	and 			$
-			strpos(namelow,'gd') lt 0			$
-			and strpos(namelow,'g191') lt 0 		$
-			and strpos(namelow,'hz43') lt 0 		$
-			and strpos(namelow,'lds') lt 0 			$
-			then error=z.continuum
+; 2019oct3 - Added contin. for 3 new prime WDs:
+		ind=where(strpos(hd,'CONTINUUM') ge 0,ncont)
+		if ncont gt 0 then error=z.continuum
 		goto,done
 		endif
 	mode=sxpar(hdr,'OBSMODE')

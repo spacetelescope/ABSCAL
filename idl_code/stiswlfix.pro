@@ -174,6 +174,7 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODBUL3040': offset=-0.41 	; 19aug GRW+70
 			'ODPCL3040': offset=-0.32       ; 19aug GRW+70 G140L
 			'ODVIL1040': offset=-0.31       ; 19aug GRW+70 G140L
+			'OE5CL1040': offset=-0.25       ; 19dec GRW+70 G140L
 
 ;ff NOT stable at -.27 to -.36
 			'O8H109010': offset=-.31	;19jul LDS749 G140L
@@ -379,6 +380,8 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODVKL1010': offset=-0.99       ; 19Jul AGK+81 G230LBE1
 			'ODVKL1020': offset=-0.15       ; 19Jul AGK+81 G230LB
 			'ODVKL2010': offset=-0.94       ; 19Jul AGK+81 G230LBE1; 			'ODVKL3010': offset=-1.05       ; 19aug AGK+81 G230LBE1
+			'OE36L1010': offset=-1.24       ; 19dec AGK+81 G230LBE1
+			'OE36L1020': offset=-0.38       ; 19dec AGK+81 G230LB
 ; END AGK			
 ; 06jun7-G230LB 52x2E1 prime WDs from wlabsrat.wd3-g230lb
 			'O6IG10020': offset=-1.1  ; 06jun G191 Bad
@@ -470,14 +473,15 @@ root=strupcase(strmid(fulroot,0,9))
 			'O6H05W010': offset=-0.20	; 19jan HD146233 E1 bad
 			'O6H05W020': offset=-0.28	; 19jan HD146233 E1 bad
 
-			'ODTA72010': offset= 0.32       ; 19Jul ETA1DO G230LB
-			'ODTA72020': offset=-0.65       ; 19Jul ETA1DO G230LBE1
+			'ODTA72010': offset= 0.45       ; 19dec ETA1DO G230LB
+			'ODTA72020': offset=-0.52       ; 19dec ETA1DO G230LBE1
 			'ODTA03020': offset=-1.01       ; 19Jul HD1289 G230LBE1
 			'ODTA04020': offset=-2.33       ; 19Jul HD1014 G230LBE1
 			'ODTA05020': offset=-2.60       ; 19Jul HD2811 G230LBE1
 			'ODTA06020': offset=-2.47       ; 19Jul HD5567 G230LBE1
-			'ODTA07010': offset=-0.12       ; 19Jul 18SCO G230LBE1
-			'ODTA08010': offset=-0.26       ; 19Jul 16CYGB G230LBE1
+			'ODTA07010': offset=-0.04       ; 19dec 18SCO G230LBE1
+			'ODTA08010': offset=-0.56       ; 19dec 16CYGB G230LBE1
+			'ODTA09010': offset=-0.55       ; 19decHD142331 G230LBE1
 			'ODTA60010': offset=-0.56       ; 19Jul HD1670 G230LBE1
 			'ODTA11010': offset=-0.46       ; 19Jul HD1151 G230LBE1
 			'ODTA12020': offset= 0.45       ; 19Jul ETAUMA G230LB
@@ -738,6 +742,8 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODVKL2040': offset=-1.22       ; 19aug AGK+81 G430LE1
 			'ODVKL3030': offset=+0.30       ; 19aug AGK+81 G430L
 			'ODVKL3040': offset=-1.11       ; 19aug AGK+81 G430LE1
+			'OE36L1030': offset=-0.18       ; 19dec AGK+81 G430L
+			'OE36L1040': offset=-1.63       ; 19dec AGK+81 G430LE1
 ; END AGK
 ; Prime WD offsets in wlerr.g430l-wd. For Primary WDs:
 			'O3TT42020': offset= 0.37       ; 19Jul GD153 
@@ -1048,17 +1054,18 @@ root=strupcase(strmid(fulroot,0,9))
 			'OCMV96010': offset=+1.90	; 15feb HD99872
 			'OCMV98010': offset=-0.31	; 15jun HD93028
 			
-			'ODTA72030': offset=-1.32       ; 19Jul ETA1DO G430LE1
-			'ODTA03030': offset=-1.46       ; 19Jul HD1289 G430LE1
-			'ODTA03040': offset=-0.23       ; 19Jul HD1289 G430L
+			'ODTA72030': offset=-1.24       ; 19dec ETA1DO G430LE1
+			'ODTA03030': offset=-1.47       ; 19dec HD1289 G430LE1
+; unstable 21-.25:
+			'ODTA03040': offset=-0.23       ; 19dec HD1289 G430L
 			'ODTA04030': offset=-4.10       ; 19Jul HD1014 G430LE1
 			'ODTA05030': offset=-4.32       ; 19Jul HD2811 G430LE1
 			'ODTA06030': offset=-4.08       ; 19Jul HD5567 G430LE1
-			'ODTA07020': offset=-0.96       ; 19Jul 18SCO G430LE1
-			'ODTA08020': offset=-1.03       ; 19Jul 16CYGB G430LE1
-			'ODTA09020': offset=-1.00       ; 19Jul HD1423 G430LE1
-			'ODTA60020': offset=-1.11       ; 19Jul HD1670 G430LE1
-			'ODTA11020': offset=-1.11       ; 19Jul HD1151 G430LE1
+			'ODTA07020': offset=-0.90       ; 19dec 18SCO G430LE1
+			'ODTA08020': offset=-1.16       ; 19dec 16CYGB G430LE1
+			'ODTA09020': offset=-1.34       ; 19dec HD1423 G430LE1
+			'ODTA60020': offset=-1.03       ; 19dec HD1670 G430LE1
+			'ODTA11020': offset=-1.03       ; 19dec HD1151 G430LE1
 			'ODTA12030': offset=+0.48	; 19jan ETAUMA Bad
 			'ODTA12040': offset= 0.51       ; 19Jul ETAUMA G430L
 			'O40801010': offset= 0.36       ; 19Jul FEIGE1 G430L
@@ -1072,9 +1079,9 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODTA16020': offset=-4.55       ; 19Jul HZ21 G430LE1
 			'ODTA17020': offset=-4.64       ; 19Jul HZ4 G430LE1
 			'ODTA18010': offset=-3.63       ; 19Jul HZ44 G430LE1
-			'ODTA19030': offset=-0.86       ; 19Jul 109VIR G430LE1
-			'ODTA19040': offset= 0.41       ; 19Jul 109VIR G430L
-			'ODTA51030': offset=-1.22       ; 19Jul DELUMI G430LE1
+			'ODTA19030': offset=-0.89       ; 19dec 109VIR G430LE1
+			'ODTA19040': offset= 0.38       ; 19dec 109VIR G430L
+			'ODTA51030': offset=-1.26       ; 19dec DELUMI G430LE1
 			'ODTB01030': offset=-1.43       ; 19Jul SDSSJ1 G430LE1
 			
 			else: begin   &  endelse  &  endcase
@@ -1133,6 +1140,7 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODVKL1060': offset=-0.35       ; 19Jul AGK+81 G750L
 			'ODVKL2060': offset=-0.14       ; 19aug AGK+81 G750L
 			'ODVKL3060': offset=+0.11       ; 19aug AGK+81 G750L
+			'OE36L1060': offset=-0.39       ; 19dec AGK+81 G750L
 			
 			'ODDG03030': offset=-0.12       ; 19Jul GRW+70 G750L
 			'ODDG04030': offset= 0.17       ; 19Jul GRW+70 G750L
@@ -1387,17 +1395,18 @@ root=strupcase(strmid(fulroot,0,9))
 			'OCMV98020': offset=-0.21	; 15jun HD93028 
 			'OCMV99020': offset=-0.17	; 14Dec HD28475
 
+			'ODTA72050': offset=+0.17       ; 19dec ETA1DOR G750L
 			'ODTA03050': offset=-0.21       ; 19Jul HD1289 G750L
 			'ODTA03060': offset=-0.24       ; 19Jul HD1289 G750L
 			'ODTA04040': offset= 0.39       ; 19Jul HD1014 G750L
-			'ODTA06040': offset= 0.21       ; 19Jul HD5567 G750L
-			'ODTA07030': offset= 0.46       ; 19Jul 18SCO G750L
-			'ODTA07040': offset= 0.37       ; 19Jul 18SCO G750L
-			'ODTA08030': offset= 0.57       ; 19Jul 16CYGB G750L
-			'ODTA08040': offset= 0.38       ; 19Jul 16CYGB G750L
-			'ODTA09030': offset= 0.43       ; 19Jul HD1423 G750L
-			'ODTA60030': offset= 0.40       ; 19Jul HD1670 G750L
-			'ODTA11030': offset= 0.20       ; 19Jul HD1151 G750L
+			'ODTA06040': offset= 0.20       ; 19dec HD5567 G750L
+			'ODTA07030': offset= 0.52       ; 19dec 18SCO G750L
+			'ODTA07040': offset= 0.43       ; 19dec 18SCO G750L
+			'ODTA08030': offset= 0.44       ; 19dec 16CYGB G750L
+			'ODTA08040': offset= 0.25       ; 19dec 16CYGB G750L
+			'ODTA09030': offset= 0.10       ; 19dec HD1423 G750L
+			'ODTA60030': offset= 0.47       ; 19dec HD1670 G750L
+			'ODTA11030': offset= 0.30       ; 19Jul HD1151 G750L
 			'ODTA12060': offset= 0.43       ; 19Jul ETAUMA G750L
 			'O40801020': offset= 0.24       ; 19Jul FEIGE1 G750L
 			'ODTA13030': offset=-0.11       ; 19Jul FEIGE1 G750L
@@ -1416,10 +1425,10 @@ root=strupcase(strmid(fulroot,0,9))
 			'O49X22010': offset=-0.16       ; 19Jul HZ4 G750L
 			'O49X19010': offset= 0.63       ; 19Jul HZ44 G750L
 			'O49X20010': offset= 0.66       ; 19Jul HZ44 G750L
-			'ODTA19050': offset= 0.41       ; 19Jul 109VIR G750L
-			'ODTA19060': offset= 0.31       ; 19Jul 109VIR G750L
-			'ODTA51050': offset= 0.40       ; 19Jul DELUMI G750L
-			'ODTA51060': offset= 0.34       ; 19Jul DELUMI G750L
+			'ODTA19050': offset= 0.38       ; 19dec 109VIR G750L
+			'ODTA19060': offset= 0.29       ; 19dec 109VIR G750L
+			'ODTA51050': offset= 0.37       ; 19dec DELUMI G750L
+			'ODTA51060': offset= 0.31       ; 19dec DELUMI G750L
 			else: begin   &  endelse  &  endcase
 		else: begin  &  endelse
 		endcase

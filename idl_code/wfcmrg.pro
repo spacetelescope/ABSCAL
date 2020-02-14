@@ -45,7 +45,6 @@ IF F2 EQ '' THEN GOTO,ONEFIL
 ; GET INPUT DATA
 ONEFIL: 			;data order: W,C,F,staterr,syserr,NPTS,TIME,QUAL
 	rdf,f1,0,x1
-	mtit1=!mtitle
 	X2=X1
 	IF F2 NE '' THEN rdf,f2,0,x2
 	siz=size(x2)  &  npts=siz(1)
@@ -72,10 +71,13 @@ IF F2 EQ '' THEN BEGIN				;SINGLE SPECTRUM
 ; Set const merge pts, so that i can do transm by div by different merged spec.
 wmerge=11250					; per mrgall plots of overlap
 if strpos(target,'2m055914') ge 0 then wmerge=11100
+if strpos(target,'gaia593_1968') ge 0 then wmerge=11075.
+if strpos(target,'gaia593_9680') ge 0 then wmerge=11015.
 print,'Wmerge = ',wmerge
 ; ck plot:
 if f1 ne '' and f2 ne'' then begin
 	!y.style=1
+	!mtitle=!mtitle+' diamonds'
 	ind=where(w1 ge wmerge-500 and w1 le wmerge+500)
 	yrang=minmax(flux1(ind))
 	yrang=[0.8*yrang(0),1.25*yrang(1)]

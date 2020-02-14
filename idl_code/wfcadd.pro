@@ -48,7 +48,7 @@ flags=(4+8+64+128+256)
 		idlist=lst(i)			; IDL oddity workaround
 
 ; flx computed from corrected net at end.
-		wfcflx,'spec/'+input+'spec_'+idlist+'.fits',head,wl,dum,ct,	$
+		wfcflx,'spec/'+input+'spec_'+idlist+'.fits',head,wl,dum,ct, $
 			gross,bkg,blo,bup,ql,flxer,exptm,/tcor,/noflux
 
 		GRAT=STRUPCASE(STRTRIM(SXPAR(HEAD,'filter'),2))
@@ -60,7 +60,7 @@ flags=(4+8+64+128+256)
 			endif
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 		if i eq 0 then begin		;initialize arrays to 0
-			wav=w102			; master WLs, dlam=16 or 25A
+			wav=w102		; master WLs, dlam=16 or 25A
 			if grat eq 'G141' then wav=w141
 			npx=n_elements(wav)
 			NPTS=intarr(npx)

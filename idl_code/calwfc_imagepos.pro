@@ -1,12 +1,9 @@
 pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
-	display=display,xstar=xstar,ystar=ystar
+	display=display,xstar=xstar,ystar=ystar,target=target
 ;+
 ;			calwfc_imagepos
 ;
 ; Routine to find star position in the imagefile
-;
-; CALLING SEQUENCE:
-;	calwfc_imagepos,file,xc,yc
 ;
 ; INPUTS:
 ;	file - name of the calibrated image file
@@ -15,12 +12,13 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 ;	xc, yc - x and y centroid of the star
 ;	xerr,yerr - error in pointing
 ;
-; OPTIONAL KEYWORD INPUTS:
-;	/display - display image and star position
-;	xstar - approximate x position of the star
-;	ystar - approximate y position of the star
+; OPTIONAL INPUTS:
 ;	crval1 - crval1 from the header (ra at center of image)
 ;	crval2 - crval2 from the header (dec at center of image)
+;	/display - display image and star position
+;	/xstar - approximate x position of the star
+;	/ystar - approximate y position of the star
+;	/target - name for the target that is in dir log file. 2020feb4
 ;
 ; HISTORY
 ;	version 1, D. Lindler, Oct 2003
@@ -31,6 +29,9 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 ;	15may6  - RCB - compute and return pointing error xerr,yerr in px
 ;	18Apr - for subarr, xc,yc are in subarr px ref frame.
 ;	18May - Try increasing search box from 25 to 35px=+/-4.5" for some GRW
+;	20feb - Add target name to input & call wfcread instead of fits_read
+;		to do coord corr. & replace that func in wfcdir for multiple
+;		targets on an image.
 ;-
 ;-------------------------------------------------------
 	st=''
@@ -39,7 +40,10 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 		return
 	end
 	
-	fits_read,file,image,h
+;2020feb4-replace reading of header w/ wfcread, which will corr coord, as needed
+;	fits_read,file,image,h
+	wfcread,file,target,image,h
+
 ;
 ; set bad data to zeros
 ;

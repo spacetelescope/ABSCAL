@@ -44,6 +44,7 @@ if n lt 1 then begin
 		end
 niclast=''				; last nicmos observation ID
 poslast=''				; last nicmos offset
+blank='            '			; for padding short targnames 2020jan
 strout=strarr(n)			; output string array for sorting
 ;
 ; open output file
@@ -73,20 +74,31 @@ for i=0,n-1 do begin
 	grating = sxpar(hd,'filter')
 ; aperture = G102 for iab904mfq, ans should be G141-REF BUT no problem.
 	aperture = sxpar(hd,'aperture')
+; 2020feb3 - Get orig target name from SPT file to fix Gaia name screwup
+; Read SPT file to get trail rate & orig targname.
+	fil=lst(i)
+	posn=strpos(fil,'.fits')
+	strput,fil,'spt',posn-3
+	fil=findfile(fil)
+	if fil eq '' then scnrat=0 else begin		; 2013nov6
+			fits_read,fil,im,hspt,/header_only,exten_no=1
+			scnrat=sxpar(hspt,'SCAN_RAT')
+;			help,scnrat & stop
+			endelse
 
-	targname=sxpar(hd,'targname')
+	targname=sxpar(hspt,'targname')			; 2020feb3 was hd
 	if strpos(targname,'6822-HV') ge 0 then targname=	$
 			       replace_char(targname,'-','')   ; n6822 shorten
 ;fix typos and alternate names:
-	if strpos(targname,'GD-153') ge 0 then targname='GD153       '
-	if strpos(targname,'GD-71') ge 0 then targname='GD71        '
+	if strpos(targname,'GD-153') ge 0 then targname=   'GD153       '
+	if strpos(targname,'GD-71') ge 0 then targname=    'GD71        '
         if strpos(targname,'BD+52-913') ge 0 then targname='G191B2B     '
         if strpos(targname,'G 191-B2B') ge 0 then targname='G191B2B     '
         if strpos(targname,'EGGR-247') ge 0  then targname='G191B2B     '
-        if strpos(targname,'HIP66578') ge 0 then targname='GRW_70D5824 '
+        if strpos(targname,'HIP66578') ge 0 then targname= 'GRW_70D5824 '
         if strpos(targname,'HIP-66578') ge 0 then targname='GRW_70D5824 '
-        if strpos(targname,'EGGR-102') ge 0 then targname='GRW_70D5824 '
-        if strpos(targname,'70D5824') ge 0 then targname='GRW_70D5824 '
+        if strpos(targname,'EGGR-102') ge 0 then targname= 'GRW_70D5824 '
+        if strpos(targname,'70D5824') ge 0 then targname=  'GRW_70D5824 '
         if strpos(targname,'GSC-02581-02323') ge 0 then targname='P330E       '
         if strpos(targname,'J17583798+6646522') ge 0 		$
 					then targname='KF06T2      '
@@ -106,14 +118,16 @@ for i=0,n-1 do begin
 	if strpos(targname,'J00361') ge 0 then targname='2M003618    '
 	if strpos(targname,'J05591') ge 0 then targname='2M055914    '
 	if strpos(targname,'J17571') ge 0 then targname='1757132     '
-	if strpos(targname,'LTT-2351') ge 0 then targname='HD37962     ';no stare
+	if strpos(targname,'LTT-2351') ge 0 then targname='HD37962     ';nostare
 	if strpos(targname,'BD+60-1753')  ge 0 then targname='BD60D1753   '
 	if strpos(targname,'J18083') ge 0 then targname='1808347     '
 	if strpos(targname,'180609') ge 0 then targname='HD180609    '
 	if strpos(targname,'SNAP-2') ge 0 then targname='SNAP2       '
 	if strpos(targname, 'GOODS-S')  ge 0 then targname='C26202      '
-	if strpos(targname,'NONE') ge 0 then 			$
+	if strpos(targname,'NONE') ge 0 then 				$
 				targname=sxpar(hd,'sclamp')+'   '
+	if strmid(targname,0,4) eq 'GAIA' then targname='GAIA'+		$
+		strmid(targname,9,3)+'_'+strmid(targname,24,4)
 	naxis1=string(sxpar(hd,'naxis1'),'(i4)')
 	naxis2=string(sxpar(hd,'naxis2'),'(i4)')
 	instr=strtrim(sxpar(hd,'instrume'),2)	; 06jan-try for ACS
@@ -131,16 +145,6 @@ for i=0,n-1 do begin
 	m1=sxpar(hd,'postarg1')
 	m2=sxpar(hd,'postarg2')
 	postarg=string([m1,m2],'(f7.1,",",f7.1)')
-; Read SPT file to get trail rate.
-	fil=lst(i)
-	posn=strpos(fil,'.fits')
-	strput,fil,'spt',posn-3
-	fil=findfile(fil)
-	if fil eq '' then scnrat=0 else begin		; 2013nov6
-			fits_read,fil,im,hspt,/header_only,exten_no=1
-			scnrat=sxpar(hspt,'SCAN_RAT')
-;			help,scnrat & stop
-			endelse
 ; ###change - 2nd below for scanned log, 1st (ne 0) for stare:
 	if scnrat ne 0 then goto,skipit			; for stare obs
 ;	if scnrat eq 0 and strmid(grating,0,1) 	eq 'G' then goto,skipit
@@ -148,6 +152,8 @@ for i=0,n-1 do begin
 ;
 ; format for printing to text file. amp is just a ' ' dummy placeholder 
 ;
+	len=strlen(targname)
+	if len lt 12 then targname=targname+strmid(blank,0,12-len)
 	strout(i) = root+amp+' '+strmid(grating,0,7)+' '+ 	$
 		     strmid(aperture,0,15)+' '+strmid(imtype,0,6)+	$
 		     strmid(targname,0,12)+' '+naxis1+'x'+naxis2+	$
@@ -174,22 +180,22 @@ star=uniq(targsort)
 nstar=n_elements(star)
 ; 2018Apr19 - Correct for lazy WFC3 IS, who omit the PM!
 ;	list of stars w/ P.M. > ~4px = ~0.5" in 25 yrs-->i.e. 20milli-arcsec/yr:
-fastar=['G191B2B','GD153','GD71','GRW_70D5824','HD37725','HD205905',		$
-	'HD38949','LDS749B','VB8','WD1657_343','WD1327_083','WD2341_322','2M003618',$
+fastar=['G191B2B','GD153','GD71','GRW_70D5824','HD37725','HD205905',	     $
+	'HD38949','LDS749B','VB8','WD1657_343','WD1327_083','WD2341_322','2M003618', $
 	'2M055914']
 ; use ten(hr,mn,sc)*15, ck w/ sixty.pro
 ; Use Simbad coord, but some are specified differently, eg WD2341+322
 ;	and astrom is based on specified star coord.
-rafast= [76.377553d,194.25974,88.115058,204.71032,85.476546,324.79230,		$
-	 87.083579,323.06767,253.89705,254.71300,202.55683,355.96136,9.0674,	$
+rafast= [76.377553d,194.25974,88.115058,204.71032,85.476546,324.79230,	     $
+	 87.083579,323.06767,253.89705,254.71300,202.55683,355.96136,9.0674, $
 	 89.829762]
-decfast=[52.831100d,22.031300,15.887153,70.285461,29.297478,-27.306575,		$
-	-24.463850,0.25400000,-8.394475,34.314803,-8.5748601,32.546293,18.352908, $
+decfast=[52.831100d,22.031300,15.887153,70.285461,29.297478,-27.306575,	     $
+	-24.463850,0.25400000,-8.394475,34.314803,-8.5748601,32.546293,18.352908,    $
 	-14.080244]
 ; mas/yr:
-rapm=[  +7.45, -46,  76,-404, 16.7,385.2,-30.47,416,-812.4, 11,-1106.3,-209.07,	$
+rapm=[  +7.45, -46,  76,-404, 16.7,385.2,-30.47,416,-812.4, 11,-1106.3,-209.07,$
 	883,563]
-decpm=[-89.54,-204,-172, -22,-27.8,-84.8,-36.46,+30,-871.2,-31,-475.97,-69.08,	$
+decpm=[-89.54,-204,-172, -22,-27.8,-84.8,-36.46,+30,-871.2,-31,-475.97,-69.08, $
 	108,-346]
 ; ###change: 2018apr12 - keep only adjacent direct images (F*) for grism cases
 ;	must go star-by-star. Mod here to make photom, etc. logs
@@ -248,10 +254,8 @@ for istr=0,nstar-1 do begin
 ;corr for pm
 	    delra=fracyr*rapm(indx)/1000.d  ; arcsec
 	    deldec=fracyr*decpm(indx)/1000.d
-;; NO	    rafast=sxpar(hd,'crval1')		    ; NOT coord of star!!!
-;;	    decfast=sxpar(hd,'crval2')
-	    print,'PM corr for '+targ+' at',tra,tdec,fracyr,delra,deldec, $
-	    	    '	  for '+fils(ifil),form='(a,2f11.6,3f8.2/a)'
+;	    print,'PM corr for '+targ+' at',tra,tdec,fracyr,delra,deldec, $
+;	    	    '	  for '+fils(ifil),form='(a,2f11.6,3f8.2/a)'
 	    tra=tra+delra/3600.d		    ;degree coord of ref. px
 	    tdec=tdec+deldec/3600.d
 	    fxhmodify,fils(ifil),'RA_TARG',tra(0),		    $

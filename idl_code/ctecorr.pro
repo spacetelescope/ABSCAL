@@ -204,7 +204,7 @@ if ndx gt 0 then begin
 	epsf(indx)=epsf(indx)>170	; CTE corr uncertain. fixed 04jan21.
 	endif
 
-; corr for time diff from 2000.6 @ 21.6 %/yr. Zero ~1yr before launch @ ~1996.0
+; corr for time diff from 2000.6 @ 21.6 %/yr. Zero ~1yr before launch @ 1995.97
 delta=(time-2000.6)*.216+1	; for launch at 1997.16
 ; 2017may12 - adjust for temp dependent CTE of 2.6% per 1 deg C:
 ;; no help: tmpcorr=1.	; early hdrs have no temp keywords (see ttcorr.pro)

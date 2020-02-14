@@ -1,4 +1,4 @@
-pro prewfc,dir
+pro prewfc,dir,display=display
 ;+
 ; EXAMPLE:
 ;	nic_process,'snap-1','n8u407',/before,grism='G206'
@@ -17,8 +17,8 @@ pro prewfc,dir
 loadct,0
 grism=['G102','G141']			; info
 
-!textout=2				; to not pause on Don's msgs.
-!dump=1					; to see don's msgs & interpr. err msgs
+;!textout=2				; to not pause on Don's msgs.
+;!dump=1					; to see don's msgs & interpr. err msgs
 ; ###change:
 ; 2019-11-22-BQ: turn the directory into a parameter, as per wfcdir.pro
 if N_PARAMS(0) EQ 0 THEN dir='~/internal2/wfc3/stare/ir/'
@@ -88,7 +88,7 @@ help,i,obs(i)
 		xstar=xstar,ystar=ystar,				$
 ;dir img aXe disp ref, not ZO. Change code to name 'axe' if redoing.
 ;		/dirimg							$
-;		/displ,/trace,						$
+		/displ,/trace,						$
 ;		grism='g141'
 ;	 	flatfile='none',					$
  		flatfile='ref/sedFFcube-both.fits',  		$;2018aprDEFAULT

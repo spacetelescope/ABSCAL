@@ -9,10 +9,10 @@ pro make_mod_calspec,filespec,modtype
 ;	for R=300,000 BOSZ models for Calspec.
 ;
 ; CALLING SEQUENCE:
-;	make_mod_calspec,filespec
+;	make_mod_calspec,filespec,modtype=?
 ;
 ; INPUTS:
-;	filespec - filespec for ascii model w/ fully calib flux
+;	filespec - filespec for ascii model w/ fully calib flux (or uncal model)
 ;		- or for CK04 models, specify filespec as '~/nical/spec/1*.mrg
 ;		(BUT these are not delivered.)
 ;	modtype - ascii type of model, eg: 'mz' (required for model grids)
@@ -21,22 +21,27 @@ pro make_mod_calspec,filespec,modtype
 ;	.fits files placed current dir (calpec/deliv)
 ;		<starname>_mod_00x.fits (read w. mrdfits)
 ; 
-; EXAMPLE: Execute in calspec/deliv dir (or wherever file is to be written)
-;
+; --> Execute in calspec/deliv dir (or wherever file is to be written)
+; EXAMPLEs: 
 ; Properly normalized files:
-;	make_mod_calspec,'/internal/1/wd/dat/*.gian2013-nlte'
-;	make_mod_calspec,'/internal/1/wd/dat/gd*.rauch-hyd'        2 of 4 prime
-;	make_mod_calspec,'/internal/1/wd/dat/hz43.rauch-hyd'       3 of 4 prime
-;	make_mod_calspec,'/internal/1/wd/dat/g191.rauch59000-nlte' 4 of 4 prime
+;	make_mod_calspec,'~/wd/dat/gd153.rauch-40204'	   1 of 3 prime
+;	make_mod_calspec,'~/wd/dat/gd71.rauch-33301'	   2 of 3 prime
+;	make_mod_calspec,'~/wd/dat/g191.hubeny59000-nlte'  3 of 3 prime
+
+;	make_mod_calspec,'~/wd/dat/hz43.rauch-hyd'        4th orig prime
 ; Norm to latest STIS reduction over 68-7700A: 
+;	make_mod_calspec,'~/wd/dat/*.gian2013-nlte'
 ;	make_mod_calspec,'/internal/1/wd/dat/*hub07*red'	;WD1057 & 1657
 ;	make_mod_calspec,'/internal/1/calib/lds749b/lds749b_mod.dk'
 ;	make_mod_calspec,'/internal/1/wd/dat/wd0308_mod.dk'
 ;	make_mod_calspec,'~/rocket/stds/sirallpr16-new.500resam501'
 ;obsolete make_mod_calspec,'/internal/1/calib/vega/vegamod_r500.05kur9400'
-;	make_mod_calspec,'../../calib/vega/vegamod_r500.344kur9550'
+;obsolete make_mod_calspec,'../../calib/vega/vegamod_r500.344kur9550'
+; 2020jan18-Streamline to make Vega processing match Sirius & skip calib/makstd:
+;	make_mod_calspec,'../../calib/vega/VEGALLPR25.500RESAM501'	; 9550K
+
 ; 2014may23 - Make a model .fits file for Susana w/ flag of stiscal:
-;	make_mod_calspec,'/internal/1/stiscal/dat/p330e.mrg','mz' ;or marcs,ck04
+;obsol:	make_mod_calspec,'/internal/1/stiscal/dat/p330e.mrg','mz' ;or marcs,ck04
 ;	make_mod_calspec,'/internal/1//calib/sun/fsunallp.5000resam51'
 ;
 ; HISTORY:
@@ -54,6 +59,7 @@ pro make_mod_calspec,filespec,modtype
 ;	2014dec31 - Fix Vega norm. Old alpha_lyr_mod_001.fits is wrong.
 ;	2017nov8 - write solar spectrum made from Kz model, incl contin, tho
 ;		using make_hires.pro might have been better.
+;	2019Oct3 - New Rauch models for 2 GD* prime stds.
 ;-
 ;-----------------------------------------------------------------------------
 ;
@@ -98,31 +104,30 @@ mtitsav=''
 	   wave=x(0:-2,0)				; trim last bad pt.
 	   flux=x(0:-2,1)
 	   cont=x(0:-2,2)				; 2019aug13 (eg Vega)
-; old	   if target eq 'Sun' then cont=x(*,2)		; continuum for Sun
 ; Re-norm all except 4 prime WDs:
 	   mnwl=0					; flag for 4 prime WDs
 	   endelse
 	   
+	contcol=1				; 2019Oct - new default
+; 3 prime stds & hz43 already normalized, otherwise re-normalize here:
 	if strpos(star,'g') ne 0 and strpos(star,'hz') ne 0		$
 			and strpos(file,'target') lt 0 then begin ; target 4 LCB
 		header=!mtitle				; trim garbage
-		if strpos(star,'vega') ge 0 then target='hd172167'
+		if strpos(star,'VEGA') ge 0 then target='hd172167'
 		if strpos(star,'wd0308') ge 0 then target='wd-0308-565'
 		if strpos(file,'sirallpr16-new') gt 0 then begin
-			wave=wave*10			;nm->AA
+			wave=wave*10				;nm->AA
 			target='sirius'
 			endif
-; re-normalize here:
-	stisfil=findfile('../../stiscal/dat/'+strlowcase(target)+'*.mrg')
-		contcol=1				; 2019aug - new default
+	       stisfil=findfile('../../stiscal/dat/'+strlowcase(target)+'*.mrg')
 		if target eq 'Sun' then	begin
 			wave=wave*10			;nm->AA
-			contcol=1			;write continuum
 			stisfil='/internal/1/calib/sun/sun-thuillier.txt'
 			header=[header,'VTURB 1.5, VMACRO 1.5,'+	$
 			     ' VROTATION  2.0, VMACRO 1.5 km/s, HE 0.089']
 			endif
-stisfil:	print,'NORMALIZING model to '+stisfil
+stisfil:	if target eq 'hd172167' then goto,hd172167 else		$
+			print,'NORMALIZING model to '+stisfil 
 		if strpos(stisfil(0),'target') ge 0 then 		$
 			readcol,stisfil(0),w,f,delimiter=',' else begin ; LCB
 		   rdf,stisfil(0),1,d				; Stis cases
@@ -138,26 +143,30 @@ stisfil:	print,'NORMALIZING model to '+stisfil
 ; wave is model, w is data:
 		normod=tin(w,f,mnwl,mxwl)/tin(wave,flux,mnwl,mxwl)
 ; 2014dec31 - old alpha_lyr_mod_001.fits is wrong.
+hd172167:
 		if target eq 'hd172167' then begin		; Vega
+			wave=wave*10
 			mnwl=5557.54-12.5  &  mxwl=5557.54+12.5
-			normod=3.44e-9/tin(wave,flux,mnwl,mxwl)
+			normod=3.47e-9/tin(wave,flux,mnwl,mxwl)	;2020jan18
+			print,'Vega norm. to 3.47e-9'
 			endif
+
 		flux=flux*normod
 		if contcol then cont=cont*normod
 		if target eq 'hd172167' then 				$
-			header=[header,'Model Normalized to 3.44e-9 by'+$
+			header=[header,'Model Normalized to 3.47e-9 by'+$
 				string(normod,'(e12.5)')+' at '+     	$
 				string([mnwl,mxwl],"(i4,'-',i4,'A')")]	$
 		    else						$
 			header=[header,'Model Normalized to obs. by'+	$
 				string(normod,'(e12.5)')+' at '+     	$
 				string([mnwl,mxwl],"(i4,'-',i4,'A')")]
-		endif
+		endif					; end unnorm cases
 		
 	nheader=n_elements(header)
 	if strpos(file,'fin') ge 0 then airtovac,wave	; vac wavelengths
 ;
-; create binary .fits files (ref: rampfits.pro & abscorsig.pro)
+; create binary .fits files (cf: rampfits.pro & abscorsig.pro)
 ;
 	hd = ['END     ']
 	sxaddpar,hd,'simple','T'
@@ -175,12 +184,12 @@ stisfil:	print,'NORMALIZING model to '+stisfil
         spos=strpos(name,'-')
         if spos gt 0 then strput,name,'_',spos  ; replace - with _
 ; ###change for later versions
-	ver='7'				; 09may22 - skip 6, except for gd71.
-	ver='1'				; new models
+;	ver='7'				; 09may22 - skip 6, except for gd71.
 ;	ver='5'				; WD1* & lds
-	ver='3'				; 2019aug vega & Sirius
+;	ver='3'				; 2019aug vega & Sirius
 ;	ver='9'				; 4 Rauch or Gianninas Models
-;	ver='10'			; 4 Rauch Models 2014Apr21
+	ver='11'			; 3 recal Models 2019dec27
+	ver='04'				; 2020jan18 sirius
 	sxaddpar,hd,'source', $
 ;		'Rauch, Werner, Bohlin, & Kruk 2013, A&A, 560, A106'
 ;		'Hubeny TLusty203: PURE HYDROGEN NLTE MODEL' ;2 wd*'s ........
@@ -190,15 +199,19 @@ stisfil:	print,'NORMALIZING model to '+stisfil
 ;		'Bohlin, R. C., & Koester, D. 2008, AJ, 135, 1092'	; LDS
 ;		'Koester He Model' 					; wd0308
 ;		'Bohlin, R. C., & Gilliland, R. L. 2004, AJ, 128, 3054' ;oldVega
-		'Bohlin, R. C. 2014, AJ, 147, 127'	; Sirius & Vega
+;		'Bohlin, R. C. 2014, AJ, 147, 127'	; Sirius & Vega
+		'Bohlin, Hubeny, & Rauch 2020, AJ, in prep.'
 ;		'Bohlin, Meszaros, Gordon 2014, AJ, in prep'		; models
 ;		'Bohlin, Gordon, Tremblay 2014, PASP, 126, 711'		;WD mods
 ;		'http://kurucz.harvard.edu/stars/sun/fsunallp.5000resam51'
-	sxaddpar,hd,'source2', 'Bohlin, Deustua, & de Rosa 2019, AJ, subm.'
+	sxaddpar,hd,'source2', 'Bohlin, Deustua, & de Rosa 2019, AJ, 158, 211'
 ; comments (do NOT overwrite one w/ another):
-;	if target eq 'G191' then 					$
-;	  sxaddpar,hd,'comment',"= 'Rauch: METAL LINE BLANKETED NLTE MODEL' /" $
-;	  else sxaddpar,hd,'comment',"= 'Rauch: PURE HYDROGEN NLTE MODEL' /"
+	if target eq 'G191' then 					$
+	  sxaddpar,hd,'comment',"= 'Hubeny: METAL LINE BLANKETED NLTE MODEL' /"$
+;	  else sxaddpar,hd,'comment',"= 'Hubeny: PURE HYDROGEN NLTE MODEL' /"
+	  else if strpos(strlowcase(file),'resam') lt 0 then		$
+		sxaddpar,hd,'comment',"= 'Rauch: PURE HYDROGEN NLTE MODEL' /"
+
 ;	sxaddpar,hd,'comment',"= 'Gianninas: PURE HYDROGEN NLTE MODEL' /"
 
 ; ###change END
@@ -280,8 +293,8 @@ stisfil:	print,'NORMALIZING model to '+stisfil
 		endif
 ; ###change
 ;	name = name + '_mod_'+modtype+'.fits'	; for CALSPEC
-	name = name + '_mod_00'+ver+'.fits'	; for CALSPEC
-;	name = name + '_mod_0'+ver+'.fits'	; for CALSPEC ver 10 etc
+;	name = name + '_mod_00'+ver+'.fits'	; for CALSPEC
+	name = name + '_mod_0'+ver+'.fits'	; for CALSPEC ver 10+ or '04' eg
 ;	name = name + '_mod_00'+ver+'-gian.fits'; for CALSPEC
 	if strpos(file,'stiscal') ge 0 then name=star+'_'+modtype+	$
 							'_mod_00'+ver+'.fits'
@@ -293,13 +306,18 @@ stisfil:	print,'NORMALIZING model to '+stisfil
 ; add some history info 
 ;
 	sxaddhist,'UNITS: Wavelength(Angstroms), Flux(erg s-1 cm-2 Ang-1)',hd
-	sxaddhist,'All wavelengths are in vacuum.',hd		; Sun. Gen OK?
+; ###change - redundant to input? NOT vega,sirius	
+	sxaddhist,'All wavelengths are in vacuum.',hd
 	sxaddhist,'CHANGES from previous version:',hd
-	sxaddhist,'  Corr for Saturated obs. changes with time',hd	; sirius
+; ###change
+	sxaddhist,'  Rauch & Hubeny WD models agree much better.',hd  ; not vega
+	sxaddhist,'    and have New average Teff,log g.',hd	      ; not vega
+;	sxaddhist,'  Corr for Saturated obs. changes with time',hd    ; sirius
 ;	sxaddhist,'  Teff increase from 9400 to 9550K',hd	;vega
 ;	sxaddhist,'  Use EXTRSIZE=11 for G750L',hd
-;       sxaddhist,'  Reconcile visible and IR absolute flux, where',hd
-;vega	sxaddhist,'Vega Flux(5556A-air)=3.44e-9 (Bohlin 2014, AJ, 147, 127)',hd
+	sxaddhist,'  Reconcile visible and IR absolute flux, where',hd
+	sxaddhist,'    new Vega Flux(5556A-air)=3.47e-9 Bohlin,et al '+	$
+							'2020, AJ,in prep',hd
 	sxaddhist,'INPUT FILE: '+file,hd
 	sxaddhist,'Written by MAKE_MOD_CALSPEC.pro  '+!STIME,hd
 	if contcol then sxaddhist,					$

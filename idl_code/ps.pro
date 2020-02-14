@@ -9,14 +9,12 @@ set_plot,'x'
 !y.thick=1
 
 ; Do: "lpstat -a"  to find the names of printers installed.
-;spawn,'lpr -Phpc82 idl.ps'			; Banner + blank page
 ; for Muller: spawn,'lp -dhpc80 idl.ps' 	; No extra pp
-print,'idl.ps on hpc80'
-;spawn,'lpr -P hpc80_stsci_edu idl.eps'		; MAC
-spawn,'lpr -P hpc80 idl.ps'		; Linux
+print,'idl.ps on PWPRINT-PA635CAN'
+;spawn,'lpr -P hpc80_stsci_edu idl.eps'		; MAC --- 2019dec NG on mac
+spawn,'lpr -P PWPRINT-PA635CAN idl.ps'		; Linux --- 2019dec NG on mac
 
-spawn,'lpq -Phpc80'
-;spawn,'lpq -P hpc80_stsci_edu'
+; NG spawn,'lpq -PPWPRINT-PA635CAN'		; 2019dec NG on mac
 return
 end
 

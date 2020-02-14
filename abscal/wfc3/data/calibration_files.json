@@ -1,0 +1,14 @@
+{
+	"flatfield": {
+					"wfc3": {
+								"G102": "WFC3.IR.G102.sky.V1.0.fits",
+								"G141": "WFC3.IR.G141.sky.V1.0.fits"
+							}
+				 },
+	"flatfield_cube": {
+						"wfc3": {
+									"G102": "sedFFcube-both.fits",
+									"G141": "sedFFcube-both.fits"
+								}
+					  }
+}

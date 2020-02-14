@@ -116,7 +116,7 @@ pro wfc_process,target,subobs,directory=directory,			      $
 		obs=allobs
 		filter=allfilt
 	     end else							$
-		if n_elements(subobs) le 1 then begin
+		if n_elements(subobs) le 1 then begin	; normal prewfc case
 ; if one element, then must be 6 char to pick up a set that incl the acq image!
 			good=where(strmid(allobs,0,6) eq subobs)
 ; special patch to include an orphan obs that should be part of iab901 or iab904
@@ -158,10 +158,11 @@ pro wfc_process,target,subobs,directory=directory,			      $
 	    if strmid(filter(i),0,1) ne 'G' then begin	; ref. images
 	    	if filter(i) ne 'Blank' then begin	; skip scan mode darks
 	    	     calwfc_imagepos,lst(i),xc,yc,crval1,crval2,xerr,	$
-		     		yerr,display=display,xstar=xstar,ystar=ystar
+		     		yerr,display=display,xstar=xstar,	$
+				ystar=ystar,target=target
 		     dirimnam=obs(i)
 		     endif
-	      end else begin
+	      end else begin					; grism obs
 	        print,target
 	        calwfc_spec,lst(i),xc,yc,xerr,yerr,			$
 			ywidth = ywidth, gwidth = gwidth, bdist = bdist,$
@@ -170,7 +171,7 @@ pro wfc_process,target,subobs,directory=directory,			      $
 			subdir = subdir, star = star, before=before,	$
 			slope=slope,crval1 = crval1, crval2 = crval2,	$
 			Lbdist = Lbdist,Ubdist = Ubdist,display=display,$
-			dirimg=dirimg,dirimnam=dirimnam
+			dirimg=dirimg,dirimnam=dirimnam,target=target
 	      endelse
 	endfor						; end of lst
 ;

@@ -37,13 +37,14 @@ pro stisdir,filespec
 		print,'stisDIR - no files found for given filespec'
 		return
 		end
+
 niclast=''				; last nicmos observation ID
 poslast=''				; last nicmos offset
 strout=strarr(n)			; output string array for sorting
 ;
 ; open output file
 ;
-	openw,unit,'dirtemp.log',/get_lun
+openw,unit,'dirtemp.log',/get_lun
 ;
 ; loop on files
 ;
@@ -81,7 +82,8 @@ strout=strarr(n)			; output string array for sorting
 ;04jul21 fix typo:
 		if strpos(targname,'SNAP7') ge 0 then targname='SNAP-1      '
 		if strpos(targname,'VB-8') ge 0 then targname='VB8         '
-
+		if strmid(targname,0,4) eq 'GAIA' then	$
+		  targname='GAIA'+strmid(targname,9,3)+'_'+strmid(targname,24,4)
 		if strpos(targname,'GJ-894.3') ge 0 then targname='FEIGE110    '
 		if strpos(targname,'HD120315') ge 0 then targname='ETAUMA      '
 		if strpos(targname,'SDSSJ151') ge 0 then targname='SDSSJ151421 '
@@ -211,15 +213,42 @@ strout=strarr(n)			; output string array for sorting
 		if subarr and strpos(obsmode,'ACQ') lt 0 then strput,st,'#',9
 		strout(i)=st
 
-	end
+	endfor						; main obs. loop
 ;do not sort STIS, because the 1999 yrs follow 2000 !!
 if strpos(filespec,'/nic') ge 0 then begin
 	targsort=strmid(strout,42,12)
 	timesort=strmid(strout,70,17)
 	indx=sort(targsort+timesort)
 	strout=strout(indx)
-	endif					; comment 2019jun4
+	endif
 printf,unit,strout
+
+; 2020feb2=20200202! - Add dup filespec for J. Maiz Apellaniz 2nd targ in obs.
+imaiz=where(strpos(strout,'oe3f') ge 0,nmaiz)
+if nmaiz gt 0 then begin
+	strout=strout(imaiz)				; dup lines to print
+	for i=0,nmaiz-1 do begin
+; add dup lines w/ name = GAIA + 1st 3 dig + last 4 digits
+		nampos=strpos(strout(i),'GAIA')
+		if nampos lt 0 then goto,skipit
+		tmpstr=strout(i)			; IDL oddity workaround
+		tmpstr=replace_char(tmpstr,'E1 ','low')
+		if strpos(tmpstr,'GAIA593_1968') ge 0 then		$
+				strput,tmpstr,'GAIA593_9680',nampos
+		if strpos(tmpstr,'GAIA405_1056') ge 0 then		$
+				strput,tmpstr,'GAIA405_6912',nampos
+		if strpos(tmpstr,'GAIA587_7024') ge 0 then		$
+				strput,tmpstr,'GAIA587_3008',nampos
+		if strpos(tmpstr,'GAIA588_7632') ge 0 then		$
+				strput,tmpstr,'GAIA588_7712',nampos
+		if strpos(tmpstr,'GAIA587_0224') ge 0 then		$
+				strput,tmpstr,'GAIA587_8560',nampos
+		strout(i)=tmpstr
+		skipit:
+		endfor
+	printf,unit,strout
+	endif
+	
 printf,unit,' # - Subarray.   A,B,C - non std CCD Amp'
 free_lun,unit
 

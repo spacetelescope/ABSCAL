@@ -1,4 +1,4 @@
-function wfcwlfix,root
+function wfcwlfix,root,targ
 ;+
 ;
 ; Name:  wfcwlfix
@@ -8,12 +8,15 @@ function wfcwlfix,root
 ; CALLING SEQUNCE:
 ;	offset=wfcwlfix(root)
 ; Inputs:
-;	root - first 6 char of observation rootname (OR starname)
+;	root - observation rootname
+;	targ - target name (optional), as not added to AXE calls in
+;		CALWFC_SPEC_WAVE (which is in CALWFC_SPEC.pro)
 ;	The wavelength correction in Ang. A vector for [G102,G141]
 ;	(Disp is Ang/px=24.5, 46.5, respectively.)
 ; HISTORY
 ;	2018may14-First use for ic6903
 ;	paschen gamma,beta=10941.1, 12821.6 (10938.1, 12818.1-air)
+;	2020feb4 - add targ to param for 15816 w/ 2 targ/image. 
 ;-
 offset=0.
 case root of
@@ -88,6 +91,25 @@ case root of
         'ibwl88ahq': offset=  36.			;18Jul-BD60D G102
         'ibwl88aiq': offset=  32.			;18Jul-BD60D G102
         'ibwl88ajq': offset=  32.			;18Jul-BD60D G102
+;20jan-Gaia G102 Eye vs STIS
+	'ie3f10c1qGAIA593_1968': offset=+15.
+	'ie3f10c2qGAIA593_1968': offset=+15.
+	'ie3f10c3qGAIA593_1968': offset=+15.
+	'ie3f10c8qGAIA593_1968': offset=+15.
+	'ie3f10c9qGAIA593_1968': offset=+15.
+; G141: line up w/ G102 at ~11500A feature
+	'ie3f10caqGAIA593_1968': offset=-50.
+	'ie3f10cbqGAIA593_1968': offset=-50.
+	'ie3f10ciqGAIA593_1968': offset=-50.
+	'ie3f10cjqGAIA593_1968': offset=-50.
+	'ie3f10ckqGAIA593_1968': offset=-50.
+;20jan-Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+	'ie3f10c1qGAIA593_9680': offset=-1.
+	'ie3f10c2qGAIA593_9680': offset=-1.
+	'ie3f10c3qGAIA593_9680': offset=-1.
+	'ie3f10c8qGAIA593_9680': offset=-1.
+	'ie3f10c9qGAIA593_9680': offset=-1.
+	
         'ibll92fqq': offset=   7.			;18Jul-GRW_7 G102
         'ic5z10ogq': offset=  10.			;18Jul-GRW_7 G102
         'ibwl89tnq': offset=  -8.			;18Oct-hd37725 G102 eye
@@ -112,7 +134,7 @@ case root of
         'ic6901x1q': offset= -20.			;18Jul-G191 G141 mrg
         'ic6901x2q': offset= -10.			;18Jul-G191 G141 mrg eye
         'ic6901x5q': offset= -20.			;18Jul-G191 G141 mrg eye
-;actual        'ic6901x5q': offset=  -7.			;18Jul-G191 G141 mrg
+;actual        'ic6901x5q': offset=  -7.		;18Jul-G191 G141 mrg
         'ichg01dwq': offset=  17.			;18Jul-G191B G141
         'ichg01dyq': offset=  10.			;18Jul-G191B G141
         'ichg01dzq': offset=  12.			;18Jul-G191B G141
@@ -190,7 +212,7 @@ case root of
         'icsf23amq': offset= +30.		        ;18Jul-2m003618 G141 mrg
         'icsf02j7q': offset= 30.			;18Jul-2M055 G141 eye
         'icsf02jhq': offset= 30.			;18Jul-2M055 G141 eye
-       'ibwl88a4q': offset=  42.			;18Jul-BD60D G141 mrg
+	'ibwl88a4q': offset=  42.			;18Jul-BD60D G141 mrg
         'ibwl88a5q': offset=  36.			;18Jul-BD60D G141
         'ibwl88a6q': offset=  30.			;18Jul-BD60D G141
         'ibwl88a7q': offset=  40.			;18Jul-BD60D G141

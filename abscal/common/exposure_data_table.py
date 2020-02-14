@@ -34,7 +34,6 @@ from astropy.time import Time
 from copy import deepcopy
 
 from abscal.common.standard_stars import starlist, find_standard_star_by_name
-from abscal.common.utils import absdate
 
 
 def scan_rate_formatter(scan_rate):
@@ -42,10 +41,12 @@ def scan_rate_formatter(scan_rate):
     return "{:<9}".format(scan_rate_str)
 
 
-class ExposureTable:
-    def __init__(self, **kwargs):
+class AbscalDataTable(Table):
+    def __init__(self, data=None, masked=None, names=None, dtype=None,
+                 meta=None, copy=True, rows=None, copy_indices=True, **kwargs):
         """
-        Initialize the class. For the moment, simply set creation metadata.
+        Initialize the table. For the moment, look for abscal-specific metadata
+        and otherwise pass everything along to the superclass.
         
         Parameters
         ----------
@@ -62,69 +63,329 @@ class ExposureTable:
                 duplicates : string
                     How to handle duplicate entries
         """
-        self.creation = datetime.datetime.now()
-        self.search_str = kwargs.get('search_str', 'i*flt.fits')
-        self.search_dirs = kwargs.get('search_dirs', os.getcwd())
-        self.duplicates = kwargs.get('duplicates', 'both')
-        if "table" in kwargs and kwargs['table'] is not None:
-            idl_mode = kwargs.get("idl_mode", False)
-            table_file = kwargs.get("table")
-            self._table = self.read_table(table_file, idl_mode, **kwargs)
+        # Persistent Metadata
+        self.create_time = datetime.datetime.now()
+        self.search_str = self._get_kwarg('search_str', 'i*flt.fits', **kwargs)
+        self.search_dirs = self._get_kwarg('search_dirs', os.getcwd(), **kwargs)
+        self.duplicates = self._get_kwarg('duplicates', 'both', **kwargs)
+        
+        # Creation Flags
+        idl_mode = self._get_kwarg('idl_mode', False, **kwargs)
+        initial_table = self._get_kwarg('table', None, **kwargs)
+        
+        if initial_table is not None:
+            if data is not None:
+                msg = "ERROR: Supplied initial data {} and input file {}"
+                raise ValueError(msg.format(data, initial_table))
+            data = self._read_file_to_table(initial_table, idl_mode, **kwargs)
+        else:
+            if data is None:
+                kwargs = {}
+                names = self.standard_columns.keys()
+                dtype = [self.standard_columns[x]['dtype'] for x in names]
+
+        # Initialize superclass
+        super().__init__(data=data, masked=masked, names=names, dtype=dtype,
+                         meta=meta, copy=copy, rows=rows,
+                         copy_indices=copy_indices, **kwargs)
     
     
+    def read(*args, **kwargs):
+        """
+        Override the read method to make sure that strings have the Object type.
+        
+        Parameters
+        ----------
+        args : list
+            List of positional arguments
+        kwargs : dictionary
+            Dictionary of keyword arguments
+        
+        Returns
+        -------
+        out : astropy.table.Table
+            The table that was read in.
+        """
+        out = super().read(*args, **kwargs)
+        for col in out.itercols():
+            if col.dtype.kind in 'SU':
+                out.replace_column(col.name, col.astype('object'))
+        return out
+
+
     def add_exposure(self, metadata_dict):
         """
         Add a new row to the table from a dictionary built up from an exposure.
+        The dictionary should contain all of the standard abscal columns. If the
+        value of the root column is already in the table, then deal with it as
+        provided for in the internal duplicates metadata.
+        
+        Handling duplicates can currently be any of:
+            - both: keep the existing entry, add the new entry.
+            - preserve: keep the existing entry, discard the new entry.
+            - replace: remove the existing entry, add the new entry.
+            - neither: remove the existing entry, discard the new entry.
         
         Parameters
         ----------
         metadata_dict : dictionary
             A dictionary containing information on a single exposure.
+        
+        Returns
+        -------
+        success : bool
+            True if the column was added, False if not. Will generally only be
+            False in the case of duplicate columns.
         """
-        if not hasattr(self, '_table'):
-            column_dict = {}
-            for column in metadata_dict:
-                column_dict[column] = [metadata_dict[column]]
-            self._table = Table(column_dict, names=self.columns)
-            for col in self._table.itercols():
-                if col.dtype.kind in 'SU':
-                    self._table.replace_column(col.name, col.astype('S512'))
-            return
-
-        if metadata_dict['root'] in self._table['root']: # duplicate entry
-            if self.duplicates == 'both': # deep both
-                self._table.add_row(metadata_dict)
-            elif self.duplicates == 'preserve': # keep existing, ignore new
-                pass
-            elif self.duplicates == 'replace': # delete existing, add new
-                remove_mask = [self._table['root'] == metadata_dict['root']]
-                self._table.remove_rows(remove_mask)
-                self._table.add_row(metadata_dict)
-            elif self.duplicates == 'neither': # delete both
-                remove_mask = [self._table['root'] == metadata_dict['root']]
-                self._table.remove_rows(remove_mask)
+        for column in self.standard_columns:
+            idl = self.standard_columns[column]['idl']
+            default = self.standard_columns[column]['default']
+            if (not idl) and (default != 'N/A') and (column not in metadata_dict):
+                metadata_dict[column] = default
+        
+        if metadata_dict['root'] in self['root']:
+            if self.duplicates == 'both':
+                self.add_row(metadata_dict)
+            elif self.duplicates == 'preserve':
+                return False
+            elif self.duplicates == 'replace':
+                remove_mask = [self['root'] == metadata_dict['root']]
+                self.remove_rows(remove_mask)
+                self.add_row(metadata_dict)
+            elif self.duplicates == 'neither':
+                remove_mask = [self['root'] == metadata_dict['root']]
+                self.remove_rows(remove_mask)
+                return False
             else:
                 msg = "ERROR: Unknown duplicate policy '{}'"
                 raise ValueError(msg.format(self.duplicates))
-        return
+        else:
+            self.add_row(metadata_dict)
+        return True
     
     
-    def sort_data(self, sort_list):
+    def adjust(self, adjustments):
         """
-        Sort the table by passing on sort_list directly to the internal table.
+        Adjust the table based on an adjustment dictionary. The dictionary
+        may contain entries that edit columns or delete rows.
         
         Parameters
         ----------
-        sort_list : str or list
-            Either a string matching a column or a list of strings matching
-            columns.
+        adjustments : dict
+            Dictionary of adjustments
         """
-        self._table.sort(sort_list)
+        removal_str = "Removed for {} ({})."
+        
+        for item in adjustments['delete']:
+            if item["value"] in self[item["column"]]:
+                masked = self[self[item["column"]] == item["value"]]
+                masked["use"] = False
+                new_notes = masked["notes"]
+                reason = removal_str.format(item["reason"], item["source"])
+                new_notes += [" "+reason for x in new_notes]
+                masked["notes"] = new_notes
+        
+        for item in adjustments['edit']:
+            value = item["key"]
+            prefix = [c[:len(value)] for c in self[item["column"]]]
+            if value in prefix:
+                mask = [x == value for x in prefix]
+                masked = self[mask]
+                if operation == "replace":
+                    column = masked[item["column"]]
+                    original, revised = item["value"].split("->")
+                    new_col = [x.replace(original, revised) for x in column]
+                masked[item["column"]] = new_col
+                reason = "Edited {} by {} {} because {} ({})."
+                reason = reason.format(item["column"], item["operation"],
+                                       item["value"], item["reason"],
+                                       item["source"])
+                new_notes = masked["notes"]
+                new_notes += [" "+reason for x in new_notes]
+                masked["notes"] = new_notes
+        
+        return
     
-    def read_table(self, file_name, idl_mode, **kwargs):
+    
+    def filtered_copy(self, filter_or_filters):
         """
-        Read a metadata table from a file, optionally using IDL for strict
-        compatibility. Note that, even if idl_mode is set to False, if reading
+        Get a copy of the table, filtered by the specified filters.
+        
+        Parameters
+        ----------
+        filter_or_filters : list of filters or filter
+            The filters to apply
+        
+        Returns
+        -------
+        table : AbscalDataTable
+            The filtered table
+        """
+        if not isinstance(filter_or_filters, list):
+            filter_or_filters = [filter_or_filters]
+        
+        table = deepcopy(self)
+        for filter in filter_or_filters:
+            table = self._filter_table(table, filter)
+        
+        return table
+    
+    
+    def write_to_file(self, file_name, idl_mode, **kwargs):
+        """
+        Write the table to a file, optionally using IDL strict compatibility.
+        
+        Parameters
+        ----------
+        file_name : str
+            The file to write the table to.
+        idl_mode : bool
+            Whether to write the table in IDL compatibility mode.
+        kwargs : dict
+            Optional keyword arguments. Known arguments are:
+                filters : list
+                    List of filters to apply to the table before writing it.
+        """
+        date_str = self.create_time.strftime("%d-%b-%Y %H:%M:%S")
+        format = kwargs.get('format', self.default_format)
+        filters = kwargs.get('filters', [])
+        
+        table = self.filtered_copy(filters)
+        if len(table) == 0:
+            return
+
+        table.comments = []
+        table.comments.append("Start time: {}".format(date_str))
+        for dir in self.search_dirs:
+            search_str = os.path.join(dir, self.search_str)
+            table.comments.append("Searched {}".format(search_str))
+        for filter in filters:
+            table.comments.append("Filtered by: {}".format(filter))
+        
+        if idl_mode:
+            self._write_to_idl(file_name, table, create_time=self.create_time,
+                               search_dirs=self.search_dirs,
+                               search_str = self.search_str)
+            return
+        
+        table.metadata = table.comments
+        
+        table.write(file_name, format=format, overwrite=True)
+    
+
+    @property
+    def n_exposures(self):
+        """
+        Return the number of rows in the table.
+        """
+        return len(self)
+
+
+    @staticmethod
+    def _filter_table(table, filter):
+        """
+        Filter a table by means of a particular filter. The filter should be
+        either a known string value, or a callable which takes an astropy table
+        and returns a filtered version of the table.
+        
+        Parameters
+        ----------
+        table : astropy.table.Table
+            The table to filter
+        filter : str or callable
+            Either a keyword string or a callable. Known strings are:
+                stare : filter out scan_rate > 0.
+                scan : filter out scan_rate == 0
+                filter : filter out grism data.
+                grism : keep all grism data and the closest-in-time filter
+                        exposure from the same visit as the grism exposure.
+                obset:<value> : keep all data where the root column begins with
+                                <value>.
+        
+        Returns
+        -------
+        filtered_table : astropy.table.Table
+            Filtered table.
+        """
+        if isinstance(filter, str):
+            if filter == 'stare':
+                table.remove_rows(table['scan_rate'] > 0.)
+            elif filter == 'scan':
+                table.remove_rows(table['scan_rate'] == 0.)
+            elif filter == 'filter':
+                filter_list = [f[0] != 'F' for f in table['filter']]
+                table.remove_rows(filter_list)
+            elif filter == 'grism':
+                table = AbscalDataTable._grism_filter(table)
+            elif "obset" in filter:
+                val = filter[filter.find(":")+1:]
+                len_val = len(val)
+                mask = [r[:len_val] == val for r in table['root']]
+                table = table[mask]
+        else:
+            table = filter(table)
+
+        return table
+
+
+    @staticmethod
+    def _grism_filter(table):
+        """
+        Filter the table as follows:
+            - keep all grism exposures
+            - for each grism exposure:
+                - if there is at least one filter exposure from the same
+                  program and visit,
+                    - keep the filter exposure closest in time to the grism
+                - else annotate the grism that no corresponding filter was found
+        
+        Parameters
+        ----------
+        table : astropy.table.Table
+            The table to filter.
+        
+        Returns
+        -------
+        filtered_table : astropy.table.Table
+            The filtered table.
+        """
+        grism_table = deepcopy(table)
+        grism_list = [f[0] != 'G' for f in grism_table['filter']]
+        grism_table.remove_rows(grism_list)
+        grism_check_table = deepcopy(grism_table)
+        
+        filter_table = deepcopy(table)
+        filter_list = [f[0] != 'F' for f in filter_table['filter']]
+        filter_table.remove_rows(filter_list)
+        
+        for row in grism_check_table:
+            
+            base_mask = [r == row['root'] for r in self['root']]
+            obset = row['obset']
+            check_mask = [r == obset for r in filter_table['obset']]
+            check_table = filter_table[check_mask]
+            if len(check_table) > 0:
+                check_dates = [abs(row['date']-t) for t in check_table['date']]
+                minimum_time_index = check_dates.index(min(check_dates))
+                minimum_time_row = check_table[minimum_time_index]
+                if minimum_time_row['root'] not in grism_table['root']:
+                    grism_table.add_row(minimum_time_row)
+                self[base_mask]["filter_root"] = minimum_time_row["root"]
+            else:
+                row_mask = [r == row['root'] for r in grism_table['root']]
+                msg = "No corresponding filter exposure found."
+                grism_table[row_mask]["note"] += " {}".format(msg)
+                self[base_mask]["note"] += " {}".format(msg)
+                self[base_mask]["filter_root"] = "NONE"
+        
+        grism_table.sort(['root'])
+        return grism_table
+    
+    
+    def _read_file_to_table(self, file_name, idl_mode, **kwargs):
+        """
+        Read an abscal table from a file, optionally using IDL compatibility 
+        mode. Note that, even if idl_mode is set to False, if reading
         the table fails with the standard method, then the program will attempt 
         to read the table with the IDL reader.
         
@@ -157,149 +418,8 @@ class ExposureTable:
         
         return t
         
-        
-        
-    def write_table(self, file_name, idl_mode, **kwargs):
-        """
-        Write the table to a file, optionally using IDL strict compatibility.
-        
-        Parameters
-        ----------
-        file_name : str
-            The file to write the table to.
-        idl_mode : bool
-            Whether to write the table in IDL compatibility mode.
-        kwargs : dict
-            Optional keyword arguments. Known arguments are:
-                filters : list
-                    List of filters to apply to the table before writing it.
-        """
-        date_str = self.creation.strftime("%d-%b-%Y %H:%M:%S")
-        format = kwargs.get('format', self.default_format)
-        filters = kwargs.get('filters', [])
-        if not isinstance(filters, list):
-            filters = [filters]
-        
-        table = self._table
-        for filter in filters:
-            table = self._filter_table(table, filter)
-        if len(table) == 0:
-            return
-
-        table.comments = []
-        table.comments.append("Start time: {}".format(date_str))
-        for dir in self.search_dirs:
-            search_str = os.path.join(dir, self.search_str)
-            table.comments.append("Searched {}".format(search_str))
-        for filter in filters:
-            table.comments.append("Filtered by: {}".format(filter))
-        
-        if idl_mode:
-            self._write_to_idl(file_name, table)
-            return
-        
-        table.metadata = table.comments
-        
-        table.write(file_name, format=format, overwrite=True)
-    
-
-    @property
-    def n_exposures(self):
-        """
-        Return the number of rows in the table.
-        """
-        return len(self._table)
-
-
-    def _filter_table(self, table, filter):
-        """
-        Filter a table by means of a particular filter. The filter should be
-        either a known string value, or a callable which takes an astropy table
-        and returns a filtered version of the table.
-        
-        Parameters
-        ----------
-        table : astropy.table.Table
-            The table to filter
-        filter : str or callable
-            Either a keyword string or a callable. Known strings are:
-                stare : filter out scan_rate > 0.
-                scan : filter out scan_rate == 0
-                filter : filter out grism data.
-                grism : keep all grism data and the closest-in-time filter
-                        exposure from the same visit as the grism exposure.
-        
-        Returns
-        -------
-        filtered_table : astropy.table.Table
-            Filtered table.
-        """
-        filtered_table = deepcopy(table)
-        if isinstance(filter, str):
-            if filter == 'stare':
-                filtered_table.remove_rows(filtered_table['scan_rate'] > 0.)
-            elif filter == 'scan':
-                filtered_table.remove_rows(filtered_table['scan_rate'] == 0.)
-            elif filter == 'filter':
-                filter_list = [f[0] != 'F' for f in filtered_table['filter']]
-                filtered_table.remove_rows(filter_list)
-            elif filter == 'grism':
-                filtered_table = self._grism_filter(filtered_table)
-        else:
-            filtered_table = filter(filtered_table)
-
-        return filtered_table
-
-
-    def _grism_filter(self, table):
-        """
-        Filter the table as follows:
-            - keep all grism exposures
-            - for each grism exposure:
-                - if there is at least one filter exposure from the same
-                  program and visit,
-                    - keep the filter exposure closest in time to the grism
-                - else annotate the grism that no corresponding filter was found
-        
-        Parameters
-        ----------
-        table : astropy.table.Table
-            The table to filter.
-        
-        Returns
-        -------
-        filtered_table : astropy.table.Table
-            The filtered table.
-        """
-        grism_table = deepcopy(table)
-        grism_list = [f[0] != 'G' for f in grism_table['filter']]
-        grism_table.remove_rows(grism_list)
-        grism_check_table = deepcopy(grism_table)
-        
-        filter_table = deepcopy(table)
-        filter_list = [f[0] != 'F' for f in filter_table['filter']]
-        filter_table.remove_rows(filter_list)
-        
-        for row in grism_check_table:
-            program_visit = row['root'][:6]
-            check_mask = [r[:6] == program_visit for r in filter_table['root']]
-            check_table = filter_table[check_mask]
-            if len(check_table) > 0:
-                check_dates = [abs(row['date']-t) for t in check_table['date']]
-                minimum_time_index = check_dates.index(min(check_dates))
-                minimum_time_row = check_table[minimum_time_index]
-                if minimum_time_row['root'] not in grism_table['root']:
-                    grism_table.add_row(minimum_time_row)
-            else:
-                row_mask = [r == row['root'] for r in grism_table['root']]
-                msg = "No corresponding filter exposure found."
-                grism_table[row_mask]["note"] += " {}".format(msg)
-        
-        grism_table.sort(['root'])
-        return grism_table
-    
-    
-    def _write_to_idl(self, file_name, table):
+    @staticmethod
+    def _write_to_idl(file_name, table, **kwargs):
         """
         Write the table in strict IDL mode.
         
@@ -309,6 +429,10 @@ class ExposureTable:
             The file to write to.
         table : astropy.table.Table
             The (filtered) table to write
+        kwargs : dict
+            Dictionary of optional keywords. Known keywords include:
+                create_time : datetime.DateTime
+                    Table creation date
         """
         if len(table) == 0:
             return
@@ -338,11 +462,13 @@ class ExposureTable:
                             "SCAN_RAT": "scan_rate"
                           }
         
+        columns = column_formats.keys()
+        
         idl_table = Table()
-        for column in self.idl_columns:
+        for column in columns:
             if column in column_mappings:
                 data = table[column_mappings[column]]
-            elif column == "IMG SIZE:
+            elif column == "IMG SIZE":
                 xsize = table["xsize"]
                 ysize = table["ysize"]
                 data = ["{:4d}x{:4d}".format(x,y) for x,y in zip(xsize,ysize)]
@@ -367,20 +493,36 @@ class ExposureTable:
                         bookend=False,
                         overwrite=True)
         
-        date_str = self.creation.strftime("%d-%b-%Y %H:%M:%S")
+        create_time = kwargs.get('create_time', datetime.datetime.now())
+        date_str = create_time.strftime("%d-%b-%Y %H:%M:%S")
+        search_dirs = kwargs.get('search_dirs', os.getcwd())
+        search_str = kwargs.get('search_str', 'i*flt.fits')
         with open(file_name, 'r+') as table_file:
             content = table_file.read()
             table_file.seek(0, 0)
             table_file.write("# WFCDIR {}\n".format(date_str))
-            for dir in self.search_dirs:
-                search_str = os.path.join(dir, self.search_str)
+            for dir in search_dirs:
+                search_str = os.path.join(dir, search_str)
                 table_file.write("# SEARCH FOR {}\n".format(search_str))
             table_file.write(content)
+        
+        meta_file_name = file_name + ".meta"
+        with open(meta_file_name, 'w') as meta_file:
+            meta_file.write("duplicates={}\n".format(table.duplicates))
+            meta_file.write("create_time={}\n".format(date_str))
+            meta_file.write("search_str={}\n".format(search_str))
+            for dir in search_dirs:
+                meta_file.write("search_dirs={}\n".format(dir))
+            for column in self.standard_columns:
+                if not self.standard_columns[column]['idl']:
+                    for item in table[column]:
+                        meta_file.write("{}={}\n".format(column, item))
 
         return
 
     
-    def _read_from_idl(self, table_file):
+    @staticmethod
+    def _read_from_idl(table_file):
         """
         Reads in an IDL-formatted text table, and turns it into a standard
         format.
@@ -398,13 +540,72 @@ class ExposureTable:
         """
         parse_fn = datetime.datetime.strptime
         parse_str = "%y-%m-%d %H:%M:%S"
+        parse_date = "%d-%b-%Y %H:%M:%S"
+
+        idl_column_start = (
+                            0,
+                            11,
+                            19,
+                            35, 
+                            41, 
+                            54, 
+                            64, 
+                            73, 
+                            82, 
+                            89, 
+                            98, 
+                            112
+                           )
         
         idl_table = ascii.read(table_file, 
                                format="fixed_width",
                                col_starts=idl_column_start)
         
-        t = Table()
+        duplicates = "both"
+        create_time = datetime.datetime.now()
+        search_str = "i*flt.fits"
+        search_dirs = []
+        extra_columns = {}
+        for column in self.standard_columns:
+            if not self.standard_columns[column]["idl"]:
+                extra_columns[column] = []
+        meta_file = table_file+".meta"
+        if os.path.isfile(meta_file):
+            with open(meta_file, 'r') as meta:
+                state='start'
+                for line in meta:
+                    items = line.strip().split("=")
+                    column = items[0]
+                    data = "=".join(items[1:])
+                    if column == "create_time":
+                        create_time = datetime.datetime.strptime(data, parse_date)
+                    elif column == "duplicates":
+                        duplicates = data
+                    elif column == "search_str":
+                        search_str = data
+                    elif column == "search_dirs":
+                        search_dirs.append(data)
+                    else:
+                        if column in extra_columns:
+                            if column == 'use':
+                                if 'false' in data or 'False' in data:
+                                    extra_columns[column].append(False)
+                                else:
+                                    extra_columns[column].append(True)
+                            else:
+                                extra_columns[column].append(data)
+                        else:
+                            msg = "ERROR: Unknown Metadata Line: {}"
+                            raise ValueError(msg.format(line.strip()))
+        
+        if len(search_dirs) == 0:
+            search_dirs.append(os.getcwd())
+        
+        t = AbscalDataTable(duplicates=duplicates, search_str=search_str,
+                            search_dirs=search_dirs, idl_mode=True)
+        t.create_time = create_time
         t['root'] = idl_table['ROOT']
+        t['obset'] = [r[:6] for r in idl_table['ROOT']]
         t['filter'] = idl_table['MODE']
         t['aperture'] = idl_table['APER']
         t['exposure_type'] = idl_table['TYPE']
@@ -423,61 +624,79 @@ class ExposureTable:
         postarg_2 = [float(p[8:].strip()) for p in idl_table["POSTARG X,Y"]]
         t['postarg2'] = Column(postarg_2)
         t['scan_rate'] = idl_table["SCAN_RAT"]
-        t['notes'] = Column(["" for r in idl_table["ROOT"]])
+        for column in self.standard_columns:
+            t[column] = Column(standard_columns[column])
         t.comments = idl_table.comments
         
         return t
-
-
-    columns = [
-                'root', 
-                'filter', 
-                'aperture', 
-                'exposure_type', 
-                'target', 
-                'xsize',
-                'ysize',
-                'date',
-                'proposal',
-                'exptime', 
-                'postarg1',
-                'postarg2',
-                'scan_rate',
-                'notes'
-              ]
-
     
-    idl_columns = [
-                    'ROOT',
-                    'MODE',
-                    'APER',
-                    'TYPE',
-                    'TARGET',
-                    'IMG SIZE',
-                    'DATE',
-                    'TIME',
-                    'PROPID',
-                    'EXPTIME',
-                    'POSTARG X,Y',
-                    'SCAN_RAT'
-                  ]
-    idl_column_start = (
-                        0,
-                        11,
-                        19,
-                        35, 
-                        41, 
-                        54, 
-                        64, 
-                        73, 
-                        82, 
-                        89, 
-                        98, 
-                        112
-                       )
+    
+    @staticmethod
+    def _get_kwarg(key, default, **kwargs):
+        """
+        Get an abscal-specific kwarg from the kwarg dictionary (if present),
+        otherwise returning a default value.
+        
+        Parameters
+        ----------
+        key : str
+            The kwarg key to look for
+        default : obj
+            The default value of key
+        kwargs : dict
+            The keyword dictionary to search.
+        """
+        if key in kwargs:
+            return kwargs.pop(key)
+        return default
     
     
     default_format = 'ascii.ipac'
+    
+    standard_columns = {
+                            'root': {'dtype': 'O', 'idl': True},
+                            'obset': {'dtype': 'S6', 'idl': True},
+                            'filter': {'dtype': 'O', 'idl': True},
+                            'aperture': {'dtype': 'O', 'idl': True},
+                            'exposure_type': {'dtype': 'O', 'idl': True},
+                            'target': {'dtype': 'O', 'idl': True},
+                            'xsize': {'dtype': 'i4', 'idl': True},
+                            'ysize': {'dtype': 'i4', 'idl': True},
+                            'date': {'dtype': 'O', 'idl': True},
+                            'proposal': {'dtype': 'i4', 'idl': True},
+                            'exptime': {'dtype': 'f8', 'idl': True},
+                            'postarg1': {'dtype': 'f8', 'idl': True},
+                            'postarg2': {'dtype': 'f8', 'idl': True},
+                            'scan_rate': {'dtype': 'f8', 'idl': True},
+                            'path': {'dtype': 'O', 'idl': False, 
+                                     'default': 'N/A'},
+                            'use': {'dtype': '?1', 'idl': False, 
+                                    'default': True},
+                            'filter_root': {'dtype': 'S10', 'idl': False,
+                                            'default': 'unknown'},
+                            'filename': {'dtype': 'O', 'idl': False,
+                                         'default': 'N/A'},
+                            'xc': {'dtype': 'f8', 'idl': False, 'default': -1.},
+                            'yc': {'dtype': 'f8', 'idl': False, 'default': -1.},
+                            'xerr': {'dtype': 'f8', 'idl': False, 
+                                     'default': -1.},
+                            'yerr': {'dtype': 'f8', 'idl': False, 
+                                     'default': -1.},
+                            'crval1': {'dtype': 'f8', 'idl': False, 
+                                       'default': 0.},
+                            'crval2': {'dtype': 'f8', 'idl': False, 
+                                       'default': 0.},
+                            'ra_targ': {'dtype': 'f8', 'idl': False, 
+                                        'default': 0.},
+                            'dec_targ': {'dtype': 'f8', 'idl': False, 
+                                         'default': 0.},
+                            'extracted': {'dtype': 'O', 'idl': False, 
+                                          'default': ''}
+                            'notes': {'dtype': 'O', 'idl': False, 
+                                      'default': 'N/A'},
+                       }
+    
+
 
 # This is the only way that I've figured out to actually read in correctly.
 #t = ascii.read("dirtemp_all.log", format="fixed_width", col_starts=(0, 11, 19, 35, 41, 54, 64, 73, 82, 89, 98, 112))

@@ -524,7 +524,7 @@ read,st
 ; 2014 feb - ff Kz special 9400K model norm to STIS at 5300-5400A to avoid
 ;	discont at5350A cutoff. 6800-7700A norm makes 0.5% too low for vegadust.
 ; ###change, if Vega changes:
-			ssreadfits,'deliv/alpha_lyr_mod_003.fits',h,wold,fold
+			ssreadfits,'deliv/alpha_lyr_mod_004.fits',h,wold,fold
 ; 2014dec31 - change from 5300-5400 to 5556A norm:
 			mnwl=5557.54-12.5  &  mxwl=5557.54+12.5
 			norm=3.44e-9/tin(wold,fold,mnwl,mxwl)
@@ -1445,9 +1445,9 @@ if !d.name eq 'X' then read,st
 			sxaddhist,' 1150    '+string(wcut,'(i4)')+	$
 				'       IUE            '+ 		$
 				'     ancient/pop/sirius.txt',hd
-			sxaddhist,string(wcut,10222,'STIS',	$
+			sxaddhist,string(wcut,10200,'STIS',	$
 				'sirius.mrg',form=wlsrc),hd
-			sxaddhist,string(10222,2996860,'Kurucz Special Model',+$
+			sxaddhist,string(10200,2996860,'Kurucz Special Model',+$
 				'sirallpr16.500resam501',form=wlsrc),hd
 			sxaddhist,' IUE fluxes increased by '+		$
 				string(norm,'(f5.3)')+' by '+      	$
@@ -1476,8 +1476,9 @@ if !d.name eq 'X' then read,st
 			exptime=flux*0
 			dataqual=flux*0+1
 			fwhm=wave/500.
-			wcut=10222
-plot,wold,fold,xr=[.96*wcut,1.04*wcut]				; Stis
+;;;			wcut=10222
+			wcut=10200		;2020jan17-smoother transition
+plot,wold,fold,xr=[.96*wcut,1.04*wcut],psym=-4			; Stis
 oplot,wave,flux,thic=2						; Model
 oplot,[wcut,wcut],[0,9e-8]
 read,st
@@ -1840,9 +1841,10 @@ skipout:
 ;	 sxaddhist,'  The HST flux scale is now ~0.6% fainter because of ',hd
 ;	 sxaddhist,'  the reconciliation of absolute visible and IR fluxes',hd
 ;	 sxaddhist,'  (Bohlin 2014, AJ, in press)',hd
-	 sxaddhist,'  The STIS G230LB and G430L flux changes because of new',hd
-	 sxaddhist,'  CCD gwidth=11 calibrations (Bohlin et al. 2019,subm.),',hd
+;	 sxaddhist,'  The STIS G230LB and G430L flux changes because of new',hd
+;	 sxaddhist,'  CCD gwidth=11 calibrations (Bohlin etal 2019,158,211),',hd
 ;	 sxaddhist,'  and models are now concatenated.)',hd
+	 sxaddhist,'  New models for 3 prime WDs (Bohlin etal 2020, in prep)',hd
 	 sxaddhist,'  For details see:',hd
          sxaddhist,'  http://www.stsci.edu/hst/instrumentation/reference-',hd
 	      sxaddhist,'    data-for-calibration-and-tools/astronomical-',hd

@@ -46,11 +46,13 @@ PRO stisflx,file,hdr,wave,flux,net,gross,blower,bupper,epsf,errf,ord,bad=bad, $
 ;	NEVER write in PREPROC the output NET that is corr for gwidth &
 ;	 aperture, which are done to flux only via calstis_abs and now via this
 ;	 routine in preproc for the 3 CCD L modes.
-;		The returned net IS corr for gwidth for gwidth>35, but preproc
-;		does not write that corr net. However, a) the returned net might
+;	    The returned net IS NOT corr for gwidth for gwidth>35, (preproc
+;		does not write net, anyhow.)
+
+; 2019dec16 - ff seems OBSOLETE: However, a) the returned net might
 ;		be better w/o the gwidth corr (fixed to corr NET 2019apr)
 ;		AND b) preproc DOES write the returned header. 
-;		So fix hdr to keep the orig wide gwidths along w/ fully
+;		So fix hdr to keep the orig wide gwidths along w/
 ;		corrected, (CTE, etc) gross,net for output params.
 ;	 - ORD order number
 ;	- /bad, set bad='B' for late G140L @ +3", where no corr is made
@@ -96,11 +98,16 @@ PRO stisflx,file,hdr,wave,flux,net,gross,blower,bupper,epsf,errf,ord,bad=bad, $
 ;	because that corr is only for 11 px flux cal. Retain full net for big
 ;	extrheight for abscor, etc. (time & temp corr are done but are smallish
 ;	effects).
-; 2019apr18-rm corr. to 7 or 11 px gwidth for CTE corr. See stis/doc/abscor.pct.
 ; 2019apr23-Upgrade Vega & Sirius abscor files, because of time variability of
 ;	these corrections
 ; 2019apr29 - make a larger coef of scat lite of .000141 for gwidth=11. See 
 ;						stis/doc/scat.ccdmodes
+; 2019dec - zeroCTE makes for poor agreement of Vega & Sirius w/ their models,
+;	so revert to orig. NO-CTE corr to define abscor
+; 2020 - do CTEcorr for the wide extr. heights, as the  corr is tiny & 
+;	abscoruplo provides evidence for CTE loss in wide extrhgts.
+;			See abscor.pct
+; 2020JAN17 - install abscor w/ cte corr of wide & narrow hgts.
 ;-
 st=''
 if keyword_set(nofile) then begin
@@ -161,7 +168,7 @@ if indx(0) gt 0 then begin		; case of reading stsci data
 	dum=mrdfits('~/stiscal/dat/spec_'+root+'.fits',1,hd0,/silent)
 	pstrtime=strtrim(sxpar(hd0,'pstrtime'),2)
 	sxaddpar,hdr,'pstrtime',pstrtime
-    end else begin
+    end else begin				; IDL processing
 	exptm=sxpar(hdr,'exptime')
 	epsf=z.epsf
 	errf=z.errf
@@ -179,7 +186,7 @@ skipreading:
 
 ; 2. DO ALL THE CORRECTIONS, if /ttcor
 
-if keyword_set(ttcor) then begin			; else jump to end
+if keyword_set(ttcor) then begin		; else jump to end. ENDIF @ bott
 	optmode=strtrim(sxpar(hdr,'opt_elem'),2)
 	root=strtrim(sxpar(hdr,'rootname'),2)
 	msmpos=sxpar(hdr,'OMSCYL1P')	;Mode select cylinder 1 position
@@ -205,7 +212,7 @@ if keyword_set(ttcor) then begin			; else jump to end
 		print,'STISFLX: No sensitivity file for ',optmode
 		if strpos(optmode,'L') ge 0 then stop
 		return					; 98feb13
-	    end else begin
+	    end else begin				; endelse @ bottom
 OK:
 		print,'STISFLX Sensitivity file='+sfile(0)
 		sxaddpar,hdr,'senstab',sfile(0),' '		;for calstis_abs
@@ -235,7 +242,6 @@ OK:
 
 ; 5. SPECIAL PROCESSING FOR HEAVILY SATURATED VEGA & SIRIUS OBS
 		corr7=1  &  corr11=1  &  corr=1		; std extractions
-		orignet=net				; gross is never changed
 		origwid=string(gwidth,'(i3)')		; for my INTEGER gwidth
 		newid=origwid
 ; %%% need to update NET eg. gwidth=15, ie new corr factor for range of 12-34px
@@ -243,47 +249,79 @@ OK:
 				targ eq 'SIRIUS') then begin
 ; special abscor correction from Vega for G230LB & AGK for G430L & G750L obs.
 ; 2013feb-for Sirius use all AGK, as 0.3s G230LB is sat.See sirius/doc.procedure
+;	and stis/doc/abscor.pct for a summary of ff.
 ; 2019apr23-new abscor-*Vega.fits files & *Sirius (w/ CAPS). All other 
 ;	abscor*vega* files are obsolete, except abscor-g230lbvega3.fits.
 ; Saturated Vega & Sirius special abscor files:
 ;	ihgt=0,1,2 for gwidth=7,11,vega or Sirius wide hgt.
-			vegfil='dat/abscor-'+strlowcase(optmode)+'Vega.fits'
+
+;			vegfil='dat/abscor-'+strlowcase(optmode)+'Vega.fits'
+;			vegfil='dat/abscor-'+strlowcase(optmode)+'Vegacte.fits'
+; 2019dec6 - switch to ascii ref. files at 1995.97 that need no CTE corr:
+; 2019dec18-abscor files UNcorr for CTE seem best per vega & sirius-cont plots
+; ###change - 2020jan14-switch to CTE corr abscor files.
+;			vegfil='dat/abscor-21cte.vega'		; 2019dec17
+			vegfil='dat/abscor-cte.vega'		;2019dec23-uncor
 			if targ eq 'SIRIUS' then vegfil=		$
-				'dat/abscor-'+strlowcase(optmode)+'Sirius.fits'
+;			      'dat/abscor-'+strlowcase(optmode)+'Siriuscte.fits'
+			      'dat/abscor-cte.sirius'		;2019dec23-uncor
 ; 2019apr16-restore very special abscor for Vega G230LB from 'unsat' short 
 ;	Vega exp. See stiscal/plots/abscorck-g230lbvega.ps 
 			if optmode eq 'G230LB' and targ eq 'HD172167' then begin
-				vegfil='dat/abscor-g230lbvega3.fits'
+;				vegfil='dat/abscor-g230lbvega3.fits'
+;				vegfil='dat/abscor-g230lb-21cte.vega3'
+				vegfil='dat/abscor-g230lb-cte.vega3'
 				endif
-			sxaddpar,hdr,'pcttab',vegfil
-
-			zabs=mrdfits(vegfil,1,hdum)
-; w/ gwidths=7,11,84(sat-Vega),206(sat-Sirius) & unity corr for 7px
-			wnode=zabs.wavelength
-			tnode=zabs.throughput
-			ihgt=2		;extr hgt=eg 84 for the sat.Vega
-			corr7=cspline(wnode(*,ihgt),tnode(*,ihgt),winstr)
-			corr11=corr7/cspline(wnode(*,1),tnode(*,1),winstr)
-; Always use sens11 for sat. data. Set back to orig below.
+;Always use sens11 for sat data. Set back to origwid at bottom. Fool calstis_abs
 			newid='11'
+			sxaddpar,hdr,'gwidth','11'	;scale @ bottom to 11px
 			print,'Use sens11 and gwidth=11 for Saturated obs.'
+			ckfil=findfile(vegfil)
+			if ckfil eq '' then begin	; No abscor corr yet
+				corr11=0
+; ###chang-RM stop for new vegfil's that do not yet exist:
+				print,'ABSCOR file missing'  &  stop
+; abscor does not call stisflx for cte=0 cases of wide hgt ???
+				goto,skipcte	;avoid error, if no ABSCOR file
+				endif
+			print,'ABSCOR file=',vegfil
+			
+; 2019dec - switch to ascii pcttab corr.
+;2019dec		sxaddpar,hdr,'pcttab',vegfil
+;2019dec		zabs=mrdfits(vegfil,1,hdum)
+; w/ gwidths=7,11,84(sat-Vega),206(sat-Sirius) & unity corr for 7px
+;2019dec		wnode=zabs.wavelength
+;2019dec		tnode=zabs.throughput
+;2019dec		ihgt=2		;extr hgt=eg 84 for the sat.Vega
+;2019dec		corr7=cspline(wnode(*,ihgt),tnode(*,ihgt),winstr)
+;2019dec		corr11=corr7/cspline(wnode(*,1),tnode(*,1),winstr)
+;2019dec - replace above fits files w/ new ascii ref files:
+			readcol,vegfil,wl,c11,cbig
+			indx=indgen(8)
+			if strlowcase(optmode) eq 'g430l' then indx=indx+8
+			if strlowcase(optmode) eq 'g750l' then		$
+						indx=indgen(10)+16
+			wnode=wl(indx)  &  tnod11=c11(indx) & tnodbig=cbig(indx)
+			corr11=cspline(wnode,tnodbig,winstr)
+			print,wnode,tnod11,tnodbig
+			print,'corr11=',tnodbig			;tnod11=1
 			print,'STISFLX: w/ '+vegfil+' & gwidth='	$
 				+string(gwidth,'(i3)')+' for calstis_abs cal'
 ; frac err unchanged 2019		errf=errf*sqrt(corr7)		;04jan17
 
-; Now i have 7 or 11px net, so must update net & gross in z.structure just to
-;			make ctecorr work:
 ; Must convert to 7px response, as the ctecorr is valid only for gwidth=7 NO!!
 ;	See abscor.pct. CTE corr should be LESS than for 7px hgt, as wider
 ;	width extractions collect more of the trailed CTE losses!!!
 ; NO!			newidth='7'
-; NO!			sxaddpar,hdr,'gwidth',newidth	; scale to 7px for cte
 ; NO!			bkg=(gross-orignet)*float(newidth)/gwidth
 ; NO!			net=net/corr7		;net, for gwidth=7
 ; NO!			z.net=net		; z NOT returned
 ; NO!			z.gross=net+bkg		; bkg is now also per 7px
 ; NO!			print,'STISFLX '+targ+		$
 ; NO!				' CTECORR for gwidth=',origwid+'/ '+newidth
+; 2020jan13 - Do NOT assume CTEcorr=0 for wide hgts, Nax CTE corr for sat. Vega
+;	is o8i106040 G430L at 0.7%
+;;			goto,skipcte
 			endif			; end wide vega & sirius 
 		
 ; 6. CTE CORRECTION
@@ -294,11 +332,10 @@ OK:
 ;
 ; ###change
 ;Print,' *** CTECORR TURNED OFF IN STISFLX' 
-;		Last use of z:			2019apr8 - typo, was epsf:
+;		Last use of z:
 		if det eq 'CCD' and not keyword_set(nocte) then	begin
 			ctecorr,hdr,z,epsf,netcor    ; corr of net
 			net=netcor
-;; NO!			net=corr7*netcor  ; corr back to wide gwidth net
 			endif
 ; ###change end
 ; 02apr4 - set B flag if G140L obs at +3" after 1999.2
@@ -312,7 +349,7 @@ OK:
 				endif
 
 ; 7. TIME & TEMPERATURE CORRECTION
-
+		skipcte:					; for Sir & Vega
 ;2019apr	if keyword_set(ttcor) then ttcorr,hdr,wave,net,	- no 
 ;	make-tchange has instrumental WLs, but wave is heliocentric:
 ; Undefined notime,notemp are interpreted as 0:
@@ -333,8 +370,9 @@ OK:
 		gain=sxpar(hdr,'ATODGAIN')
 		if gain gt 3 and gain lt 5 then begin
 ;			print,'Adj NET (& FLUX) for 4.016 gain ratio from:',gain
-; NO!! maintain IDL CALSTIS net w/ NO change & fix below
-;; NO!! 2019Aug		sxaddpar,hdr,'ATODGAIN',4.016	; Corr IDL Calstis
+; NO!! maintain IDL CALSTIS net w/ NO change & fix below.
+;; NO!! 2019Aug		sxaddpar,hdr,'ATODGAIN',4.016	; Corr IDL Calstis 4.034
+;	as preproc uses stisflx to update flux, but leaves the orig net w/ 4.034
 			if gain ne 4.034 then stop	; and consider 09jul28
 			net=net*4.016/gain  &  endif 	; 00dec26
 
@@ -352,6 +390,8 @@ OK:
 				tin(winstr,net,2350,2550)
 			sxaddpar,hdr,'SCATLITE',string(scat,'(e10.3)'),	$
 			       'Scattered Red light corr (ct/s) for flux cal.'
+			if origwid gt 11 then print,'Approx SCAT lite '+    $
+				'corr. for gwidth=',origwid
 			print,scat,' G230LB scat lite corr. 17-1800A net='  $
 				+string(tin(winstr,net,1700,1800),'(f9.3)') $
 				+' coef='+string(coef,'(f8.6)')
@@ -368,20 +408,22 @@ OK:
 
 ; 11. CALIBRATE 7 or 11 px NET TO FLUX. calstis_abs does wide corr.
 		if det ne 'CCD' then goto,skipccd
-		sxaddpar,hdr,'gwidth',newid		; for flux cal
-		if sens eq 'sens11_' then begin
+		sxaddpar,hdr,'gwidth',newid	;fool calstis_abs for siri,vega
+		if sens eq 'sens11_' then 				$
 			corr=corr11		; all CCD cases, except gwidth=7
-			if newid ge 35 then stop	; 2019apr9 - eg 15 OK
-		    end else begin
-			corr=corr7
-			if newid ne 7 then stop		; idiot ck.
-			endelse
 skipccd:
-		print,'STISFLX: FLUX CAL w/ minmax gwidth corr=',minmax(corr)
+		if corr11(0) eq 0 then begin
+			sxaddhist,'  **** NO FLUX CAL ****',hdr
+			flux=net*0
+		      end else begin
+			print,'STISFLX: FLUX CAL w/ '+			$
+				'minmax gwidth corr=',minmax(corr)
 ; The flux cal:
-		sxaddhist,'  **** STISFLX: OVER-RIDE CALSTIS FLUX CAL ****',hdr
-		calstis_abs,hdr,1,winstr,net/corr,dum,epsf,flux	;1 for first ord
-		
+			sxaddhist,'  **** STISFLX: OVER-RIDE '+		$
+					'CALSTIS FLUX CAL ****',hdr
+;1 for first ord
+			calstis_abs,hdr,1,winstr,net/corr,dum,epsf,flux
+			endelse
 		sxaddpar,hdr,'TIMECORR',origtcor	; replace orig
 		sxaddpar,hdr,'GWIDTH',origwid		; replace orig
 		errf=errf*flux				; 04jan17

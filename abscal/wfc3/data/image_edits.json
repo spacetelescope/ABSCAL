@@ -1,0 +1,274 @@
+{
+	"reduce": [
+				{
+					"column": "root", "value": "ibwi08mkq", "ext": "sci",
+					"x": [548], "y": [555], "value": 8.2,
+					"source": "calwfc_spec.pro", "reason": "G141 WD1657+343"
+				},
+				{
+					"column": "root", "value": "ibwib6mbq", "ext": "sci",
+					"x": [940, 941], "y": [557], "value": 220.,
+					"source": "calwfc_spec.pro", "reason": "G102 P330E"
+				},
+				{
+					"column": "root", "value": "ibwib6mbq", "ext": "sci",
+					"x": [940, 941], "y": [558], "value": 1010.,
+					"source": "calwfc_spec.pro", "reason": "G102 P330E"
+				},
+				{ 
+					"column": "root", "value": "idpo02pjq", "ext": "sci", 
+					"x": [431], "y": [712], "value": 110., 
+					"source": "calwfc_spec.pro", "reason": "G141 GD153"
+				},
+				{
+					"column": "root", "value": "idpo02pjq", "ext": "sci", 
+					"x": [433], "y": [713], "value": 122., 
+					"source": "calwfc_spec.pro", "reason": "G141 GD153"
+				},
+				{
+					"column": "root", "value": "ic5z03grq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 310., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z03gsq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 10., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibll92fqq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 68., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc05awq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 53., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc15acq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 131., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc15adq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 23., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc22h6q", "ext": "sci", 
+					"x": [548], "y": [555], "value": 10., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc54skq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 93., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc42lsq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 321., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc45eiq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 234., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z03grq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 311., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z04bvq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 99., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z05ilq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 7., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z07doq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 9.5, 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z07dpq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 6., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z08itq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 45., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z10ofq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 8., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z10ofq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 321., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibwl81xhq", "ext": "sci", 
+					"x": [334], "y": [290], "value": 1900., 
+					"source": "calwfc_spec.pro", "reason": "G141 1757132 deadpx"
+				},
+				{
+					"column": "root", "value": "ibll72npq", "ext": "sci", 
+					"x": [605], "y": [557], "value": 208., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibll72npq", "ext": "sci", 
+					"x": [605], "y": [558], "value": 280., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibuc05axq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 75., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ic5z09hkq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 49., 
+					"source": "calwfc_spec.pro", "reason": "G102 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ich319oeq", "ext": "sci", 
+					"x": [534], "y": [562], "value": 683., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibll92fpq", "ext": "sci", 
+					"x": [548], "y": [555], "value": 45., 
+					"source": "calwfc_spec.pro", "reason": "G141 GRW deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt03f6q", "ext": "sci", 
+					"x": [502, 503], "y": [168], "value": 178., 
+					"source": "calwfc_spec.pro", "reason": "G102 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt03f6q", "ext": "sci", 
+					"x": [502, 503], "y": [169], "value": 150., 
+					"source": "calwfc_spec.pro", "reason": "G102 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt03f6q", "ext": "sci", 
+					"x": [501, 503], "y": [170], "value": 27., 
+					"source": "calwfc_spec.pro", "reason": "G102 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt04hwq", "ext": "sci", 
+					"x": [501, 503], "y": [169], "value": 35., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt04hwq", "ext": "sci", 
+					"x": [501, 503], "y": [170], "value": 115., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt04hwq", "ext": "sci", 
+					"x": [501, 503], "y": [171], "value": 52., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibbt04hwq", "ext": "sci", 
+					"x": [501, 503], "y": [172], "value": 20, 
+					"source": "calwfc_spec.pro", "reason": "G141 gd71 deadpx"
+				},
+				{
+					"column": "root", "value": "ibwq1bldq", "ext": "sci", 
+					"x": [111], "y": [816], "value": 45., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd153 deadpx"
+				},
+				{
+					"column": "root", "value": "ibwq1bldq", "ext": "sci", 
+					"x": [95, 96], "y": [818], "value": 82., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd153 deadpx"
+				},
+				{
+					"column": "root", "value": "ibwq1bldq", "ext": "sci", 
+					"x": [95, 97], "y": [819], "value": 15., 
+					"source": "calwfc_spec.pro", "reason": "G141 gd153 deadpx"
+				},
+				{
+					"column": "root", "value": "ibwq1aszq", "ext": "sci", 
+					"x": [453, 454], "y": [182], "value": 94., 
+					"source": "calwfc_spec.pro", "reason": "G102 gd153 deadpx"
+				},
+				{
+					"column": "root", "value": "ibwib6m8q", "ext": "sci", 
+					"x": [924, 925], "y": [183], "value": 830., 
+					"source": "calwfc_spec.pro", "reason": "G102 p330e deadpx"
+				},
+				{
+					"column": "root", "value": "ibwib6m8q", "ext": "sci", 
+					"x": [922, 925], "y": [184], "value": 160., 
+					"source": "calwfc_spec.pro", "reason": "G102 p330e deadpx"
+				},
+				{
+					"column": "root", "value": "ibwib6m8q", "ext": "sci", 
+					"x": [980], "y": [184], "value": 625., 
+					"source": "calwfc_spec.pro", "reason": "G102 p330e deadpx"
+				},
+				{
+					"column": "root", "value": "ibwib6m8q", "ext": "sci", 
+					"x": [878], "y": [182], "value": 250., 
+					"source": "calwfc_spec.pro", "reason": "G102 p330e deadpx"
+				},
+				{
+					"column": "root", "value": "ic6903y8q", "ext": "sci", 
+					"x": [927], "y": [136], "value": 334., 
+					"source": "calwfc_spec.pro", "reason": "G102 g191 deadpx"
+				},
+				{
+					"column": "root", "value": "ic6903y8q", "ext": "sci", 
+					"x": [929], "y": [137], "value": 63., 
+					"source": "calwfc_spec.pro", "reason": "G102 g191 deadpx"
+				},
+				{
+					"column": "root", "value": "ic6901x2q", "ext": "sci", 
+					"x": [877], "y": [960], "value": 250., 
+					"source": "calwfc_spec.pro", "reason": "G141 g191 deadpx"
+				},
+				{
+					"column": "root", "value": "ic6901x2q", "ext": "sci", 
+					"x": [877], "y": [961], "value": 728., 
+					"source": "calwfc_spec.pro", "reason": "G141 g191 hotpx"
+				},
+				{
+					"column": "root", "value": "icqw01b5q", "ext": "sci", 
+					"x": [185], "y": [119], "value": 168., 
+					"source": "calwfc_spec.pro", "reason": "G102gd71 deadpx dq=8"
+				},
+				{
+					"column": "root", "value": "icrw12l9q", "ext": "sci", 
+					"x": [372], "y": [260], "value": 1910., 
+					"source": "calwfc_spec.pro", "reason": "G141VB8 deadpx dq=32"
+				},
+				{
+					"column": "root", "value": "ibwi08mkq", "ext": "sci", 
+					"x": [606], "y": [557], "value": 1., 
+					"source": "calwfc_spec.pro", "reason": "G141wd1657 hotpx dq=0"
+				},
+				{
+					"column": "root", "value": "ibwi08mkq", "ext": "sci", 
+					"x": [607], "y": [554], "value": 2., 
+					"source": "calwfc_spec.pro", "reason": "G141wd1657 hotpx dq=0"
+				},
+				{
+					"column": "root", "value": "ibwi08mkq", "ext": "sci", 
+					"x": [625], "y": [556], "value": 3.1, 
+					"source": "calwfc_spec.pro", "reason": "G141wd1657 hotpx dq=0"
+				},
+			  ],
+}

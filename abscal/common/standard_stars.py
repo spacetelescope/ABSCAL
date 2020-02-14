@@ -22,6 +22,56 @@ __all__ = ['starlist', 'find_standard_star_by_name']
 
 starlist =  [
                 {
+                    'name': 'GAIA593_9680',
+                    'ra': 243.54954,
+                    'dec': -51.781001,
+                    'coord_type': 'gal',
+                    'coord_epoch': 'J2000',
+                    'pm_ra': 0.,
+                    'pm_dec': 0.,
+                    'names': ['GAIA593_9680']
+                },
+                {
+                    'name': 'GAIA587_8560',
+                    'ra': 230.18496,
+                    'dec': -58.453704,
+                    'coord_type': 'gal',
+                    'coord_epoch': 'J2000',
+                    'pm_ra': 0.,
+                    'pm_dec': 0.,
+                    'names': ['GAIA587_8560']
+                },
+                {
+                    'name': 'GAIA588_7712',
+                    'ra': 234.55682,
+                    'dec': -54.522627,
+                    'coord_type': 'gal',
+                    'coord_epoch': 'J2000',
+                    'pm_ra': 0.,
+                    'pm_dec': 0.,
+                    'names': ['GAIA588_7712']
+                },
+                {
+                    'name': 'GAIA405_6912',
+                    'ra': 267.32024,
+                    'dec': -29.210493,
+                    'coord_type': 'gal',
+                    'coord_epoch': 'J2000',
+                    'pm_ra': 0.,
+                    'pm_dec': 0.,
+                    'names': ['GAIA405_6912']
+                },
+                {
+                    'name': 'GAIA587_3008',
+                    'ra': 223.75403,
+                    'dec': -60.215841,
+                    'coord_type': 'gal',
+                    'coord_epoch': 'J2000',
+                    'pm_ra': 0.,
+                    'pm_dec': 0.,
+                    'names': ['GAIA587_3008']
+                },
+                {
                     'name': '6822HV',
                     'ra': 334.3073,
                     'dec': -16.6928,
