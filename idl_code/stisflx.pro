@@ -15,7 +15,7 @@ PRO stisflx,file,hdr,wave,flux,net,gross,blower,bupper,epsf,errf,ord,bad=bad, $
 ;	NO CTEcorr done in preproc to NET; but GAC is applied to net by preproc.
 ;	{Should put GAC corr here & not in preproc. Otherwise need special 
 ;		preproc run to make all AGK w/o GAC corr. but: 2019mar-make-gac
-;	fixed to corr the old corr, so no special preproc needed.}
+;	fixed to corr the old corr, w/ minmaxso no special preproc needed.}
 ; ***********************************************************************
 ; INPUT
 ;	- file-extracted spectral data file, w/ virgin, uncorr net, except GAC.
@@ -61,7 +61,7 @@ PRO stisflx,file,hdr,wave,flux,net,gross,blower,bupper,epsf,errf,ord,bad=bad, $
 ;	ctecorr & ttcorr.
 ;	calstis_abs, which also calls calstis_sens to do the aperture corr. 
 ;	gwidth corrections for output flux done here for wide gwidths. The
-;	7 & 11 gwidths use corresponding sens* files w/o gwidth corr.
+;	11 gwidths use corresponding sens* files w/o gwidth corr.
 ; AUTHOR-R.C.BOHLIN
 ; HISTORY:
 ; 97aug14 - written
@@ -108,6 +108,8 @@ PRO stisflx,file,hdr,wave,flux,net,gross,blower,bupper,epsf,errf,ord,bad=bad, $
 ;	abscoruplo provides evidence for CTE loss in wide extrhgts.
 ;			See abscor.pct
 ; 2020JAN17 - install abscor w/ cte corr of wide & narrow hgts.
+; 2020mar13 - use sens11 for all CCD cal & conv for 7 px for the odd case in
+;		calstis_sens
 ;-
 st=''
 if keyword_set(nofile) then begin
@@ -197,12 +199,13 @@ if keyword_set(ttcor) then begin		; else jump to end. ENDIF @ bott
 
 ; 3. FIND THE SENSITIVITY CAL FILE & place in header senstab
 
-	sens='sens_'
-; ff for hz43, vega, new gwidth=11 CCD etc.
-; INTEGER gwidths, Always use sens11 for saturated obs. w/ wide Gwidths.
-	if gwidth ne 7 and (optmode eq 'G750L' or 		$
-		optmode eq 'G230LB' or optmode eq 'G430L')		$
-		and strpos(file,'hgt7') lt 0 then sens='sens11_'     ;2019mar20
+	sens='sens_'					; for MAMAs
+; ff for hz43, vega etc.
+; Always use sens11 for saturated obs. w/ wide & 7px Gwidths.
+; 2020mar13	if gwidth ne 7 and (optmode eq 'G750L' or 		$
+	if optmode eq 'G750L' or optmode eq 'G230LB' or optmode eq 'G430L'  $
+		then sens='sens11_'	; 2020mar13 use 11 for all (incl 7) gwid
+	if strpos(file,'hgt7') ge 0 then stop	; idiot ck
 ; i.e. default for wide extractions is to use the sens11 flux cal:
 	sfile=findfile('~/stisidl/scal/'+sens+strlowcase(optmode)+'.fits')
 	indx=where(strpos(sfile,'PFL') lt 0,ngood)
@@ -228,7 +231,8 @@ OK:
 		if helio eq '1' then begin
 			evel=sxpar(hdr,'earthvel')	; veloc toward star is +
 		        winstr=wave+wave*(-evel)/3e5 ; corr obs to obs. wl frame
-			print,root,evel,'= Heliocentric Rad. Veloc Corr removed'
+			print,root,evel,'= Heliocentric Rad. Veloc'+	$
+				' Corr removed to get instr WLs for flux cal'
 			endif
 ; STSCI intrumental wavelengths for calibrating
 		helio=strtrim(sxpar(hdr,'helcorr'),2)
@@ -244,6 +248,7 @@ OK:
 		corr7=1  &  corr11=1  &  corr=1		; std extractions
 		origwid=string(gwidth,'(i3)')		; for my INTEGER gwidth
 		newid=origwid
+
 ; %%% need to update NET eg. gwidth=15, ie new corr factor for range of 12-34px
 		if gwidth ge 35 and (targ eq 'HD172167' or	$
 				targ eq 'SIRIUS') then begin
@@ -319,7 +324,7 @@ OK:
 ; NO!			z.gross=net+bkg		; bkg is now also per 7px
 ; NO!			print,'STISFLX '+targ+		$
 ; NO!				' CTECORR for gwidth=',origwid+'/ '+newidth
-; 2020jan13 - Do NOT assume CTEcorr=0 for wide hgts, Nax CTE corr for sat. Vega
+; 2020jan13 - Do NOT assume CTEcorr=0 for wide hgts, Max CTE corr for sat. Vega
 ;	is o8i106040 G430L at 0.7%
 ;;			goto,skipcte
 			endif			; end wide vega & sirius 
@@ -384,7 +389,7 @@ OK:
 ; Make scat increase for 12813-Schmidt obs per stisdoc/scat.ccdmodes:
 ; 2019apr1 - ff scat calc moved here from stisflx.
 		if optmode eq 'G230LB' then begin
-			coef=0.00013
+			coef=0.00013				; for gwidth=7
 			if gwidth gt 9 then coef=0.000141	; 2019apr29
 			scat=coef*tin(winstr,net,2900,3050)^2/		$
 				tin(winstr,net,2350,2550)
@@ -410,18 +415,18 @@ OK:
 		if det ne 'CCD' then goto,skipccd
 		sxaddpar,hdr,'gwidth',newid	;fool calstis_abs for siri,vega
 		if sens eq 'sens11_' then 				$
-			corr=corr11		; all CCD cases, except gwidth=7
+			corr=corr11		; =1, except sirius & vega
 skipccd:
 		if corr11(0) eq 0 then begin
 			sxaddhist,'  **** NO FLUX CAL ****',hdr
 			flux=net*0
 		      end else begin
 			print,'STISFLX: FLUX CAL w/ '+			$
-				'minmax gwidth corr=',minmax(corr)
+				'minmax wide gwidth corr=',minmax(corr)
 ; The flux cal:
 			sxaddhist,'  **** STISFLX: OVER-RIDE '+		$
 					'CALSTIS FLUX CAL ****',hdr
-;1 for first ord
+;1 for first ord:
 			calstis_abs,hdr,1,winstr,net/corr,dum,epsf,flux
 			endelse
 		sxaddpar,hdr,'TIMECORR',origtcor	; replace orig

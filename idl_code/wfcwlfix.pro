@@ -16,6 +16,7 @@ function wfcwlfix,root,targ
 ; HISTORY
 ;	2018may14-First use for ic6903
 ;	paschen gamma,beta=10941.1, 12821.6 (10938.1, 12818.1-air)
+; 8752.86 8865.32 9017.8 9232.2 9548.8 10052.6 10941.082 12821.578 18756.4 vac
 ;	2020feb4 - add targ to param for 15816 w/ 2 targ/image. 
 ;-
 offset=0.

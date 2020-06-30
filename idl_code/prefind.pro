@@ -61,7 +61,7 @@ if dbase eq 'lanz' then begin
 
 tabinv,modt,origt,indx
 indx=round(indx)
-itmin=(indx-3)>0							; do 7 steps
+itmin=(indx-3)>0						; do 7 steps
 itmax=itmin+6							; do 7 steps
 if itmax gt nteff-1 then begin
 	itmax=nteff-1  &  itmin=itmax-6  &  endif
@@ -139,7 +139,7 @@ doebv=orige
 print,'PREFIND starting T,g,z,e=',origt,origg,origz,orige
 print,'PREFIND search ranges in teff, logg, logz=',dbase,		$
 	minmax(doteff),minmax(dologg),minmax(dologz)
-
+;stop
 chisq=fltarr(7,7,7)  &  earr=chisq			; do 7 steps in ea param
 for it=0,6 do begin
    for ig=0,n_elements(dologg)-1 do begin

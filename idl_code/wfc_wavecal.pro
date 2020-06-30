@@ -34,13 +34,20 @@ if ns lt 1014 then begin
 
 case filter of
 	 'G102': begin					
+	 
+;	 	print,"zxpos=",zxpos
+;	 	print,"zypos=",zypos
+	 
 ; +1st order:
 ; Y coef comes out first from sfit in wlmake.pro:
 		b0= 148.538  &  b1= 0.145605  &  b2=-0.008558	; 2013May31
 		m0=23.8796  &  m1=-0.000332  &  m2= 0.001489
 		b=b0+b1*zxpos+b2*zypos
 		m=m0+m1*zxpos+m2*zypos
+;		print,"b=",b,", m=",m
 		wave=b+m*(x-zxpos)
+;		print,"wave after +1"
+;		print,wave
 		sxaddpar,hdr,'b+1st',b,'Constant Term of the +1st order disp.'
 		sxaddpar,hdr,'m+1st',m,'Linear Term of the +1st order disp.'
 ; -1st order:
@@ -55,6 +62,8 @@ case filter of
 		   sxaddpar,hdr,'b-1st',b,'Constant Term of the -1st order disp.'
 		   sxaddpar,hdr,'m-1st',m,'Linear Term of the -1st order disp.'
 		   endif
+;		print,"wave after -1"
+;		print,wave
 		wav1st=wave			; 1st order WLs for FF
 ; 2nd order:
 		b0= 213.571  &  b1= 0.561877  &  b2=-0.040419	; 2013May31
@@ -68,6 +77,8 @@ case filter of
 		   sxaddpar,hdr,'m+2nd',m,'Linear Term of the +2nd order disp.'
 		   wav1st(indx)=(b+m*(indx-zxpos))/2
 ; ck monotonicity:
+;		print,"wave after +2"
+;		print,wave
 		if wave(indx(0)) le wave(indx(0)-1) then stop; & enforce monotonicity
 		endif
 		  

@@ -152,6 +152,7 @@ pro calwfc_spec_wave,h,xcin,ycin,x,wave,angle,wav1st,noprnt=noprnt
 ;	angle - avg slope of spectrum
 ;	wav1st - 1st order WLs for flat fielding w/ FF data cube
 ;-
+; This CALWFC_SPEC_WAVE & is only used if NO Z-order
 if not keyword_set(noprnt) then					$
 	sxaddpar,h,'xc',xcin(0),'Dir img ref X position used for AXE WLs'
 if not keyword_set(noprnt) then					$
@@ -362,11 +363,20 @@ if strpos(flatfile,'both') lt 0 then begin	; BOTH-g102&141 pkgd. together
 print,'FF file=',flatfile
 sedoff=0			;Susana has hdr in exten=0, coef0 in exten=1 etc
 if strpos(flatfile,'sed') ge 0 then sedoff=1 
+; WMIN and WMAX are actually in the zeroth header.
+;	We *can* use Ralph's custom fits_read file here, which will get
+;	coefficients regardless of extension through some black magic, or
+;	we can just read in the primary header and get them there, then proceed.
+;	
+;	I'm doing the latter.
+fits_read,flatfile,ignore,hdr,exten=0
+wmin = float(sxpar(hdr,'wmin'))
+wmax = float(sxpar(hdr,'wmax'))
+
 fits_read,flatfile,coef0,hdr,exten=0+sedoff
 fits_read,flatfile,coef1,hdr,exten=1+sedoff
 fits_read,flatfile,coef2,hdr,exten=2+sedoff
-wmin=float(sxpar(hdr,'wmin'))
-wmax=float(sxpar(hdr,'wmax'))
+
 ; 1st ord WLs defined for 1014 px, but for subarr: wave(0) is for 1st subarr px
 abswl=abs(wave)
 x=(abswl-wmin)/(wmax-wmin)		; normalized 1st order wavelengths

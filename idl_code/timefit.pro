@@ -33,7 +33,7 @@ if nwl eq 1 then							$
 ; many wl bins yinput(spline-vals,n-WLs) & one times(0) for ttcorr.pro:
        for i=0,nwl-1 do yfit(i,*)=cspline(endpts,yinput(*,i),times(0))
 		 
-indx=where(times gt endpts(-1)+1,npts)	; one yr grace
+indx=where(times gt endpts(-1)+1.2,npts)	; one yr grace
 if npts gt 0 then begin
 	print,'   ******  WARNING  ****** timefit.pro corrections '+	$
 			'extrapolated more than 1 year at:',times(indx)

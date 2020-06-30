@@ -38,12 +38,17 @@ pro hubmod,teff,grav,wav,flux,blanket,cont,wrange=wrange
 nteff=22  &  ngrav=6		; 2019aug20 - new
 tmin=20000.  &  gmin=7.
 
-if teff lt tmin or teff gt 95000. or grav lt gmin or grav gt 9.5 then 	$
-	if grav gt 9.5 then begin
-		print,'***********WARNING: max grav=9.5 and requested ',$
+if grav gt 9.5 then begin
+	print,'***********WARNING: max grav=9.5 and requested ',$
 			grav, ' is set to 9.5 in hubmod.pro'
-		grav=9.5
-		endif
+	grav=9.5
+	endif
+if teff lt tmin then begin					; 3020mar9
+	print,'***********WARNING: min teff=20000 and requested ',$
+			teff, ' is set to 20000 in hubmod.pro'
+	teff=20000.
+	endif
+	
 st=''
 common dummhub,wave,flxarr,contarr
 if n_elements(flxarr) gt 0 then goto,skipread

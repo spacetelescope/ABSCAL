@@ -40,7 +40,7 @@ from copy import deepcopy
 from scipy import signal
 
 from abscal.common.args import parse
-from abscal.common.utils import get_data_file, set_param
+from abscal.common.utils import get_data_file, set_params
 from abscal.common.exposure_data_table import AbscalDataTable
 
 def cross_correlate(s1, s2, row, arg_list, overrides={}):
@@ -48,17 +48,20 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
     Reduces and co-adds grism data
     """
     verbose = arg_list.verbose
-    interactive = arg_list.user_interaction
+    interactive = arg_list.trace
     task = "cross_correlate"
+    preamble = "{}: {}".format(task, row['root'][0])
 
     if verbose:
-        print("Starting WFC3 cross-correlation of GRISM data.")
-    
-    known_issues = json.loads(get_data_file("abscal.wfc3", "known_issues.json"))
-    input_table.adjust(known_issues['metadata'])
-    issues = {}
-    if "locate_image" in known_issues["reduction"]:
-        issues = known_issues["reduction"]["locate_image"]
+        print("{}: Starting WFC3 cross-correlation of GRISM data.".format(task))
+
+    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
+    with open(known_issues_file, 'r') as inf:
+        known_issues = json.load(inf)
+    issues = []
+    if "reduction" in known_issues:
+        if "cross_correlate" in known_issues["reduction"]:
+            issues = known_issues["reduction"]["cross_correlate"]
     
     defaults = {
                 'ishift': 0,
@@ -66,36 +69,36 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
                 'i1': 0,
                 'i2': -1
                }
-    defaults['i2'] = len(s2) - 1
-    params = set_params(defaults, row, issues, overrides, verbose)
+    defaults['i2'] = len(s1) - 1
+    params = set_params(defaults, row, issues, preamble, overrides, verbose)
     approx = int(round(params['ishift']))
 
     # extract template from spectrum 2 (s2)
     ns2 = len(s1)//2
-    width2 = width//2
-    it2_start = max((params['i1'] - approx + width2), 0)
-    it2_end = min((params['i2'] - approx - width2), len(s1)-1)
+    width2 = int(params['width']//2)
+    it2_start = int(max((params['i1'] - approx + width2), 0))
+    it2_end = int(min((params['i2'] - approx - width2), len(s1)-1))
     nt = it2_end - it2_start + 1
     if nt < 1:
         if verbose:
             msg = "{}: region too small, width too large, or ishift too large."
             print(msg.format(task))
         return 0., None
-    template2 = s2[it2_start:it2_end]
+    template2 = s2[it2_start:it2_end+1]
     
     # Correlation Time!
-    corr = np.zeros((width,), dtype='float64')
+    corr = np.zeros(int((params['width']),), dtype='float64')
     mean2 = np.sum(template2)/nt
-    sig2 = np.sqrt(np.sum((template2-mean2)*(template2-mean2)))
+    sig2 = np.sqrt(np.sum((template2-mean2)**2))
     diff2 = template2 - mean2
     
-    for i in range(width):
+    for i in range(int(params['width'])):
         # Find region in first spectrum
         it1_start = it2_start - width2 + approx + i
-        it1_end = it2_start + nt - 1
+        it1_end = it1_start + nt
         template1 = s1[it1_start:it1_end]
         mean1 = np.sum(template1)/nt
-        sig1 = np.sqrt(np.sum((template1-mean1)*(template1-mean1)))
+        sig1 = np.sqrt(np.sum((template1-mean1)**2))
         diff1 = template1 - mean1
         if (sig1 == 0) or (sig2 == 0):
             if verbose:
@@ -104,16 +107,29 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
         corr[i] = np.sum(diff1*diff2)/(sig1*sig2)
     
     # Find maximum
-    maxc = max(corr)
-    maxi = np.argmax(corr)
-    if maxi == 0 or maxi == width-1:
+    maxc, maxi = np.max(corr), np.argmax(corr)
+    if maxi == 0 or maxi == params['width']-1:
         if verbose:
-            print("{}: maximum found at edge of search area")
+            print("{}: maximum found at edge of search area".format(preamble))
         return 0., None
     
     # Refine with the power of QUADRATICS!
-    Kmin = (corr[maxi-1]-corr[maxi])/(corr[maxi-1]+corr[maxi+1]-2*corr[maxi])-0.5
+    kmin = (corr[maxi-1]-corr[maxi])/(corr[maxi-1]+corr[maxi+1]-2*corr[maxi])-0.5
     offset = maxi + kmin - width2 + approx
+    
+    if verbose:
+        print("{}: offset {} from translated code.".format(preamble, offset))
+
+    np_corr = np.correlate(s1, s2, mode='same')
+    np_maxc = np.max(np_corr)
+    np_maxi = np.argmax(np_corr)
+    np_kmin = (np_corr[np_maxi-1] - np_corr[np_maxi])
+    np_kmin /= (np_corr[np_maxi-1] + np_corr[np_maxi+1] - 2*np_corr[np_maxi])
+    np_kmin -= 0.5
+    np_offset = np_maxi + np_kmin - len(np_corr)//2 + approx
+    
+    if verbose:
+        print("{}: numpy offset calculated as {}.".format(preamble, np_offset))
     
     return offset, corr
 

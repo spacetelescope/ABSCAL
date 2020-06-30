@@ -41,7 +41,7 @@ st=''
 !P.NOCLIP=1
 hdr1=["SYS-ERROR is a broadband 1% INTERNAL repeatability of WFC3 fluxes.", $
  "IN ADDITION, THERE IS SOME SYSTEMATIC UNCERTAINTY IN THE ABS CALIB, see ",$
-" (Bohlin et al.2014,PASP,126,711). BOTH THE STAT-ERR AND SYS-ERR ARE 1-SIGMA."]
+" Bohlin et al.2014,PASP,126,711. BOTH THE STAT-ERR & SYS-ERR ARE 1-SIGMA"]
 hdr2=[ '',									     $
  '',                                                                         $
 "WL(ang)   COUNT-RATE     FLUX     STAT-ERROR   SYS-ERROR  NPTS "+      $

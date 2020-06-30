@@ -43,6 +43,7 @@ if n_elements(flxarr) gt 0 then goto,skipread
 	for ifil=0,n_elements(file)-1 do begin
 		fil=file(ifil)
 		rdfloat,files(ifil),wave,flx,blank,cont,/silent,skipl=38,/double
+;print,'model #=',ifil,' of',n_elements(file)
 		siz=size(wave)
 		if siz(1) ne 144795 then stop	; idiot ck
 		temp=float(strmid(fil,2,5))

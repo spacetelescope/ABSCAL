@@ -26,6 +26,7 @@ pro wfcdir,filespec
 ;		as there are a few grism* apers, eg for GD153,GD71.)
 ;	Mod this pro to output only dir img photom for output
 ; 2018apr19 - Correct targ coord for Proper Motion
+; 2020Apr22 - Mod to work for UVIS photometry
 ;
 ; DOC:
 ;There is no flag that tells you the data is trailed. you need to look in the 
@@ -38,10 +39,8 @@ pro wfcdir,filespec
 ;
 if N_PARAMS(0) EQ 0 THEN filespec='*raw.fits'
 lst = findfile(filespec,count=n)
-if n lt 1 then begin
-		print,'wfcdir - no files found for given filespec'
-		return
-		end
+print,n,' wfcdir - files found for given filespec'
+
 niclast=''				; last nicmos observation ID
 poslast=''				; last nicmos offset
 blank='            '			; for padding short targnames 2020jan
@@ -163,25 +162,12 @@ for i=0,n-1 do begin
 	fxhmodify,lst(i),'targname',targname,'Updated by wfcdir.pro-rcb'
 
 skipit:
-	endfor						; # of files
+	endfor				; # of files. All obs read and formatted
 		
-good=where(strpos(strout,'DARK') lt 0 and strpos(strout,'TUNGSTEN')	$
-		lt 0 and strout ne '')
-strout=strout(good)						; elim trash
-targsort=strmid(strout,41,12)
-filtsort=strmid(strout,11,7)
-timesort=strmid(strout,64,17)
-indx=sort(targsort+timesort)
-strout=strout(indx)
-
-targsort=strmid(strout,41,12)
-targsort=targsort(sort(targsort))				; sort stars
-star=uniq(targsort)
-nstar=n_elements(star)
 ; 2018Apr19 - Correct for lazy WFC3 IS, who omit the PM!
 ;	list of stars w/ P.M. > ~4px = ~0.5" in 25 yrs-->i.e. 20milli-arcsec/yr:
 fastar=['G191B2B','GD153','GD71','GRW_70D5824','HD37725','HD205905',	     $
-	'HD38949','LDS749B','VB8','WD1657_343','WD1327_083','WD2341_322','2M003618', $
+'HD38949','LDS749B','VB8','WD1657_343','WD1327_083','WD2341_322','2M003618', $
 	'2M055914']
 ; use ten(hr,mn,sc)*15, ck w/ sixty.pro
 ; Use Simbad coord, but some are specified differently, eg WD2341+322
@@ -190,19 +176,46 @@ rafast= [76.377553d,194.25974,88.115058,204.71032,85.476546,324.79230,	     $
 	 87.083579,323.06767,253.89705,254.71300,202.55683,355.96136,9.0674, $
 	 89.829762]
 decfast=[52.831100d,22.031300,15.887153,70.285461,29.297478,-27.306575,	     $
-	-24.463850,0.25400000,-8.394475,34.314803,-8.5748601,32.546293,18.352908,    $
+-24.463850,0.25400000,-8.394475,34.314803,-8.5748601,32.546293,18.352908,    $
 	-14.080244]
-; mas/yr:
-rapm=[  +7.45, -46,  76,-404, 16.7,385.2,-30.47,416,-812.4, 11,-1106.3,-209.07,$
-	883,563]
-decpm=[-89.54,-204,-172, -22,-27.8,-84.8,-36.46,+30,-871.2,-31,-475.97,-69.08, $
-	108,-346]
+; mas/yr: 2020jun5 update per CALSPEC page.
+rapm=[  12.6,-38.4,76.8, -402, 15.0,384.1,-30.4,413.2,-813.4,  8.8,-1111.1,  $
+	-215.8,901.6,570.2]
+decpm=[-93.5, -203,-173,-24.6,-26.9,-84.0,-35.4, 27.3,-870.6,-31.2, -472.4,  $
+	 -59.7,124.0,-337.6]
 ; ###change: 2018apr12 - keep only adjacent direct images (F*) for grism cases
 ;	must go star-by-star. Mod here to make photom, etc. logs
+
+good=where(strpos(strout,'DARK') lt 0 and strpos(strout,'TUNGSTEN')	$
+		lt 0 and strout ne '')
+strout=strout(good)						; elim trash
+
+target=strmid(strout,41,12)
+times=strmid(strout,64,17)
+indx=sort(target+times)
+strout=strout(indx)					;sort by targ,time
+
+target=strmid(strout,41,12)
+targsort=target(sort(target))				; sort targets for uniq
+star=uniq(targsort)					; indices for uniq stars
+nstar=n_elements(star)
 for istr=0,nstar-1 do begin
 	targ=strtrim(targsort(star(istr)),2)
-	indstr=where(strpos(strout,targ) ge 0)	; same star
-	strsort=strout(indstr)
+	indstr=where(strpos(strout,targ) ge 0)			; same star
+	strsort=strout(indstr)					;subset per star
+
+; 2020apr22 - skip grating sorting:
+	if strpos(filespec,'UVIS') gt 0 then begin
+		filter=strmid(strsort,11,7)		;sorted by targ,time
+		times=strmid(strsort,64,17)
+		strsort=strsort(sort(filter+times))
+		uv=where(strpos(strsort,'UVIS') ge 0)
+		ir=where(strpos(strsort,'UVIS') lt 0)
+		strsort=[strsort(uv),strsort(ir)]
+		indx=where(strpos(strout,targ) ge 0)
+		goto,skipgrat
+		endif
+
 	filt=strmid(strsort,11,7)				; filters
 ; expand by one in the index (per IUE reso flagging)
 	shftp=shift(filt,1)  &   shftp(0)='xxx'
@@ -227,8 +240,11 @@ for istr=0,nstar-1 do begin
 	       if ngd eq 0 then indx=indx(where(indx ne imfilt(ifilt)))	; rm bad
 	       endfor
 ; THE LOG:
+skipgrat:
 	printf,unit,strsort(indx)		;ea obs. set (1st 6 char root)
 ; ******************************************************
+
+; Correct the coord below:
 	root=strmid(strsort(indx),0,9)
 	fils=dir+root+'_flt.fits
 	nfils=n_elements(root)

@@ -34,18 +34,27 @@ ltv2=-sxpar(hdr,'ltv2')         ; positive subarr offset
 flat=flat(ltv1:ltv1+ns-1,ltv2:ltv2+nl-1)
 xpos=indgen(ns)			; 2018Apr26
 sclfac=nl/1014.			; =1 for usual 1014x1014 images 
+;print,"sclfac ",sclfac
 
 xmin=min(xpos)  &  xmax=max(xpos)
+;print,"xmin ",xmin," xmax ",xmax
 imav=reform(rebin(image(xmin:xmax,*),1,nl),nl)	; collapse along x
+;print,"imav ",size(imav)
 bkav=reform(rebin(flat(xmin:xmax,*),1,nl),nl)
+;print,bkav
+;print,"bkav ",size(bkav)
+;print,imav
 smimav=median(imav,61)					; remove spikes
+;print,smimav
 smbkav=median(bkav,21)
+;print,smbkav
 rat=smimav/smbkav					; const for perfect flat
 sigma=stdev(rat(100*sclfac:900*sclfac),avrat)	;scale to mean of rows 100:900
 ; Div by flat in calwfc_spec; but G206 will be a diff flat-->worse approx of bkg
 avgbkg=avg(smimav(100*sclfac:900*sclfac))*gwidth
 sxaddpar,hdr,'avgbkgr',avgbkg,'Average Background from wfc_flatscal'
 print,'wfc_flatscal: Avg bkg =',avgbkg,'+/-',sigma,' for gwidth=',gwidth
+print,'wfc_flatscal: ratio =',avrat
 ;window,1
 ;st=''
 ;plot,imav-smbkav*avrat,yr=[-1,5]

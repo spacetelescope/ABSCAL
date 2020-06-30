@@ -89,6 +89,7 @@ if nextend ne crsplit and nextend ne 0 then begin	; 0 for stsci pipeline
 exptime=sxpar(hd,'exptime')
 gain=sxpar(hd,'ccdgain')
 star=strtrim(sxpar(hd,'targname'),2)
+root=strtrim(sxpar(hd,'rootname'),2)
 temp=sxpar(hd,'OCCDHTAV')
 if strpos(star,'HD172167') ge 0 then star='HD172167'	; bad name in 2nd visit
 ; meandark computed by IDL CALSTIS as a median; STScI pipeline has ADU=elect/G.
@@ -96,7 +97,8 @@ meandark=sxpar(hd,'meandark')/crsplit
 hgt=sxpar(hd,'gwidth')
 ; hz43B is above hz43 --> no cticorr for G750L, where HZ43B is bright.
 ; if root eq 'o69u07030' HZ43B faint,but in slit
-if mode eq 'G750L' and star eq 'HZ43' then begin
+; 2020mar16 - do CTE corr for o69u07030
+if mode eq 'G750L' and star eq 'HZ43' and root ne 'o69u07030' then begin
 ;or strpos(star,'NGC6681') ge 0 then begin
 	sxaddhist,'Crowded field. No CCD CTE Loss Correction.',hd
 	print,'No CTE correction for ',star

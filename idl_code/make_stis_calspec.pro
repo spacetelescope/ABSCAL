@@ -75,6 +75,8 @@ pro make_stis_calspec,filespec,all=all
 ; 2018oct26-start mods for WFC3 grism results for stars WITH Nicmos
 ;2019aug - omit IUE for new A stars, even tho 109vir & delumi are at ancient/pop
 ;	(See notes at calspec/doc/new.names)
+; 2020feb15 - add models for WDs
+; 2020mar30 - rm extra starvel corr for wd0308
 ;-
 
 ; 2018Nov8 - Get names of stars to process. Elim other input styles!?
@@ -101,95 +103,107 @@ if keyword_set(all) then begin	; make filelist from ALL nic & stis files:
 	nstis=n_elements(tmp)
 	fdecomp,tmp,disk,dir,stisnam,ext
 ; Start w/ all files w/ Nicmos data, then add those STIS files w/ NO Nicmos:
-	for i=0,nstis-1 do begin
+	for i=0,nstis-1 do begin	;add STIS to nic filelist, if not there:
 		ind=where(nicnam eq stisnam(i),nsame)
 ; odd name and bad star cases:
-		if stisnam(i) eq 'agk' or stisnam(i) eq '2m003618' or	$
+		if stisnam(i) eq 'agk_81d266' or stisnam(i) eq '2m003618' or $
 		   stisnam(i) eq 'bd17d4708' or stisnam(i) eq 'g191' or	$
 		   stisnam(i) eq 'bpm' or stisnam(i) eq 'dbl-hd27836' 	$
-		   or stisnam(i) eq 'sf1615001a' or stisnam(i) eq	$
+		   or stisnam(i) eq 'sf1615_001a' or stisnam(i) eq	$
 		   					'2m055914' or	$
 		   stisnam(i) eq 'wd1057_719' or			$
 		   stisnam(i) eq 'wd1657_343' or			$
 		   strpos(stisnam(i),'grw') ge 0 or 			$
 		   strpos(stisnam(i),'m33') ge 0 or 			$
-		   strpos(stisnam(i),'ngc') ge 0 or			$
+		   strpos(stisnam(i),'lds') ge 0 or			$
+;old		   strpos(stisnam(i),'ngc') ge 0 or			$
 		   strpos(stisnam(i),'k648') ge 0 then nsame=1
 		if nsame eq 0 then filelist=[filelist,tmp(i)]	; full file list
 		endfor
 	endif							; END /all Case
-; BAD data:
+; BAD data omit 2 stars:
 filelist=filelist(where(strpos(filelist,'snap-1b') lt 0 and 		$
 		strpos(filelist,'1739431') lt 0))
 if filespec eq 'vega' then filelist='../stiscal/dat/hd172167.mrg'		; 03nov12
 if filelist(0) ne '' then print,'files found=',filelist,form='(a)' $
 	else begin
 	print,'no files found for filespec=',filespec  &  stop  &  endelse
-
 ;
-; loop on files
+; loop on all files w/ STIS or NICMOS *mrg files:
 ;
 ; ###change
 for ifile=0,n_elements(filelist)-1 do begin
 ;for ifile=56,n_elements(filelist)-1 do begin
-	Teff=-1.			; initialize flag for no model
-	!y.style=1			; wd1057 sets it to 0
+	Teff=-1.  &  modl=0		; initialize flag for no model
+	!y.style=1
 	iuelo=1.			; flag for NOT adding IUE mult hist
 	sun=''
+	tmlus='TMAP'			; initialize WD grid
     	instrum='STIS'
 	fdecomp,filelist(ifile),disk,dir,nam,ext
-	nictarg=nam					; mv up 2018nov8
-	target=strupcase(nam)
-	if strpos(target,'172167') ge 0 then target='ALPHA_LYR'
-	if strpos(target,'G191') ge 0 then target='G191B2B'
-	if filespec eq 'g191.calobs' then target='G191B2B_PURE'
-	if target eq 'WD-0308-565' then target='WD0308-565'
-	if target eq 'WD1327-083' then target='WD1327_083'
-	if target eq 'WD2341+322' then target='WD2341_322'
+	nictarg=nam
+	target=strupcase(nam)		; eg. stis file name for starvel.pro
 	name=strlowcase(target)
-	if name eq '2m0036+18' then name='2m003618'	; a bit inconsistent !
-	if name eq '2m0559-14' then name='2m055914'	; a bit inconsistent !
+	if strpos(name,'172167') ge 0 then name='alpha_lyr'
+	if strpos(name,'g191') ge 0 then name='g191b2b'
+	if filespec eq 'g191.calobs' then name='g191b2b_pure'
+	if name eq 'wd-0308-565' then name='wd0308-565'
+	if name eq 'wd1327-083' then name='wd1327_083'
+	if name eq 'wd2341+322' then name='wd2341_322'
+	if name eq 'wd0320-539' then name='wd0320_539'
+	if name eq '2m0036+18' then name='2m003618'
+	if name eq '2m0559-14' then name='2m055914'
 	if name eq 'bd28d4211' then name='bd_28d4211'
 	if name eq 'bd75' then name='bd_75d325'
+	if name eq '' then name='bd_75d325'
         spos=strpos(name,'+')
         if spos gt 0 then strput,name,'_',spos  ; replace + with _
 ; 08may13 - use NO minus signs!
 	if strpos(name,'snap') ge 0 then name=replace_char(name,'-','')	$
-		else name=replace_char(name,'-','_')
-; 2013Jan22 - Use outnam for file names
+		else name=replace_char(name,'-','_')  ;stis name matches outnam
+; ##########################################################
+; Process stars w/ outnam from input doc/new.names. Otherwise skip
 	ind=where(strpos(outnam,name+'_') eq 0,ngood)
 	if ngood ne 1 then begin
 		print,'Not in new.names: SKIPPING: ',name
 ;		read,st
 		goto,nextfile
 		endif
-	nam=name				;for targcase select & output
-	name=outnam(ind(0))			; OUTPUT file name
-	targcase=target				; for case statement
+; ##########################################################
 
-; ###change - Gen. Purpose. Do NOT include special case stars, eg HD93521 w/ IUE
-; JWST,etc. G & OBA stars w/o nicmos where a model is added at WL>10000A,
-;				including case of WFC3 IR grisms w/ NO nicmos
+	nam=name				; for targcase select
+	name=outnam(ind(0))+'.fits'		; OUTPUT file name
+;???	targcase=target				; for case statement
+; for case statement, eg alpha_lyr. same as target w/ few above exceptions
+	targcase=strupcase(nam)	; 2020mar18-But all hdrs should be checked!!
+;stop
+; ###change-STARS W/ MODEL AND NO NICMOS.
+;	Do NOT include special case stars, eg HD93521 w/ IUE
+; 	All G & OBA stars w/o nicmos where a model is added at WL>10000A.
+;	Include cases of WFC3 IR grisms w/ NO nicmos
+; New stars w/ no model and no wfc3 or nicmos fall thru & need no edits here,
 	if nam eq 'hd37962' or nam eq 'hd38949' or 			$; G
 	   nam eq 'hd106252' or nam eq 'hd159222' or nam eq 'hd205905'	$; G
 	   or nam eq 'hd14943' or nam eq 'hd37725' or nam eq 'hd116405'	$; A
 	   or nam eq 'bd60d1753' or nam eq 'hd158485' or nam eq 'hd163466' $
 	   or nam eq '1757132' or nam eq '1808347' or nam eq 'hd180609'	$; A
-	   or nam eq '10lac' or nam eq 'mucol' or nam eq 'ksi2ceti'	$
+	   or nam eq 'ksi2ceti'						$
 	   or nam eq 'bd02d3375' or nam eq 'bd21d0607' 			$;Schmid
 	   or nam eq 'bd26d2606' or nam eq 'bd29d2091'			$;Bessel
 	   or nam eq 'bd54d1216' or nam eq 'hd009051' or nam eq 'hd031128' $
 	   or nam eq 'hd074000' or nam eq 'hd111980' or nam eq 'hd160617'  $
-	   or nam eq 'hd185975' or nam eq 'hd200654' or nam eq 'lamlep'	$
+	   or nam eq 'hd185975' or nam eq 'hd200654'			$
 	   or nam eq 'wd1327_083' or nam eq 'wd2341_322'		$
-; no model no edits needed:	 or strpos(nam,'sdss') eq 0		$
 	   or nam eq '109vir' or nam eq '16cygb' or nam eq '18sco'	$ ;15485
 	   or nam eq 'delumi' or nam eq 'eta1dor' or nam eq 'etauma'    $
 	   or nam eq 'hd101452' or nam eq 'hd115169' or nam eq 'hd128998'  $
 	   or nam eq 'hd142331' or nam eq 'hd167060' or nam eq 'hd2811' $
-	   or nam eq 'hd55677'						$
+	   or nam eq 'wd0320_539' or nam eq 'wd0947_857' or		$
+	   nam eq 'wd1026_453' or					$
+	   nam eq 'wd0308_565' or 					$ ;20feb
+	   nam eq 'hd55677' or nam eq 'sdssj151421' 			$
 	   						then targcase='gstis'
-; clump of JWST mostly A stars w/ STIS and Nicmos-2011Dec22. + some WFC3-2018
+; clump of JWST mostly A stars w/ STIS and Nicmos and Nicmos+WFC3
 ; Exclude C26202 w/ only WFC3 G141. Put under targcase='c26202'
 ; Exclude P330e w/ FOS. Put under targcase='p330e':
 ; Exclude g191 w/ IUE @ short WL. Put under targcase='g191b2b'
@@ -200,15 +214,15 @@ for ifile=0,n_elements(filelist)-1 do begin
 	   nam eq 'kf08t3' or nam eq 'gd153' or nam eq 'gd71' or	$ ;18nov
 	   nam eq '2m003618' or nam eq '2m055914' or			$ ;18nov
 	   nam eq 'grw_70d5824' or nam eq 'snap2' or			$ ;18nov
+	   nam eq 'lds749b' or nam eq 'snap1' or nam eq 'wd1057_719' or	$ ;20feb
 	   nam eq 'vb8' or nam eq 'wd1657_343'				$ ;18nov
 	   						then targcase='stisnic'
 
-	nichd=''  &  hder=''  &  nicfile=''
+	nichd=''  &  hder=''  &  nicfile=''  &  wfchd=''	;2020feb-add wfc
 	file=filelist(ifile)
 	if strpos(dir,'nical') ge 0 then begin			; nicmos data
 		nicfile=file
 		tmp=replace_char(nam,'+','_')
-; del?		if strpos(tmp,'wd') lt 0 then tmp=replace_char(tmp,'_','')
 ; STIS file:
 		if strpos(nicfile,'snap') ge 0 then fdecomp,nicfile,disk,dir,tmp
 		if tmp eq 'g191b2b' then tmp='g191'
@@ -223,7 +237,7 @@ for ifile=0,n_elements(filelist)-1 do begin
 		rdfhdr,nicfile,0,nic,nichd
 		nichd=nichd(where(strpos(nichd,'WAVELENGTH') lt 0))
 		gd1=where(strpos(nichd,'nicreduce') ge 0)
-		nichd=[nichd(gd1(0)),nichd(where(strpos(nichd,'.pro') lt 0))]
+		nichd=[nichd(gd1(0)),nichd(where(strpos(nichd,'.pro') lt 0)),'']
 		wold=nic(*,0)*1e4 
 		fold=nic(*,2)
 		errold=nic(*,3)
@@ -234,6 +248,17 @@ for ifile=0,n_elements(filelist)-1 do begin
 		fwold=(wold(1:npts-1)-wold(0:npts-2))*4 	;/double
 		fwold=[fwold(0),fwold]
 		if file eq '' then goto,sun	; NO STIS, eg NICMOS only
+		endif
+		
+; Read WFC3 input file
+	if strpos(name,'wfc') gt 0 then begin
+		wfcfile='~/wfc3/spec/'+nam+'.mrg'
+		print,'WFC3 file=',wfcfile
+		rdfhdr,wfcfile,0,dum,wfchd
+		wfchd=wfchd(where(strpos(wfchd,'WAVELENGTH') lt 0))
+		gd1=where(strpos(wfchd,'WFCREDUCE') ge 0)
+		wfchd=[wfchd(gd1(0)),wfchd(where(strpos(wfchd,'.PRO') lt 0 $
+		   and strpos(wfchd,'WL(ang)') lt 0)),'']
 		endif
 		
 ; Read STIS input file
@@ -247,9 +272,7 @@ for ifile=0,n_elements(filelist)-1 do begin
 	hder=header(good(sort(good)))
 	good=where(strpos(hder,'WAVELENGTH') lt 0 and strpos(hder,	$
 			'=    0.0') lt 0)	; remove WL & zero merge pt
-	hder=hder(good)
-	good=where(strpos(hder,'G750L') ge 0)  &  good=good(0)
-	if filespec eq 'vega' then hder=hder(0:good-1)	;G750L not used for vega
+	hder=[hder(good),'']			; blank line at end
 
 	if strpos(target,'SUN-TH') ge 0 then goto,sun
 	wave=x(*,0)
@@ -306,22 +329,21 @@ sun:					; Sun or NO STIS
         sxaddpar,hd,'dbtable','CRSPECTRUM'
 	sxaddpar,hd,'mapkey','calspec'		; 2014Jul21 for Rossy
  	sxaddpar,hd,'airmass',0.0,'Mean airmass of the observation'
-	sxaddpar,hd,'source','Flux scale of Bohlin, et al.2014, PASP, 126, 711'
+	sxaddpar,hd,'source','Flux scale of Bohlin, et al.2020, AJ, in press'
 	sxaddpar,hd,'USEAFTER','Jan 01 2000 00:00:00'
 	sxaddpar,hd,'comment',						$
-		"= 'HST Flux scale is based on Rauch WD NLTE MODELS' /"
+	       "= 'HST Flux scale is based on TMAP AND TLUSTY WD NLTE MODELS' /"
 ;	sxaddpar,hd,'PEDIGREE','INFLIGHT 30/06/2003 23/08/2003'	; vega
-	sxaddpar,hd,'PEDIGREE','INFLIGHT 18/05/1997 31/12/2019'	;STIS brth-death
-;	sxaddpar,hd,'PEDIGREE','INFLIGHT 13/07/2001 27/12/2002'		; LDS
-;	sxaddpar,hd,'PEDIGREE','INFLIGHT 22/11/2010 23/11/2010'		; wd-308
+	sxaddpar,hd,'PEDIGREE','INFLIGHT 18/05/1997 31/12/2020'	;STIS brth-death
+;	sxaddpar,hd,'PEDIGREE','INFLIGHT 13/07/2001 27/12/2002'	; LDS
+;	sxaddpar,hd,'PEDIGREE','INFLIGHT 22/11/2010 23/11/2010'	; wd-308
 ;	sxaddpar,hd,'PEDIGREE','INFLIGHT 13/02/1998 13/02/1998'	; eta UMa	
 	
-; add old history
+; add old history. (Any missing header makes an extra blank HISTORY line)
 ;
-	if target ne 'SUN_REFERENCE' then sxaddhist,[hder,nichd],hd
+	if target ne 'SUN_REFERENCE' then sxaddhist,[hder,wfchd,nichd],hd
 ;
 ; add some more keyword information
-	if nichd(0) ne '' then sxaddhist,'',hd			; blank line
 	sxaddhist,'Units: Angstroms(A) and erg s-1 cm-2 A-1',hd
         sxaddhist,' All wavelengths are in vacuum.',hd
 	sxaddhist,' Written by MAKE_STIS_CALSPEC.pro  '+strmid(!stime,0,11),hd
@@ -330,7 +352,7 @@ sun:					; Sun or NO STIS
 	sxaddhist,'WAVELENGTH RANGE         SOURCE                FILE',hd
         sxaddhist,'----------------   ----------------------   ----------',hd
 ; MAKE NICMOS only cases:
-	if file eq '' then begin		; NO STIS
+	if file eq '' then begin		; NO STIS & no model
 ;1812524 is a dbl star & the only A* w/ just NICMOS
 		wave=wold  &  flux=fold  &  sterr=errold
 		syerr=sysold  &  exptime=exold
@@ -339,8 +361,8 @@ sun:					; Sun or NO STIS
 					nam+'.'+ext,form=wlsrc),hd
 
 ; skip this section, unless I want to add a model to NICMOS only SED.
-		goto, nicnorm				;Nicmos only-rarely used
-
+; BIG SKIP to near bottom:
+		goto, nicnorm				;no model Nicmos only
 		modl='../calspec/'+nam+'_mod_001.fits'
 		print,'Reading Model file:',modl
 		ssreadfits,modl,modhd,wave,flux		;NICMOS only 
@@ -389,7 +411,6 @@ stop	;revise as needed for BOSZ models
 ; make spectra. If there is NO targcase Match, then goto ELSE endcase near bott.
 	help,nam,name,target,targcase
 ; ##################################################################
-
 	case targcase of
 		'SUN-THUILLIER': begin
 			wold=x(*,0)*10			; nm ---> Ang
@@ -428,7 +449,7 @@ plot,wave,flux,xr=[.95*wcut,1.05*wcut]
 oplot,wold,fold,thic=2
 oplot,[wcut,wcut],[0,1000]
 plotdate,'make_stis_calspec'
-read,st			
+if !d.name eq 'X' then read,st			
 			sterr=flux*0
 			syerr=flux*0.02
 			exptime=flux*0
@@ -507,17 +528,17 @@ stop ; 05jan5 & fix wl scale of solar data, at least the 8A error in the
 			sxaddhist,' IUE fluxes increased by'+		$
 				string(norm,'(f5.2)')+' in '+		$
 				'MAKE_STIS_CALSPEC.pro  '+strmid(!stime,0,11),hd
-			sxaddhist,'Kz Model Normalized to 3.44e-9 at 5556A',hd
+			sxaddhist,'Kz Model Normalized to 3.47e-9 at 5556A',hd
 plot,wold,fold,xr=[1600,1900],thic=2+5*(!d.name eq 'PS'),yr=[4e-9,8e-9]	; IUE
 oplot,wave,flux,thic=0							; stis
-oplot,[wcut,wcut],[0,1e-8]
-read,st
+oplot,[wcut,wcut],!y.crange
+if !d.name eq 'X' then read,st
 ; 06aug10 - 1. NO eps=0 flags at motes. 
 ;	    2. Should be ~no mote dips, in wide saturated spectra.
 ; IUE+STIS:
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
-; ff model norm to Meggessier 3.46e-9 @ 5545-5570A vac WL
+; ff model norm to Meggessier 3.46e-9 (originally) @ 5545-5570A vac WL
 ;			rdf,'../calib/vega/vegamod_r500.05kur9400',1,dkur
 ;			wold=dkur(*,0)
 ;			fold=dkur(*,1)
@@ -527,8 +548,8 @@ read,st
 			ssreadfits,'deliv/alpha_lyr_mod_004.fits',h,wold,fold
 ; 2014dec31 - change from 5300-5400 to 5556A norm:
 			mnwl=5557.54-12.5  &  mxwl=5557.54+12.5
-			norm=3.44e-9/tin(wold,fold,mnwl,mxwl)
-			fold=fold*norm		;norm model to 3.44e-9
+			norm=3.47e-9/tin(wold,fold,mnwl,mxwl)
+			fold=fold*norm		;norm model to 3.47e-9
 			errold=fold*0
 			sysold=fold*0.01
 			exold=fold*0
@@ -537,9 +558,9 @@ read,st
 			wcut=10200			; 19jan - was 5350
 plot,wold,fold,xr=[.96*wcut,1.04*wcut]				; Model
 oplot,wave,flux,thic=2						; Stis
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 ;plotdate,'make_stis_calspec'
-read,st
+if !d.name eq 'X' then read,st
 ; IUE + STIS + Model
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				wold,fold,errold,sysold,exold,epold,fwold
@@ -558,9 +579,9 @@ read,st
 			wcut=1152
 plot,wold,fold,xr=[.96*wcut,1400]			; iue
 oplot,wave,flux,thic=2					; model
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
-read,st
+if !d.name eq 'X' then read,st
 ;hprint,hd
 ; Model + IUE + STIS + Model
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
@@ -569,7 +590,7 @@ read,st
 			wave=wold  &  flux=fold  &  sterr=errold  & syerr=sysold
 			exptime=exold  &  dataqual=epold  &  fwhm=fwold
 			end
-		'AGK+81D266': begin
+		'AGK_81D266': begin
 			ssread,'agk_81d266_005.tab',wiue,fiue,erriue, $
 					hdiue,fwiue,sysiue,epiue,exiue,	      $
 ; /epsfx converts to dataqual, good=1; and erriue to flux instead of frac.
@@ -585,7 +606,7 @@ read,st
 				nam+'.mrg',form=wlsrc),hd
 			goto,iuestisnic
 			end
-		'BD+17D4708': begin
+		'BD_17D4708': begin
 ; IUE flux=0 at 1700A and below, so STIS must have some red leak. cut at 1701A:
 			good=where(wave ge 1701)
 			wold=wave(good)  &  fold=flux(good)
@@ -610,16 +631,17 @@ read,st
 			wcut=10160
 plot,wold,fold,xr=[.95*wcut,1.05*wcut]
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
-read,st
+if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
-		sxaddpar,hd,'source2','Bohlin & Gilliland 2004, AJ, 128, 3053'
+		sxaddpar,hd,'source2','Bohlin & Gilliland 2004, AJ, 128, 3053',$
+				after='source'
 		sxaddhist,string(1701,wcut,'STIS', $
 				'bd17d4708.mrg',form=wlsrc),hd
 			end
-		'BD28D4211': begin
+		'BD_28D4211': begin
 			ssread,'bd_28d4211_fos_003.tab',wold,	$
 				fold,errold,hdold,fwold,sysold,epold,exold,   $
 					/epsfx,/okefx		;,magfx=0.008
@@ -630,7 +652,7 @@ read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
 ; Process header
-; get 3 lines of old data sources
+; get history lines of old data sources
 		        ndx=where(strmid(hdold,0,7) eq 'HISTORY',numhist)
 		        if numhist gt 0 then hdold(ndx)=strmid(hdold(ndx),8,71)
 			ndx=where(strpos(hdold,'WAVELENGTH RANGE') ge 0)
@@ -641,7 +663,7 @@ read,st
 			sxaddhist,string(3875,wcut,'OKE CORR TO FOS FLUX',    $
 				 'BD_28D4211_fos_003',form=wlsrc),hd
 			end
-		'BD75': begin
+		'BD_75D325': begin
 			ssread,'bd_75d325_fos_003.tab',wold,	$
 				fold,errold,hdold,fwold,sysold,epold,exold,   $
 					/epsfx		;,magfx=0.008
@@ -672,7 +694,7 @@ read,st
 				'eta_uma_015.fits',form=wlsrc),hd
 plot,wiue,fiue,xr=[.95*wcut,1.05*wcut]
 oplot,wave,flux,thic=2,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 ; IUE + STIS
 			pastem,wcut,wiue,fiue,erriue,sysiue,exiue,epiue,fwiue, $
@@ -696,7 +718,7 @@ if !d.name eq 'X' then read,st
 ; (IUE + STIS)
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; stis
 oplot,wtab,ftab,th=2,psym=-6				; square IUE
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			pastem,wcut,wtab,ftab,errtab,systab,extab,eptab,fwtab, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
@@ -719,12 +741,13 @@ if !d.name eq 'X' then read,st
 				'feige34_005',form=wlsrc),hd
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; stis
 oplot,wold,fold,th=2,psym=-6				; square IUE
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 ; IUE + STIS
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
 			end
+
 		'G191B2B': begin		; 00jul31
 ;FOS needs -.5A shift at 1216 & 1140-2085 is FOS blue. MgII 2800 (red) ok to 1A.
 			ssread,'g191b2b_fos_003.tab',wold,		$
@@ -741,7 +764,7 @@ if !d.name eq 'X' then read,st
 ; FOS + STIS
 plot,wold,fold,xr=[.95*wcut,1.05*wcut]		; FOS
 oplot,wave,flux,thic=2				; STIS
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
@@ -761,7 +784,7 @@ if !d.name eq 'X' then read,st
 			fwwfc=[fwwfc(0),fwwfc,fwwfc(-1)]	; 2px
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; stis
 oplot,wwfc,fwfc,thic=2,psym=-6				; square WFC3
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc
@@ -778,7 +801,7 @@ if !d.name eq 'X' then read,st
 			fwold=[fwold(0),fwold]
 plot,wold,fold,xr=[.95*wcut1,1.05*wcut1],psym=-6		;nic
 oplot,wwfc,fwfc,psym=-4						;wfc3
-oplot,[wcut1,wcut1],[0,1e-8]
+oplot,[wcut1,wcut1],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 		       pastem,wcut1,wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc, $
@@ -786,13 +809,39 @@ if !d.name eq 'X' then read,st
 			good=where(epold ge 1 or wold lt 3450 or 	$
 				wold gt 7000 or (wold gt 4750 and wold lt 4850))
 			epold(good)=1
-; Reverse names for case w/ old data used at longest WL & elim bad for 3 WDs:
-			wcut=wcut1			; sxaddhist below
-			wave=wold &  flux=fold
-			sterr=errold  & syerr=sysold
-			exptime=exold  &  dataqual=epold
-			fwhm=fwold
-			teff=0
+
+; 2020feb17 - Add model for G191
+			sxaddpar,hd,'comment',				$
+		"= 'Hubeny: metal line-blanketed model @ TEFFGRAV=59000/7.60' /"
+			wcut=24700
+			sxaddhist,string(wcut1,wcut,'NICMOS',nam+'.'+ext,   $
+				form=wlsrc),hd
+; read old model and renorm to new obs. flux:
+; FOS + STIS +wfc3 + NICMOS + model:
+			ssreadfits,'deliv/g191b2b_mod_011.fits',h,wmod,fmod
+			flux=fmod*tin(wold,fold,6800,7700)/	$
+						tin(wmod,fmod,6800,7700)
+			wave=wmod*(1+starvel(target)/3e5)
+			teff=59000
+			logg=7.6
+			logz=0  &  ebv=0.0005
+plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-4		;nic
+oplot,wave,flux							;model
+oplot,[wcut,wcut],!y.crange
+plotdate,'make_stis_calspec'
+if !d.name eq 'X' then read,st
+			sterr=fmod*0
+			syerr=fmod*0.02
+			exptime=fmod*0
+			npts=n_elements(wmod)
+			fwhm=(wave(1:npts-1)-wave(0:npts-2))
+			fwhm=[fwhm(0),fwhm]
+			dataqual=fmod*0+1
+		        pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
+				wave,flux,sterr,syerr,exptime,dataqual,fwhm
+			sxaddhist,string(wcut,319961,'Tlusty Model',	$
+				nam+'.'+ext,form=wlsrc),hd
+			goto,skipout
 			end
 		'GJ7541A': begin
 			wcut=10115
@@ -801,7 +850,8 @@ if !d.name eq 'X' then read,st
 			wold=wave  &  fold=flux  &  errold=sterr  & sysold=syerr
 			exold=exptime  &  epold=dataqual  &  fwold=fwhm
 ; STIS + Koester Model
-			readcol,'../calib/bessell/models/EG131_RB.dk',wave,flux
+			rdf,'../calib/bessell/models/EG131_RB.dk',1,d
+			wave=d(*,0)   &  flux=d(*,1)
 ; normalize model to stis from 7000-8000A:
 			norfac=tin(wold,fold,7000,8000)/tin(wave,flux,7000,8000)
 			print,'Koester model mult by ',norfac
@@ -842,7 +892,7 @@ if !d.name eq 'X' then read,st
 			fwold=[fwold(0),fwold]
 plot,wold,fold,xr=[.95*wcut,1.05*wcut]
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
@@ -883,7 +933,7 @@ if !d.name eq 'X' then read,st
 				'hd60753_004.fits',form=wlsrc),hd
 plot,wiue,fiue,xr=[.95*wcut,1.05*wcut]
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 ; IUE + STIS
 			pastem,wcut,wiue,fiue,erriue,sysiue,exiue,epiue,fwiue, $
@@ -923,7 +973,7 @@ if !d.name eq 'X' then read,st
 ; (IUE + STIS)
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; stis
 oplot,wold,fold,th=2,psym=-6				; square IUE
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			sxaddhist,string(min(wold),wcut,'IUE',	$
 				'HD93521_005',form=wlsrc),hd
@@ -961,7 +1011,7 @@ if !d.name eq 'X' then read,st
 			wcut=1670
 plot,wold,fold,xr=[.9*wcut,1.1*wcut]
 oplot,wave,flux,thic=2,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			sxaddhist,string(1140,wcut,'FOS BLUE',	$
 				'HZ44_FOS_003',form=wlsrc),hd
@@ -969,71 +1019,124 @@ if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
 			end
-		'LAMLEP': begin
-			ssreadfits,'/grp/hst/cdbs/calobs/lam_lep_003.fits',  $
-				hdiue,wiue,fiue,erriue,sysiue,epiue,exiue,fwiue
-			epiue=epiue*0+1.	;good=1, orig. all epiue=100
-			wcut=1698
-			sxaddhist,string(1148,wcut,'IUE',		$
-				'lam_lep_003.fits',form=wlsrc),hd
-plot,wiue,fiue,xr=[.95*wcut,1.05*wcut]
-oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
-if !d.name eq 'X' then read,st
-; IUE + STIS
-			pastem,wcut,wiue,fiue,erriue,sysiue,exiue,epiue,fwiue, $
-				wave,flux,sterr,syerr,exptime,dataqual,fwhm
-			good=where(wave ge 1148)
-			wave=wave(good)
-			flux=flux(good)
-			sterr=sterr(good)
-			syerr=syerr(good)
-			exptime=exptime(good)
-			dataqual=dataqual(good)
-			fwhm=fwhm(good)
+	       '10LAC': begin
+		       ssreadfits,'/grp/hst/cdbs/calobs/10_lac_004.fits',  $
+			       hdiue,wiue,fiue,erriue,sysiue,epiue,exiue,fwiue
+			!mtitle='10lac'
+			fiue=fiue*1.03				; small tweak
+			wcut=1672
+			sxaddhist,string(1148,wcut,'IUE',	       $
+			       '10_lac_004.fits',form=wlsrc),hd
+			goto,laclepcol
 			end
-		'MUCOL': begin
-			ssreadfits,'/grp/hst/cdbs/calobs/mu_col_006.fits',  $
-				hdiue,wiue,fiue,erriue,sysiue,epiue,exiue,fwiue
-			epiue=epiue*0+1.	;good=1, orig. all epiue=100
-			wcut=1670
+	       'LAMLEP': begin
+			ssreadfits,'/grp/hst/cdbs/calobs/lam_lep_003.fits',  $
+			       hdiue,wiue,fiue,erriue,sysiue,epiue,exiue,fwiue
+			fiue=fiue*1.03				; small tweak
+			wcut=1672
+			!mtitle='lamlep'
+			sxaddhist,string(1148,wcut,'IUE',	       $
+			       'lam_lep_003.fits',form=wlsrc),hd
+			goto,laclepcol
+			end
+	       'MUCOL': begin
+		       ssreadfits,'/grp/hst/cdbs/calobs/mu_col_006.fits',  $
+			       hdiue,wiue,fiue,erriue,sysiue,epiue,exiue,fwiue
+			!mtitle='mucol'
+			fiue=fiue*1.03				; small tweak
+			wcut=1672
 			sxaddhist,string(1148,wcut,'IUE',		$
-				'mu_col_006.fits',form=wlsrc),hd
-plot,wiue,fiue,xr=[.95*wcut,1.05*wcut]
-oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
-if !d.name eq 'X' then read,st
-; IUE + STIS
-			pastem,wcut,wiue,fiue,erriue,sysiue,exiue,epiue,fwiue, $
-				wave,flux,sterr,syerr,exptime,dataqual,fwhm
-			good=where(wave ge 1148)
-			wave=wave(good)
-			flux=flux(good)
-			sterr=sterr(good)
-			syerr=syerr(good)
-			exptime=exptime(good)
-			dataqual=dataqual(good)
-			fwhm=fwhm(good)
+			       'mu_col_006.fits',form=wlsrc),hd
+			goto,laclepcol
 			end
 
+	       'notused': begin
+laclepcol:
+plot,wiue,fiue,xr=[.95*wcut,1.05*wcut],psym=-4
+oplot,wave,flux,thic=2
+oplot,[wcut,wcut],!y.crange
+if !d.name eq 'X' then read,st
+; IUE + STIS
+		epiue=epiue*0+1.	    ;good=1, orig. all epiue=100
+		pastem,wcut,wiue,fiue,erriue,sysiue,exiue,epiue,fwiue, $
+			wave,flux,sterr,syerr,exptime,dataqual,fwhm
+		good=where(wave ge 1148)
+		wave=wave(good)
+		flux=flux(good)
+		sterr=sterr(good)
+		syerr=syerr(good)
+		exptime=exptime(good)
+		dataqual=dataqual(good)
+		fwhm=fwhm(good)
+		sxaddhist,string(wcut,10120,'STIS',		$
+					nam+'.mrg',form=wlsrc),hd
+		wcut=10120.				; for model
+		goto,boszmod
+			end				;end 'notused'
 ; Stis (wave, etc) & Nicmos (wold, etc) initialized near top
 ; JWST stars w/ STIS and NICMOS wold-nicmos, wave-STIS & wfc3
+
 
 		'stisnic': begin
 			print,'stisnic case'
 			wcut1=10160			; for NO wfc3
+			if target eq 'SNAP-1' then wcut1=10050
 			instrum='NICMOS'  &  teff=0	; initialize
-; mv up 2018nov7 - to cf. w. data;
+; mv up 2018nov7 - to cf. w. data
 			modl=1				; there is a model
-			if strmid(nam,0,2) eq 'gd' or 			$
+			if strmid(nam,0,2) eq 'gd' or nam eq 'lds749b' or      $
 			   strmid(nam,0,3) eq 'grw' or strmid(nam,0,2) eq 'wd' $
-				then modl=0	; NO model, but teff ne 0
+				then begin
+				modl=0	; not BOSZ, but teff ne 0 far below:
+				dum=vmag(nam,ebv,spty,bvri,teff,logg,logz)
+				help,nam,modl,teff,logg,logz,ebv  ;&  read,st
+				endif
 			if modl then begin
 				boszmodcor,nam,wave,flux,wmod,fmod,	$
 						cont,ebv,teff,logg,logz
 ; 2019jun3 - Correct wave to stellar radial velocity:
 				wmod=wmod*(1+starvel(target)/3e5)
 				endif
+
+; 2020feb15 - add special WD models
+			if nam eq 'lds749b' then begin
+; lds749b_mod.dk goes to 30mic. 
+				wcut1=9480
+				sxaddpar,hd,'comment',			$
+		"= 'Koester: He LTE model trace C @ TEFFGRAV=13575/8.050' /"
+				teff=13575
+				logg=8.05
+				logz=0  &  ebv=0
+; read old model and renorm to new obs. flux:
+				ssreadfits,'lds749b_mod_005.fits',h,	$
+					wmod,fmod
+				wmod=wmod*(1+starvel(target)/3e5)
+				fmod=fmod*tin(wave,flux,6800,7700)/	$
+						tin(wmod,fmod,6800,7700)
+				endif
+
+; 2020feb16 - add WD models per findminwd.pro Teff(wd0308)=21805
+			if (modl eq 0 and teff gt 22000) or		$
+					target eq 'GRW+70D5824' then begin
+			   wcut1=9260
+			   if target eq 'WD1057+719' then wcut1=8000
+			   sxaddpar,hd,'comment',"= 'Pure-Hyd model WD' /"
+; get model, redden, and renorm to obs. flux:
+			   if target eq 'GRW+70D5824' then begin
+				print,'hub-model:Teff,logg,ebv=:',teff,logg,ebv
+				hubmod,teff,logg,wmod,fmod
+				wcut1=9610
+			   	tmlus='TLUSTY'  ; Hub for cool * @ Teff~20000K
+			      end else	begin
+				print,'rau-model:Teff,logg,ebv=:',teff,logg,ebv
+				raumod,teff,logg,wmod,fmod
+				endelse
+			   chiar_red,wmod,fmod,-ebv,fmod
+			   wmod=wmod*(1+starvel(target)/3e5)
+			   fmod=fmod*tin(wave,flux,6800,7700)/	$
+					tin(wmod,fmod,6800,7700)
+			   endif
+; model inserted just before end of case stisnic				
 ;
 ; INSERT WFC3 IR Grism SEDs HERE
 ;
@@ -1050,20 +1153,22 @@ if !d.name eq 'X' then read,st
 				wcut=9610	;1802271
 				if target eq 'KF06T2' then wcut=9425
 				if target eq 'SNAP-2' then wcut=9169
+				if target eq 'WD1657+343' then wcut=8000
+
 				if teff eq 0 then begin		; no model
 ; All Flagged GD71 & GD153 are OK: (others OK?)
 				     dataqual=dataqual*0+1
-				     wcut=8400		;gd153,gd71,grw
-				     if target eq 'VB8' then wcut=10069
-				     if target eq '2M0036+18' then wcut=10082
-				     if target eq '2M0559-14' then wcut=9935
-				     if target eq 'WD1657+343' then wcut=8000
+				     wcut=8400		;gd153,gd71
+				    if target eq 'VB8' then wcut=10069
+				    if target eq '2M0036+18' then wcut=10050
+				    if target eq '2M0559-14' then wcut=9935
 				     endif		; end no model
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; diam STIS
 oplot,wwfc,fwfc,thic=2,psym=-6				; square WFC3
 oplot,wold,fold,lin=1					; nic
+xyouts,.6,.7,'Dots-Nicmos, sq-wfc3, dash-model',/norm
 if teff ne 0 then oplot,wmod,fmod,lin=2,th=4		; model
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 				sxaddhist,string(min(wave),wcut,'STIS',$
 ; 2018nov15 - odd names for some STIS & Nicmos, eg. snap-2 (was nam):
@@ -1080,14 +1185,15 @@ if !d.name eq 'X' then read,st
 				if target eq 'GD71' then wcut1=16570
 				if target eq 'GRW+70D5824' then wcut1=16530
 				if target eq 'SNAP-2' then wcut1=16440
-				if target eq 'WD1657+343' then wcut1=16540
+				if target eq 'WD1657+343' then wcut1=16380
 				sxaddhist,string(wcut,wcut1,'WFC3',	$
 						nam+'.mrg',form=wlsrc),hd
 				wave=wwfc &  flux=fwfc
 				sterr=stwfc  & syerr=sywfc
 				exptime=exwfc  &  dataqual=dqwfc
 				fwhm=fwfc
-			     end else 			$		;no-WFC3
+
+			     end else 			$;end WFC, no-WFC3 below
 				sxaddhist,string(min(wave),wcut1,'STIS',$
 ; 2018nov15 - odd names for some STIS & Nicmos, eg. snap-2 (was nam):
 					strlowcase(target)+'.mrg',form=wlsrc),hd
@@ -1095,17 +1201,18 @@ if !d.name eq 'X' then read,st
 			wcut=wcut1			; for teff=0 cases
 			if teff eq 0 then goto,iuestisnic	$ ;No cool*model
 					else instrum=''		; has a model
-plot,wave,flux,xr=[.95*wcut1,1.05*wcut1],psym=-4	; diam STIS or WFC3
-oplot,wold,fold,thic=2,psym=-6				; square nic
-if teff ne 0 then oplot,wmod,fmod,lin=2,th=4		; model
-oplot,[wcut1,wcut1],[0,1e-8]
+			if target eq 'WD1057+719' then wcut1=8000
+plot,wave,flux,psym=-4,xr=[.95*wcut1,1.05*wcut1]	; diam STIS or WFC3
+oplot,wold,fold,psym=-6					; square nicmos
+if teff gt 0 then oplot,wmod,fmod,lin=2,th=4		; model
+oplot,[wcut1,wcut1],!y.crange
 if !d.name eq 'X' then read,st
-; STIS+WFC3+Nicmos:
+; STIS+(WFC3)+Nicmos:
 		      pastem,wcut1,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				wold,fold,errold,sysold,exold,epold,fwold
-			if teff eq 0 then goto,skipmod
+			if teff le 0 then goto,skipmod
 
-			print,'A-STAR W/ STIS & NICMOS. TEFF,LOG g, LOG z,'+ $
+			print,'STAR W/ STIS & NICMOS. TEFF,LOG g, LOG z,'+ $
 				'E(B-V)= ',teff,logg,logz,ebv
 			stmod=fmod*0
 			symod=fmod*0.02
@@ -1116,25 +1223,51 @@ if !d.name eq 'X' then read,st
 			fwmod=[fwmod(0),fwmod]
 			qualmod=fmod*0+1
 			wcut=24200		;1802271
+			if target eq 'WD1657+343' then wcut=18780
+			if target eq 'LDS749B' then wcut=23900
 ; cannot cut shorter than 24000 because of findmin fitting bin ending there.
 ;			if strmid(target,0,2) eq 'KF' then wcut=22900
 ;			if target eq 'SNAP-2' then wcut=20580
 			sxaddhist,string(wcut1,wcut,'NICMOS',		$
 ; 2018nov15 - odd names for some STIS & Nicmos, eg. snap-2 (was nam):
 					strlowcase(target)+'.mrg',form=wlsrc),hd
-			sxaddhist,string(wcut,max(wmod+1),		$
-			  'Bohlin et al. 2017','BOSZ R=500 Model',form=wlsrc),hd
 			sun='sun'			; flag used below
-			sxaddhist,'BOSZ Model with Teff,log g,log z,E(B-V)='+  $
-			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
-			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
-			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
+			if teff gt 0 and modl eq 1 then begin
+			   sxaddhist,string(wcut,max(wmod+1),		$
+			  'Bohlin et al. 2017','BOSZ R=500 Model',form=wlsrc),hd
+			   sxaddhist,'BOSZ Model with Teff,log g,log z,'+$
+			   	'E(B-V)='+string(teff,logg,logz,ebv,	$
+			   	form='(i5,2f6.2,f6.3)'),hd
+			   sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
+			   sxaddhist,'Model Normalized to Observed '+	$
+					'Flux at 6800-7700A',hd
+			   endif
+
+			if target eq 'LDS749B' then begin
+			   teff=0
+			   sxaddhist,string(wcut,max(wmod+1),		$
+			      'Koester: He LTE model','lds749b_mod_005',$
+								form=wlsrc),hd
+			   sxaddhist,'Model Normalized to Observed '+	$
+					'Flux at 6800-7700A',hd
+			   endif
+			if teff gt 0 and modl eq 0 then begin
+			   sxaddhist,string(wcut,max(wmod+1),		$
+			   	tmlus+' pure Hyd Model','From Grid',	$
+				form=wlsrc),hd
+			   sxaddhist,tmlus+' pure Hyd Model with Teff,log g,'+$
+			   	'E(B-V)='+string(teff,logg,ebv,		$
+			   	form='(i5,f6.2,f7.4)'),hd
+			   sxaddhist,'     Bohlin, et al. 2020, AJ, in press',hd
+			   sxaddhist,'Model Normalized to Observed '+	$
+					'Flux at 6800-7700A',hd
+			   endif
+			    
 			print,'Model to ',max(wmod),' for ',teff,logg,logz,ebv
-plot,wmod,fmod,xr=[.95*wcut,1.05*wcut],psym=-6		; model sq
+plot,wmod,fmod,xr=[.95*wcut,1.05*wcut]			; model
 oplot,wold,fold,psym=-4					; wfc3 or nicmos diam
-oplot,[wcut,wcut],[0,1e-8]
-if !d.name eq 'X' then read,st		; +model
+oplot,[wcut,wcut],!y.crange
+if !d.name eq 'X' then read,st				; +model
 		        pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wmod,fmod,stmod,symod,expmod,qualmod,fwmod
 			wave=wmod
@@ -1148,9 +1281,10 @@ if !d.name eq 'X' then read,st		; +model
 			dataqual(indx)=1		; Line at dust mote
 skipmod:
 			end		; case of stisnic
+
 		'gstis': begin		;G & OBA stars w/ no NICMOS, just STIS:
-gstis:				; entry point for no wfc3 or nic, eg hd93521
-			print,'gstis case'
+gstis:	; entry point for no nic, eg hd93521
+			print,'gstis case: NO NICMOS'
 			wcut=10120
 ; ###change
 			if target eq '1808347' then wcut=10114
@@ -1159,29 +1293,31 @@ gstis:				; entry point for no wfc3 or nic, eg hd93521
 			if target eq 'BD21D0607' then wcut=10075
 			if target eq 'BD29D2091' then wcut=10070
 			if target eq 'BD54D1216' then wcut=10070
+			if target eq 'HD009051' then wcut=9850		;2020feb
 			if target eq 'HD031128' then wcut=10070
 			if target eq 'HD074000' then wcut=10080
 			if target eq 'HD160617' then wcut=10070
+			if target eq 'SDSSJ151421' then wcut=8000
+			if nam eq 'wd0308_565' then wcut=8000
+			if target eq 'WD0320_539' or			$
+				target eq 'WD0947_857' or		$
+				target eq 'WD1026_453' then wcut=5685	;noG750L
 			wcutlo=max([min(wave),wcutlo])	    ; 2019aug eg hd93521
 			print,'WCUTLO,WCUT=',wcutlo,wcut
 			sxaddhist,string(wcutlo,wcut,'STIS',		$
 					nam+'.mrg',form=wlsrc),hd
 ; STIS + Model
-			if nam eq '10lac' or nam eq 'lamlep' or 	$
-; 2018aug4-typo, stop & ck mucol change	nam eq '10lac' then begin
-					nam eq 'mucol' then begin
-stop ; ck mucol
-			   lanzmodcor,nam,wave,flux,wmod,fmod,ebv,teff,logg,logz
+;2020mar-Bosz mods are a better fit.See plots & results.output.Match make_hires
+;			if nam eq '10lac' or nam eq 'lamlep' or 	$
+;					nam eq 'mucol' then begin
+;			   lanzmodcor,nam,wave,flux,wmod,fmod,ebv,teff,logg,logz
 ; 2019jun3 - Correct wave to stellar radial velocity:
-			   wmod=wmod*(1+starvel(target)/3e5)
-			   sxaddhist,string(wcut,max(wmod+1),		$
-				'Lanz Model','Lanz grid',form=wlsrc),hd
-			 end else begin
+;			   wmod=wmod*(1+starvel(target)/3e5)
+;			   sxaddhist,string(wcut,max(wmod+1),		$
+;				'Lanz Model','Lanz grid',form=wlsrc),hd
+;			 end else begin
 ; cases to insert WFC3 data between stis and the model (if any):
-			   if nam eq 'hd37725' or nam eq 'bd60d1753'	$
-	   		   	or nam eq '1757132' or nam eq '1808347' $
-	   		   	or nam eq 'wd1327_083' or nam eq 'wd2341_322' $
-				then begin
+			   if strpos(name,'wfc') gt 0 then begin
 				wfcfil=strlowcase(target)+'.mrg'
 				rdf,'../wfc3/spec/'+wfcfil,1,d
 				wwfc=d(*,0)
@@ -1194,7 +1330,7 @@ stop ; ck mucol
 				fwwfc=[fwwfc,fwwfc(-1)]
 plot,wwfc,fwfc,xr=[.95*wcut,1.05*wcut],psym=-6		;wfc3
 oplot,wave,flux,psym=-4					;stis
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 		        	pastem,wcut,wave,flux,sterr,syerr,exptime,$
 					dataqual,fwhm,wwfc,fwfc,stwfc,	$
 					sywfc,expwfc,dqwfc,fwwfc
@@ -1212,39 +1348,94 @@ oplot,[wcut,wcut],[0,1e-8]
 				if target eq '1808347' then wcut=17127
 				if target eq 'BD60D1753' then wcut=16910
 				if target eq 'HD37725' then wcut=11350
-				if !d.name eq 'X' then read,st
-				endif
-			   if strpos(nam,'wd') eq 0 then begin;WFC3 but no model
-			   	wcut=17000			; ~safe good lim
-			   	good=where(wave lt wcut)
-				wave=wave(good)
-				flux=flux(good)
-				sterr=sterr(good)
-				syerr=syerr(good)
-				exptime=exptime(good)
-				dataqual=dataqual(good)
-				fwhm=fwhm(good)
-				wcut=max(wave)
 			   	sxaddhist,string(wcutshrt,wcut,		$
 			  		'WFC3 IR grisms',wfcfil,form=wlsrc),hd
-				goto,skipout			; no model
-			     end else begin
+				print,target,' gstis case w/ wfc3 cut @ ',wcut
+				if !d.name eq 'X' then read,st
+				endif			; end WFC3
+
+			teff=0	&  modl=1 ; initialize, 1 for BOSZ model
+			if strmid(nam,0,2) eq 'wd' or strmid(nam,0,4) eq 'sdss'$
+								then begin
+				modl=0	; no BOSZ model:
+				dum=vmag(nam,ebv,spty,bvri,teff,logg,	$
+						logz,model='rauch')
+
+				if nam eq 'wd0308_565' then begin
+				    wcut=8000
+				    sxaddpar,hd,'comment',		$
+			"= 'Koester: He LTE model @ TEFFGRAV=21805/7.959' /"
+				    teff=21805
+				    logg=7.96
+				    logz=0  &  ebv=0
+; read old model and renorm to new obs. flux:
+				    ssreadfits,'wd0308_565_mod_003.fits',h,$
+					wmod,fmod
+				    wmod=wmod*(1+starvel(target)/3e5)
+				    fmod=fmod*tin(wave,flux,6800,7700)/	$
+						tin(wmod,fmod,6800,7700)
+			   	    sxaddhist,string(wcut,max(wmod),	$
+			  		'Koester: He LTE model',	$
+					'wd0308_565_mod_003',form=wlsrc),hd
+					sxaddhist,'Model Normalized to '+$
+					'Observed Flux at 6800-7700A',hd
+				    goto,mrgmod
+				    endif			; end wd0308_565
+
+				if teff le 0 then begin	; no model
+			   		good=where(wave lt wcut)
+					wave=wave(good)
+					flux=flux(good)
+					sterr=sterr(good)
+					syerr=syerr(good)
+					exptime=exptime(good)
+					dataqual=dataqual(good)
+					fwhm=fwhm(good)
+					goto,skipout	; no model
+					endif
+; get model, redden, and renorm to obs. flux:
+				print,'rau-model:Teff,logg,ebv=:',teff,logg,ebv
+				raumod,teff,logg,wmod,fmod
+				chiar_red,wmod,fmod,-ebv,fmod
+				wmod=wmod*(1+starvel(target)/3e5)
+
+				if target eq 'WD0320_539' or		$
+				     target eq 'WD0947_857' or		$
+				     target eq 'WD1026_453' then begin	;noG750L
+				    fmod=fmod*tin(wave,flux,4500,5400)/	$
+						tin(wmod,fmod,4500,5400)
+			   	    sxaddhist,string(wcut,max(wmod),	$
+			  		'Bohlin et al. 2020',		$
+					tmlus+' pure Hyd from grid',	$
+							form=wlsrc),hd
+				    sxaddhist,'Model Normalized to '+$
+						'Observed Flux at 4500-5400A',hd
+				 end else begin
+				    fmod=fmod*tin(wave,flux,6800,7700)/	$
+						tin(wmod,fmod,6800,7700)
+			   	    sxaddhist,string(wcut,max(wmod),	$
+			  		'Bohlin et al. 2020',		$
+					'TMAP pure Hyd from grid',form=wlsrc),hd
+				    sxaddhist,'Model Normalized to '+	$
+					'Observed Flux at 6800-7700A',hd
+				    endelse		; end tmap models
+			     end else begin		; end wd or sdss
+boszmod:
 			   	boszmodcor,nam,wave,flux,wmod,fmod,cont,$
 			   				ebv,teff,logg,logz
 ; 2019jun3 - Correct wave to stellar radial velocity:
 				wmod=wmod*(1+starvel(target)/3e5)
-;---- add to all model calls.
-; 2019may31 - only add wfc3 history, if there are WFC3 data:
-				if n_elements(wfcfil) gt 0 then 	$
-			   	      sxaddhist,string(wcutshrt,wcut,	$
-			  		'WFC3 IR grisms',wfcfil,form=wlsrc),hd
 			   	sxaddhist,string(wcut,max(wmod),	$
 			  		'Bohlin et al. 2017',		$
 					'BOSZ R=500 Model',form=wlsrc),hd
-				endelse			; end non-WDs
-			   endelse			; end Lanz models
-			print,nam,' W/ STIS only or STIS+WFC3. TEFF,LOG'+$
-				' g, LOG z, E(B-V)= ',teff,logg,logz,ebv
+				sxaddhist,'Model Normalized to '+	$
+					'Observed Flux at 6800-7700A',hd
+				sxaddhist,'     Bohlin, et al. 2017,'+	$
+					' AJ, 153, 234',hd
+				endelse			; end BOSZ
+mrgmod:			print,nam,' W/ STIS only or STIS+WFC3. TEFF,LOG'+$
+				' g, LOG z, E(B-V)= ',teff,logg,logz,ebv,$
+				' gstis case w/ MODEL'
 			stmod=fmod*0
 			symod=fmod*0.02
 			expmod=fmod*0
@@ -1255,13 +1446,11 @@ oplot,[wcut,wcut],[0,1e-8]
 			sun='sun'			; flag used below
 			sxaddhist,'Model with Teff,log g,log z,E(B-V)='+  $
 			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
-			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
-			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
 			print,'Model to ',max(wmod),' for ',teff,logg,logz,ebv
-plot,wmod,fmod,xr=[.95*wcut,1.05*wcut],psym=-6			; model
+plot,wmod,fmod,xr=[.95*wcut,1.05*wcut]				; plot model
 oplot,wave,flux,psym=-4						; stis+wfc3
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
+if !d.name eq 'X' then read,st			; Another oplot below!
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				wmod,fmod,stmod,symod,expmod,qualmod,fwmod
 			wave=wmod
@@ -1273,8 +1462,7 @@ oplot,[wcut,wcut],[0,1e-8]
 			fwhm=fwmod
 			indx=where(wave ge 8590 and wave le 8675)	;vac
 			dataqual(indx)=1		; Line at dust mote
-			oplot,wave,flux,thic=3
-			if !d.name eq 'X' then read,st
+			oplot,wave,flux,thic=6
 			end				; case of gstis
 ; Faint Solar analogs 09oct6:
 		'C26202': begin
@@ -1298,7 +1486,7 @@ oplot,[wcut,wcut],[0,1e-8]
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		; stis diam
 oplot,wold,fold,psym=-6,th=2+5*(!d.name eq 'PS') 	; nicmos sq
 oplot,wmod,fmod,lin=2,th=4				; model
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st		; stis+nicmos:
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
@@ -1321,7 +1509,7 @@ if !d.name eq 'X' then read,st		; stis+nicmos:
 plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-4		; nic
 oplot,wwfc,fwfc,thic=2,psym=-6				; square WFC3
 oplot,wmod,fmod,lin=2,th=4				; model
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st		;nic+wfc3:
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold,$
 				wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc
@@ -1331,7 +1519,7 @@ if !d.name eq 'X' then read,st		;nic+wfc3:
 plot,wold,fold,xr=[.95*wcut1,1.05*wcut1],psym=-6	; square nic
 oplot,wwfc,fwfc,psym=-4					; diam WFC3
 oplot,wmod,fmod,lin=2,th=4				; model
-oplot,[wcut1,wcut1],[0,1e-8]
+oplot,[wcut1,wcut1],!y.crange
 if !d.name eq 'X' then read,st		;nic+wfc3+nic:
 			pastem,wcut1,wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc,$
 				wold,fold,errold,sysold,exold,epold,fwold
@@ -1358,21 +1546,21 @@ if !d.name eq 'X' then read,st		;nic+wfc3+nic:
 			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
 			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
 			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
+					'Flux at 7700-6800A',hd
 			print,'BOSZ Mod to',max(wmod),' for ',teff,logg,logz,ebv
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],thic=2
 oplot,wold,fold,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
 			indx=where(wave ge 8590 and wave le 8675)	;vac
 			dataqual(indx)=1		; Line at dust mote
 			end
-		'SF1615+001A': begin
-			wcut=9680  &  wcutlast=wcut
+		'SF1615_001A': begin			; NICMOS name
+			wcut=8000  &  wcutlast=wcut
 			sxaddhist,string(min(wave),wcut,'STIS',	$
-					'SF1615001A.MRG',form=wlsrc),hd
+					'SF1615_001A.MRG',form=wlsrc),hd
 ; STIS + NICMOS
 			instrum='NICMOS'
 			rdf,'../nical/spec/sf1615+001a.mrg',1,d
@@ -1381,14 +1569,14 @@ if !d.name eq 'X' then read,st
 			npts=n_elements(wold)
 			fwold=(wold(1:npts-1)-wold(0:npts-2))*4		;/double
 			fwold=[fwold(0),fwold]
-plot,wold,fold,xr=[.95*wcut,1.05*wcut]
-oplot,wave,flux,thic=2
-oplot,wmod,fmod,lin=2,th=4				; model
-oplot,[wcut,wcut],[0,1e-8]
+plot,wave,flux,xr=[.95*wcut,1.05*wcut],psym=-4		;stis
+oplot,wold,fold,psym=-6					;nicmos
+oplot,[wcut,wcut],!y.crange,th=6
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				   wold,fold,errold,sysold,exold,epold,fwold
+			oplot,wold,fold,th=6
 			wcut=23000
 			sxaddhist,string(wcutlast,wcut,'NICMOS',nam+'.'+ext,   $
 				form=wlsrc),hd
@@ -1412,11 +1600,11 @@ if !d.name eq 'X' then read,st
 			  string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
 			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
 			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
-			print,'BOSZ Mod to',max(wmod),' for ',teff,logg,logz,ebv
+					'Flux at 6800-7700A',hd
+			print,'BOSZ Mod to',max(wave),' for ',teff,logg,logz,ebv
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],thic=2
 oplot,wold,fold,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
@@ -1448,7 +1636,7 @@ if !d.name eq 'X' then read,st
 			sxaddhist,string(wcut,10200,'STIS',	$
 				'sirius.mrg',form=wlsrc),hd
 			sxaddhist,string(10200,2996860,'Kurucz Special Model',+$
-				'sirallpr16.500resam501',form=wlsrc),hd
+				'sirallpr16-new.500resam501',form=wlsrc),hd
 			sxaddhist,' IUE fluxes increased by '+		$
 				string(norm,'(f5.3)')+' by '+      	$
 				'MAKE_STIS_CALSPEC.pro  '+strmid(!stime,0,11),hd
@@ -1462,7 +1650,8 @@ if !d.name eq 'X' then read,st
 ; Reverse names:
 			wold=wave  &  fold=flux  &  errold=sterr  & sysold=syerr
 			exold=exptime  &  epold=dataqual  &  fwold=fwhm
-			rdf,'../rocket/stds/sirallpr16.500resam501',1,k  ; kz
+; 2020mar24 - add -new !!:
+			rdf,'../rocket/stds/sirallpr16-new.500resam501',1,k  ;kz
 			wave=k(*,0)*10			; nm-->Ang
 			flux=k(*,1)
 ; normalize model to stis from 6800-7700A, 2014 Feb25
@@ -1481,7 +1670,7 @@ if !d.name eq 'X' then read,st
 plot,wold,fold,xr=[.96*wcut,1.04*wcut],psym=-4			; Stis
 oplot,wave,flux,thic=2						; Model
 oplot,[wcut,wcut],[0,9e-8]
-read,st
+if !d.name eq 'X' then read,st
 ; IUE + STIS + Model
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
@@ -1517,8 +1706,8 @@ read,st
 				form=wlsrc),hd
 plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-4
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
-read,st
+oplot,[wcut,wcut],!y.crange
+if !d.name eq 'X' then read,st
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				   wold,fold,errold,sysold,exold,epold,fwold
 ; FOS + STIS + NICMOS + Model:
@@ -1542,11 +1731,11 @@ read,st
 			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
 			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
 			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
+					'Flux at 6800-7700A',hd
 			print,'BOSZ Mod to',max(wmod),' for ',teff,logg,logz,ebv
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],thic=2
 oplot,wold,fold,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
@@ -1570,7 +1759,7 @@ if !d.name eq 'X' then read,st
 ; (FOS + STIS)
 plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-4
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
 				wave,flux,sterr,syerr,exptime,dataqual,fwhm
@@ -1592,7 +1781,7 @@ if !d.name eq 'X' then read,st
 				form=wlsrc),hd
 plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-4
 oplot,wave,flux,thic=2
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 		       pastem,wcut,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
@@ -1618,10 +1807,10 @@ if !d.name eq 'X' then read,st
 			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
 			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
 			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
+					'Flux at 6800-7700A',hd
 plot,wave,flux,xr=[.95*wcut,1.05*wcut],thic=2
 oplot,wold,fold,psym=-4
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
@@ -1666,7 +1855,7 @@ if !d.name eq 'X' then read,st
 				form=wlsrc),hd
 plot,wold,fold,xr=[.96*wcut,1.04*wcut],psym=-4		; fos
 oplot,wave,flux,psym=-6					; stis
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st
 ; (STIS + FOS + STIS)
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
@@ -1691,7 +1880,7 @@ if !d.name eq 'X' then read,st
 plot,wwfc,fwfc,thic=2,xr=[.95*wcut1,1.05*wcut1],psym=-6		; square WFC3
 oplot,wave,flux,psym=-4						; stis
 oplot,wmod,fmod,lin=2,th=4					; model
-oplot,[wcut1,wcut1],[0,1e-8]
+oplot,[wcut1,wcut1],!y.crange
 if !d.name eq 'X' then read,st
 		      pastem,wcut1,wave,flux,sterr,syerr,exptime,dataqual,fwhm,$
 				wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc
@@ -1714,7 +1903,7 @@ if !d.name eq 'X' then read,st
 plot,wold,fold,xr=[.95*wcut,1.05*wcut],psym=-6			; nic
 oplot,wwfc,fwfc,psym=-4						; wfc3
 oplot,wmod,fmod,lin=2,th=4					; model
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 		       pastem,wcut,wwfc,fwfc,stwfc,sywfc,exwfc,dqwfc,fwwfc, $
@@ -1736,11 +1925,11 @@ if !d.name eq 'X' then read,st
 			    string(teff,logg,logz,ebv,form='(i5,2f6.2,f6.3)'),hd
 			sxaddhist,'     Bohlin, et al. 2017, AJ, 153, 234',hd
 			sxaddhist,'Model Normalized to Observed '+	$
-					'Flux at 6000-9000A',hd
+					'Flux at 6800-7700A',hd
 			print,'BOSZ Mod to',max(wmod),' for ',teff,logg,logz,ebv
 plot,wmod,fmod,xr=[.95*wcut,1.05*wcut],psym=-6		; model sq
 oplot,wold,fold,psym=-4					; nic
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 plotdate,'make_stis_calspec'
 if !d.name eq 'X' then read,st
 			pastem,wcut,wold,fold,errold,sysold,exold,epold,fwold, $
@@ -1750,35 +1939,18 @@ if !d.name eq 'X' then read,st
 			indx=where(wave ge 8603 and wave le 8682)	;vac
 			dataqual(indx)=1		; Line at dust mote
 			end				; P330E
-; STIS+NICMOS:
-;	LDS,Snap1,VB8,WD1057?,WD1657? w/ no model
-;	 lds749b_mod.dk goes to 30mic???
-		'LDS749B': begin
-			wcut=9480
-			sxaddpar,hd,'source2',				$
-					'Bohlin & Koester 2008, AJ, 135, 1092'
-	stop		; add concatenation of model 2017jan12
-			goto,stisniconly
-			end
-		'SNAP-1': begin
-			wcut=10100			; get STIS P-delta 10050
-			goto,stisniconly
-			end
-		'WD1057+719': begin
-			wcut=5695
-			!y.style=0
-; STIS+NICMOS only:
-stisniconly:
+		'WD1057+719': begin			; entry point not used
+stisniconly:				; STIS+NICMOS only isolated here:
 			sxaddhist,string(min(wave),wcut,'STIS', $
 				nam+'.mrg',form=wlsrc),hd
 iuestisnic:						;No model: AGK, 2M*,etc
+
 plot,wave,flux,xr=[wcut*.95,wcut*1.05],psym=-4		; stis (or +wfc3)
-;plot,wave,flux,xr=[8200,10300],psym=-2
+;del plot,wave,flux,xr=[8200,10300],psym=-2
 oplot,wold,fold,thic=2,psym=-6				; nic
-oplot,[wcut,wcut],[0,1e-8]
+oplot,[wcut,wcut],!y.crange
 if !d.name eq 'X' then read,st 		       
-; Trim noise:
-; ff lines seem misplaced??? 2019aug
+; Trim noise: (ff lines ck out as good)
 			if target eq 'WD1657+343' then begin
 			   good=where(wold le 19270.)
 			   wold=wold(good) & fold=fold(good) & fwold=fwold(good)
@@ -1786,7 +1958,7 @@ if !d.name eq 'X' then read,st
 			   exold=exold(good)  &  epold=epold(good)
 			   print,target,minmax(wold)
 			   endif
-			if strpos(nam,'wd1057') eq 0 then wcut=8000	;lv gap
+			if strpos(nam,'wd1057') eq 0 then wcut=8000
 			sxaddhist,string(wcut,max(wold),'NICMOS', $
 						nictarg+'.mrg',form=wlsrc),hd
 ; STIS+(wfc)+NICMOS
@@ -1795,23 +1967,15 @@ if !d.name eq 'X' then read,st
 			wave=wold  &  flux=fold  &  sterr=errold  & syerr=sysold
 			exptime=exold  &  dataqual=epold  &  fwhm=fwold
 			goto,nicnorm
-			end
-		'WD-0308-565': begin
-			good=where(wave le 10100)
-			wave=wave(good)
-			flux=flux(good)
-			sterr=sterr(good)
-			syerr=syerr(good)
-			exptime=exptime(good)
-			dataqual=dataqual(good)
-			fwhm=fwhm(good)
-			end
+			end				; WD1057
 		  else:		print,'STIS only case'		
 ; STIS ONLY comes here
 ;		'G191B2B_PURE'			; pure stis for calobs
 ;		'HZ43B':
 ;		'HS2027+0651':
 		endcase				; end of star specific process.
+; End of all cases
+
 		
 ; Vega is only star that writes full pedigree above:
 	if sun ne 'sun' and filespec ne 'vega' and wcut gt 0 and	$
@@ -1823,16 +1987,17 @@ nicnorm:
 sunskip:
 	if iuelo ne 1. then sxaddhist,iuehist,hd
 	iuelo=1.
-	if teff gt 26000 then						$
-	   sxaddhist,'Lanz NLTE  model grid with good sampling in the IR',hd $
-	 else								$
-	  if teff gt 0	then					$ ;0 is no model
+;	if teff gt 26000 and modl eq 1 then				$
+;	   sxaddhist,'Lanz NLTE  model grid with good sampling in the IR',hd $
+;	 else								$
+; 0,0 is no BOSZ model
+	  if teff gt 0 and modl eq 1 then				$
 	   sxaddhist,'BOSZ model with good sampling in the IR',hd
 ; ###change
 ; 10feb9-New HISTORY STORY required:
-skipout:
+skipout:				; hist etc all done
 	if strpos(name,'_001') lt 0 then begin	; no change for 001 ver.
-;	if strpos(name,'wfc') ge 0 then begin
+;;	if strpos(name,'wfc') ge 0 then begin
 	 sxaddhist,'CHANGES from previous version:',hd
 ;	 sxaddhist,'  New WFC3 IR grism Data',hd
 ;	 sxaddhist,'  The HST flux scale is now based on Rauch NLTE WD ',hd
@@ -1844,19 +2009,20 @@ skipout:
 ;	 sxaddhist,'  The STIS G230LB and G430L flux changes because of new',hd
 ;	 sxaddhist,'  CCD gwidth=11 calibrations (Bohlin etal 2019,158,211),',hd
 ;	 sxaddhist,'  and models are now concatenated.)',hd
-	 sxaddhist,'  New models for 3 prime WDs (Bohlin etal 2020, in prep)',hd
+	 sxaddhist,'  3 New prime WDs  models (Bohlin et al 2020, in press)',hd
+	 sxaddhist,'  New STIS data',hd
 	 sxaddhist,'  For details see:',hd
          sxaddhist,'  http://www.stsci.edu/hst/instrumentation/reference-',hd
 	      sxaddhist,'    data-for-calibration-and-tools/astronomical-',hd
 	      sxaddhist,'    catalogs/calspec',hd
 	 end else sxaddhist,'  New Star',hd
 
-;	if target eq 'WD0308-565' then begin
-;	   sxaddhist,'The primary motivation for establishing WD0308-565',hd
-;	   sxaddhist,'  as a standard star was for use as a COS calibrator.',hd
-;	   sxaddhist,'  The well calibrated STIS instrumentation was',hd
-;	   sxaddhist,'  used to measure the SED of this star.',hd
-;	   endif
+	if target eq 'WD0308-565' then begin
+	   sxaddhist,'The primary motivation for establishing WD0308-565',hd
+	   sxaddhist,'  as a standard star was for use as a COS calibrator.',hd
+	   sxaddhist,'  The well calibrated STIS instrumentation was',hd
+	   sxaddhist,'  used to measure the SED of this star.',hd
+	   endif
 	if target eq 'SDSS132811' then begin
 	  sxaddhist,'The primary motivation for establishing SDSS132811',hd
 	  sxaddhist,'  as a standard star is for an ACS/SBC calibrator.',hd
@@ -1869,6 +2035,7 @@ skipout:
 	  sxaddhist,'  according to Narayan et al. 2019, ApJS, 241, 20.',hd
 	  sxaddhist,'  The well calibrated STIS instrumentation was',hd
 	  sxaddhist,'  used to measure the SED of this star.',hd
+	  sxaddhist,'  See Bohlin et al 2020, AJ, in press.',hd
 	  endif
 	
 	sxaddpar,hd,'filename',name
@@ -1881,7 +2048,7 @@ skipout:
 
 	mn=min(flux)  &  if mn le 0 then mn=max(flux)*1e-4
 	!mtitle=target+' Flux, syst-err, stat-err=dots'
-	plot_oo,wave,flux,yr=[0.9*min(flux(100:-1))>5e-20,1.1*max(flux)],  $
+	plot_oo,wave,flux,yr=[0.9*min(flux(100:-1))>1e-21,1.1*max(flux)],  $
 			xr=[min(wave),max(wave)]
 	oplot,wave,syerr,thic=2
 	oplot,wave,(sterr<1),lines=1
@@ -1921,7 +2088,7 @@ skipout:
 	bad=where(sterr eq 1.6e38,nbad)
 	if nbad gt 0 then sterr(bad)=0
         fxbcreate,unit,name,hd			; unit must be auto assigned
-        row=0
+        row=0L
 	flux=float(flux)
 	sterr=float(sterr)
 	syerr=float(syerr)
@@ -1941,7 +2108,6 @@ skipout:
 
 if filespec eq 'vega' or filespec eq 'sun' then return	; avoid loop error msg.
 nextfile:
-;    read,st
     end
 return
 end

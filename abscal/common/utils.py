@@ -65,15 +65,16 @@ def get_data_file(module, fname):
     
     # /path/to/module
     base_loc = os.path.dirname(current_loc)
+    base_loc = os.path.dirname(base_loc)
     
     # Replace '.' with path separator
-    module_path = module.replace(".", os.pathsep)
+    module_path = module.replace(".", "/")
     
     data_file = os.path.join(base_loc, module_path, "data", fname)
     return data_file
 
 
-def set_param(param, default, row, issue_dict, override_dict={}, verbose=False):
+def set_param(param, default, row, issues, pre, overrides={}, verbose=False):
     """
     Given a parameter name, that parameter's default value, a data table
     row, and a JSON dictionary which may have an entry for the current row that
@@ -87,11 +88,11 @@ def set_param(param, default, row, issue_dict, override_dict={}, verbose=False):
         The default value for that parameter
     row : abscal.common.exposure_data_table.AbscalDataTable
         A single-row table containing the data of interest.
-    issue_dict : dict
+    issues : dict
         A dictionary containing a set of parameters (one of which may be
         param), along with information to identify files whose parameters
         should be adjusted .
-    override_dict : dict
+    overrides : dict
         A dictionary containing any parameters whose value is being overridden
         by the user.
     verbose : bool
@@ -103,24 +104,24 @@ def set_param(param, default, row, issue_dict, override_dict={}, verbose=False):
         The appropriate value for the parameter given 
     """
     value = default
-    if param in issue_dict:
-        issue_list = issue_dict[param]
+    if param in issues:
+        issue_list = issues[param]
         for item in issue_list:
-            val_len = len(item["value"])
-            if row[item["column"][:val_len]] == item["value"]:
+            val_len = len(item["value"])            
+            if row[item["column"]][:val_len] == item["value"]:
                 value = item["param_value"]
-                 if verbose:
+                if verbose:
                     reason = item["reason"]
                     source = item["source"]
-                    msg = "{} changed xstar to {} because {} from {}"
-                    print(msg.format(root, xstar, reason, source))
-    if param in override_dict:
-        value = override_dict[param]
+                    msg = "{}: changed {} to {} because {} from {}"
+                    print(msg.format(pre, param, value, reason, source))
+    if param in overrides:
+        value = overrides[param]
         
     return value
 
 
-def set_params(defaults, row, issues, overrides={}, verbose=False):
+def set_params(defaults, row, issues, pre, overrides={}, verbose=False):
     """
     Given a dictionary of default values, a metadata row, a dictionary of
     known issues and overrides, a dictionary of user-supplied overrides,
@@ -152,14 +153,14 @@ def set_params(defaults, row, issues, overrides={}, verbose=False):
     
     for param in defaults:
         default = defaults[param]
-        value = set_param(param, default, row, issues, overrides, verbose)
+        value = set_param(param, default, row, issues, pre, overrides, verbose)
         params[param] = value
         if value != default:
             params['set'].append(param)
     
     return params
 
-def set_image(images, row, issues, overrides={}, verbose=False):
+def set_image(images, row, issues, pre, overrides={}, verbose=False):
     """
     Given an image, image metadata, and a set of known issues, determine if any
     of the known issues apply to the image in question and, if they do, make
@@ -185,8 +186,12 @@ def set_image(images, row, issues, overrides={}, verbose=False):
     image : tuple
         Tuple of (SCI, ERR, DQ) np.ndarray images, as edited.
     """
+#     print("set_image with {}, {}, {}, {}".format(images, row, issues, overrides))
     
     for issue in issues:
+#         print(issue)
+#         print(issue["column"], type(issue["column"]))
+#         print(row)
         found = False
         if issue["column"] in row:
             if isinstance(issue["column"], str):
@@ -210,8 +215,8 @@ def set_image(images, row, issues, overrides={}, verbose=False):
                 reason = issue["reason"]
                 source = issue["source"]
                 value = issue["value"]
-                msg = "{} changed ({}:{},{}:{}) to {} because {} from {}"
-                print(msg.format(root, y1, y2, x1, x2, value, reason, source))
+                msg = "{}: changed ({}:{},{}:{}) to {} because {} from {}"
+                print(msg.format(pre, y1, y2, x1, x2, value, reason, source))
                 
     
     return images

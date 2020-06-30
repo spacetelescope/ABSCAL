@@ -179,7 +179,7 @@ st=''
 			   b(0,nout) =  gross*0
 			   g(0,nout) = gross		; NO wgt, curiously?
 			   time(0,nout)=tim
-			end else begin
+			 end else begin
 ; POINT SOURCE DATA
 			   f(0,nout) = a.net	; rcb says this would fail for
 			   e(0,nout) = a.err	;longer than orig ns,ngood array
@@ -188,7 +188,7 @@ st=''
 			   b(0,nout) = a.back
 			   g(0,nout) = a.gross
 			   time(0,nout) = a.time
-			endelse
+			   endelse
 			nout = nout + 1		; # of spectra to process
 nexti:
 		end				;i loop to read & store all data
@@ -205,11 +205,11 @@ nexti:
 		for ick=0,ngood-1 do begin
 			dum=where(w(*,ick) gt -1e19,ngd) ;elim -1e20 flags
 			ns=max([ns,ngd])
-			print,file_list(ick),ns,ngd
+print,file_list(ick),ns,ngd
 ;if ns gt ngd then stop
 ;bad=where(w(*,ick) gt 11450 and w(*,ick) lt 15400,nbad)
 ;if nbad gt 0 then stop
-		endfor
+			endfor
 		print,'Set input arrays to max # of good points=',ns
 		w = w(0:ns-1,0:nout-1)
 		f = f(0:ns-1,0:nout-1)

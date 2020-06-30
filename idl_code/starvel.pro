@@ -10,6 +10,7 @@ function starvel,starin
 ;	star name
 ; OUTPUT:
 ;	The radial velocity in km/s. Positive vel means star is going away.
+;		YES!!! Checked w/ Google.
 ; HISTORY
 ;	97dec8 - rcb
 ;	02may9 - wd320-539 new, gd71 changed from 80(stis guess) to 30
@@ -48,7 +49,8 @@ star=strupcase(strtrim(starin,2))		; 08dec4-change to starin
 							then starvel=-50.
 ;			'BD+75D325' : starvel=-19.	;+-11,1957PASP...69..242
 ;Pierre Dubath, Georges Meylan, and Michel Mayer 1997, A&A, 324, 505:
-	if strpos(star,'NGC6681') eq 0 then starvel=223.4
+;	if strpos(star,'NGC6681') eq 0 then starvel=223.4
+	if strpos(star,'NGC6681') eq 0 then starvel=218.7	;2020APR1 Simbad
 
 ; update Simbad values 2019jan14:
 	if strpos(star,'10LAC') eq 0 then starvel=-9.7
@@ -66,6 +68,7 @@ star=strupcase(strtrim(starin,2))		; 08dec4-change to starin
 	if strpos(star,'GD50') eq 0 then starvel=+87.		;2019jan
 ;	if strpos(star,'GJ7541') eq 0 then starvel= Not in Simbad
 	if strpos(star,'GRW+70') eq 0 then starvel=+26.		;2019jan
+	if strpos(star,'GRW_70') eq 0 then starvel=+26.		;2020mar10
 	if strpos(star,'HD0090') eq 0 then starvel=-72.
 	if strpos(star,'HD0311') eq 0 then starvel=+112.
 	if strpos(star,'HD0740') eq 0 then starvel=+206.
@@ -118,6 +121,7 @@ star=strupcase(strtrim(starin,2))		; 08dec4-change to starin
 ;	if strpos(star,'WD0320') eq 0 then starvel=+57.8;Maxted-00,mnras,319,305
 	if strpos(star,'WD0320') eq 0 then starvel=+49.9	;falcon 2019jan
 	if strpos(star,'WD1057') eq 0 then starvel=+76.	; Jay-1997, ApJ,484,871
+;	if strpos(star,'WD1657') eq 0 then starvel=+78.	;+/-72 omit
 	if strpos(star,'WD1327') eq 0 then starvel=+36. 	;2019jan
 	if strpos(star,'WD2341') eq 0 then starvel=-16. 	;2019jan
 

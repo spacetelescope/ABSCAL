@@ -78,20 +78,20 @@ FOR IGRAT=0,ngrat-1 DO BEGIN		;MAIN LOOP
 	hdr2(0)=''
 ; 2019jun13 - & omit ff for x1/
 	if file(0) ne 'dirx1.log' then case grat(igrat) of
-		'G140L': hdr2(0)=grat(igrat)+' Net & Flux corr. '+	$
-			'for time,temp effects(Stys,etal. STIS ISR 2004-04)'
-		'G230L': hdr2(0)=grat(igrat)+' Net & Flux corr. '+	$
-			'for changes w/ time (Stys,etal. STIS ISR 2004-04)'
-		'G230LB': hdr2(0)=grat(igrat)+' Net & Flux corr. '+	$
-		       'for time & CTE loss (STIS ISRs 04-04 & 06-03).'
-		'G430L': hdr2(0)=grat(igrat)+' Net and Flux corr. '+	$
-		       'for time & CTE loss (STIS ISRs 04-04 & 06-03).'
-		'G750L': hdr2(0)=grat(igrat)+' Net and Flux corr. '+	$
-		       'for time & CTE loss (STIS ISRs 04-04 & 06-03).'  
+		'G140L': hdr2(0)=' Net & Flux corr '+			$
+			'for change w/ time,temp (Bohlin,etal.2019,AJ,158,211)'
+		'G230L': hdr2(0)=' Net & Flux corr. '+	$
+			'for changes w/ time (Bohlin,etal.2019,AJ,158,211)'
+		'G230LB': hdr2(0)='Net & Flux corr '+			$
+		     'for time(2019,AJ,158,211)&CTE loss(2006,PASP,118,1455)'
+		'G430L': hdr2(0)='Net and Flux corr '+		$
+		     'for time(2019,AJ,158,211)&CTE loss(2006,PASP,118,1455)'
+		'G750L': hdr2(0)='Net and Flux corr '+		$
+		     'for time(2019,AJ,158,211)&CTE loss(2006,PASP,118,1455)'
 		endcase
 	if star eq 'HZ43' and grat(igrat) eq 'G750L' then		$
 		hdr2(0)=grat(igrat)+' Net and Flux corr. for '+		$
-			'time but NOT CTE loss.'
+			'time but NOT CTE loss, except o69u07030.'
 ; 98jun2 - patch to make old Low disp merges work for obsnames w/o grating names
 	lst=strupcase(file)		; to make capital gratings work below
 	if strpos(file(0),'dir') lt 0 and ngrat eq 1 then goto,nofidl
@@ -142,14 +142,16 @@ nofidl:
 	nlst=n_elements(lst)
 	lst=lst(where(strmid(lst,0,1) ne 'B'))	; elim +3" after 1999.2
 	ngood=n_elements(lst)
-	last=strpos(lst(0),'.fits')
 	if strpos(lst(0),'gaia') ge 0 then begin			$
+		last=strpos(lst(0),'.fits')
 		lst=strmid(lst,last-28,28)
 		form='(a/(2a29))'
 	    end	else begin
-	    	lst=strmid(lst,last-9,9)
+		fdecomp,lst,disk,dir,spcnam
+		lst=strmid(spcnam,5,9)
 		form='(a/(7(1x,a9)))'
 		endelse
+	if strpos(lst(0),'o') ne 0 then stop			; & fix
 	printf,11,'coadd lst for '+GRAT(IGRAT)+' from dir='+input+':',	$
 						lst,form=form
 	iepoch=where(strpos(head,'EPOCH:') ge 0,nepoch)
@@ -170,6 +172,7 @@ nofidl:
 	AP=STRTRIM(SXPAR(HEAD,'aperture'),2)
 	det=strtrim(sxpar(head,'detector'),2)
 	gwid=sxpar(head,'gwidth')
+	sens=sxpar(head,'senstab')
 	gwidstd=11					; 2019
 	if file(0) eq 'dirx1.log' then begin		; MAST pipeline
 		gwid=11  &  gwidstd=11
@@ -180,13 +183,15 @@ nofidl:
 ; check for any fudge factors
 	if keyword_set(FUDGE) then begin
 		f=f*fudge(igrat)
-		if fudge(igrat) ne 1. then printf,11,grat(igrat),              $
+		if fudge(igrat) ne 1. then printf,11,grat(igrat),	$
 		  ' flux multiplied by fudge=',fudge(igrat),form='(2a,f5.3)'
 		endif
 ; 00apr6 - sys err = 1% internal residuals of abs cal (bohlin 2000 AJ) {was 2%}
 	ind=where(c ne 0.)
 	ferr=f*0  &  FERR(ind)=0.01*abs(F(ind))
-	printf,11,'gwidth for '+grat(igrat)+' flux cal=',gwid
+; 2020mar15 - add sens to output
+	printf,11,'gwidth for '+grat(igrat)+' flux cal=',		$
+			strtrim(gwid,2),' w/ ',sens
 	if ap eq '52X2' and gwid eq gwidstd then PRINTF,11,hdr1,format='(a)'  $
 	     else begin
 		printf,11,'SYS-ERROR is set to 1% but may be larger. Aper='+ap

@@ -39,15 +39,44 @@ from astropy.io import ascii, fits
 from astropy.table import Table, Column
 from astropy.time import Time
 from copy import deepcopy
-from photutils.centroids import centroid_sources, centroid_com
+from pathlib import Path
+from photutils.centroids import centroid_sources
+from photutils.centroids import centroid_1dg as g1
+from photutils.centroids import centroid_2dg as g2
+from photutils.centroids import centroid_com as com
+from photutils.detection import DAOStarFinder
 from rebin import rebin
-from scipy import signal
+from scipy import ndimage
 from scipy.interpolate import interp2d
 
 from abscal.common.args import parse
-from abscal.common.utils import get_data_file, set_param, set_params, set_image
+from abscal.common.utils import get_data_file, set_params, set_image
 from abscal.common.exposure_data_table import AbscalDataTable
 from abscal.wfc3.util_filter_locate_image import locate_image
+
+
+def make_monotonic(wave, indx):
+    """
+    Make the supplied wavelength array (and the index of the wavelength values
+    that were just altered) monotonically increasing.
+    
+    Parameters
+    ----------
+    wave : np.ndarray
+        Array of wavelength values
+    indx : np.ndarray
+        Index of wave entries that were just replaced by a different order.
+    """
+    ibreak = np.max(indx)
+    bad = np.where(wave[ibreak+1:1013] < wave[ibreak])
+    npts = len(bad[0])
+    if npts > 0:
+        print("Non-monotonic: {}".format(bad))
+        delwl = np.where((wave[ibreak+1+npts] - wave[ibreak])>1.,
+                         (wave[ibreak+1+npts] - wave[ibreak]), 1.)
+        delwl /= npts
+        wave[ibreak:ibreak+npts] = wave[ibreak] + delwl*np.arange(1, npts+1)
+    return wave
 
 
 def set_hdr(hdr, params):
@@ -70,7 +99,7 @@ def set_hdr(hdr, params):
     hdr["YACTUAL"] = (params['yc'], "Actual Found Direct Image Y Position")
     hdr["XCAMERR"] = (params['xerr'], "Pointing error XACTUAL-Predicted (px)")
     hdr["YCAMERR"] = (params['yerr'], "Pointing error YACTUAL-Predicted (px)")
-    if axeflg:
+    if params['axeflg']:
         hdr['HISTORY'] = 'WAVELENGTH solution per AXE coef. No Z-order.'
     else:
         hdr['HISTORY'] = 'WAVELENGTH solution per 0-order position ISR'
@@ -92,7 +121,7 @@ def set_hdr(hdr, params):
     hdr["BMEDIAN"] = (params['bmedian'], "Bkg. Median filter width")
     hdr["BMEAN1"] = (params['bmean1'], "Bkg. Boxcar Smooth width 1")
     hdr["BMEAN2"] = (params['bmean2'], "Bkg. Boxcar Smooth width 2")
-    hdr["WLOFFSET"] = (params['wloffset'], "Wavelength correction.")
+    hdr["WLOFFSET"] = (params['wl_offset'], "Wavelength correction.")
     hdr["ANGLE"] = (params['angle'], "Found angle of spectrum WRT x-axis")
     now = datetime.datetime.now()
     now_str = now.strftime("%Y-%m-%d %H:%M:%S")
@@ -130,23 +159,38 @@ def reduce_flatfield(input_table, params):
         File name of the flatfield used.
     """
     task = "wfc3_grism_reduce_flatfield"
-
+    
+    root = params['root']
     image = params['image']
     hdr = params['hdr']
     flat = params['flat']
     wave = params['wave']
+    ltv1 = params['ltv1']
+    ltv2 = params['ltv2']
+    filter = params['filter']
     verbose = params['verbose']
     
     grating = input_table['filter']
+
+    np_formatter = {'float_kind':lambda x: "{:8.4f}".format(x)}
+    np_opt = {'max_line_width': 175, 'threshold': 2000000,#}#,
+               'formatter': np_formatter}
+    
+    preamble = "{}: {}: {}".format(task, root, grating)
+    
+    if verbose:
+        print("{}: starting".format(preamble))
     
     # Create an array for quadratic fits of SED
     coef3 = np.zeros((1014, 1014), dtype='float64')
-    
+
     # Get flatfield data cube
     cal_data = get_data_file("abscal.wfc3", "calibration_files.json")
-    cal_files = json.loads(cal_data)
-    flat_file_name = cal_files["flatfield_cube"]["wfc3"][row["filter"]]
+    with open(cal_data, 'r') as inf:
+        cal_files = json.load(inf)
+    flat_file_name = cal_files["flatfield_cube"]["wfc3"][filter]
     flat_file = get_data_file("abscal.wfc3", flat_file_name)
+
     with fits.open(flat_file) as in_flat:
         # Figure out extension of first coefficient extension of flatfield
         coeff_offset = 0
@@ -155,51 +199,53 @@ def reduce_flatfield(input_table, params):
             coeff_offset = 1
         coef0 = in_flat[0+coeff_offset].data
         coef1 = in_flat[1+coeff_offset].data
-        coef2 = in_flat[1+coeff_offset].data
+        coef2 = in_flat[2+coeff_offset].data
         
         flat_hdr = in_flat[0].header
-        
+
     wmin, wmax = float(flat_hdr["WMIN"]), float(flat_hdr["WMAX"])
     abswl = abs(wave)
     x = (abswl - wmin)/(wmax - wmin)
     if grating == 'G102':
-        good = np.where((abswl >= 7000) and (abswl <= 12000))
+        good = np.where((abswl >= 7000) & (abswl <= 12000))
     elif grating == 'G141':
-        good = np.where((abswl >= 9000) and (abswl <= 18000))
+        good = np.where((abswl >= 9000) & (abswl <= 18000))
     else:
         raise ValueError("Unknown Grating {}".format(grating))
     xgood = x[good]
     ff = np.ones_like(image)
-    ltv1, ltv2 = -hdr['ltv1'], -hdr['ltv2']
     ns, nl = hdr['naxis1'], hdr['naxis2']
+    xpx = ((good[0]+ltv1).astype('int32'),)
     
     for i in range(nl):
-        if abswl.shape[0] == 2:
+        if abswl.ndim == 2:
             if grating == 'G102':
-                good = np.where((abswl[:,i] >= 7000) and (abswl[:,i] <= 12000))
+                good = np.where((abswl[:,i] >= 7000) & (abswl[:,i] <= 12000))
             elif grating == 'G141':
-                good = np.where((abswl[:,i] >= 9000) and (abswl[:,i] <= 18000))
+                good = np.where((abswl[:,i] >= 9000) & (abswl[:,i] <= 18000))
             else:
                 raise ValueError("Unknown Grating {}".format(grating))
-            xgood = x[good[0],i]
-            xgood = x[good][:,i]
-        xpx = (good+ltv1)[:,i]
-        ypx = i+ltv2
-        ff[good][:,i] = coef0[xpx,ypx] + coef1[xpx,ypx]*xgood[:,i] 
-        ff[good][:,i] += coef2[xpx,ypx]*xgood[:,i]*xgood[:,i] 
-        ff[good][:,i] += coef3[xpx,ypx]*xgood[:,i]*xgood[:,i]*xgood[:,i]
+            xgood = x[:,i][good]
+        ypx = i + int(ltv2)
+        coef0i = coef0[ypx,:][xpx]
+        coef1i = coef1[ypx,:][xpx]
+        coef2i = coef2[ypx,:][xpx]
+        coef3i = coef3[ypx,:][xpx]
+        ff[i,:][good] = coef0i + coef1i*xgood + coef2i*xgood**2 + coef3i*xgood**3
     
     if ns < 1014:
         if verbose:
-            msg = "{}: {}: Subarray w/ ltv1,ltv2 = ({},{})"
-            print(msg.format(task, row['root'], ltv1, ltv2))
+            msg = "{}: Subarray w/ ltv1,ltv2 = ({},{})"
+            print(msg.format(preamble, ltv1, ltv2))
     ff = np.where(ff<=0.5, 1., ff)
     image = image/ff
     if verbose:
-        msg = "{}: {}: flatfield for number of wave points {}"
-        print(msg.format(task, row['root'], ns))
+        print("{}: flatfield for number of wave points {}".format(preamble, ns))
+
+    if verbose:
+        print("{}: finished".format(preamble))
     
-    return image, flatfile
+    return image, flat_file
 
 
 def calculate_order(params, xc, yc):
@@ -226,7 +272,8 @@ def calculate_order(params, xc, yc):
     result += params['d']*xc*xc + params['e']*xc*yc + params['f']*yc*yc
     return result
 
-def reduce_wave_axe(input_table, params):
+
+def reduce_wave_axe(row, params):
     """
     Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
     this should only be used for the AXE solution. The Zero-order (Z-ORD)
@@ -258,6 +305,11 @@ def reduce_wave_axe(input_table, params):
     file = os.path.join(row["path"], row["filename"])
     xcin = params['xin']
     ycin = params['yin']
+    root = row['root']
+    preamble = '{}: {}'.format(task, root)
+    
+    if verbose:
+        print("{}: starting.".format(preamble))
 
     with fits.open(file) as inf:
         image = inf['SCI'].data
@@ -266,7 +318,7 @@ def reduce_wave_axe(input_table, params):
         xc, yc = xcin, ycin
         ns = inf[0].header['naxis1']
         if ns < 1014:
-            ltv1, ltv2 = inf[0].header['ltv1'], inf[0].header['ltv2']
+            ltv1, ltv2 = inf[1].header['ltv1'], inf[1].header['ltv2']
             xc, yc = xcin + ltv1, ycin + ltv2
         
         if row['filter'] == 'G102':
@@ -305,22 +357,7 @@ def reduce_wave_axe(input_table, params):
             indx = np.where(wave < 300)
             if len(indx[0]) > 0:
                 wave[indx] = -(a0 + a1*(indx[0]-xc))
-                
-                # Check for monotonic
-
-# ; enforce monotonicity:
-# 		  ibreak=max(indx)
-# 		  bad=where(wave(ibreak+1:1013) lt wave(ibreak),npts)
-# 		  if npts gt 0 then begin
-# 			   delwl=((wave(ibreak+1+npts)-wave(ibreak))>1)/(npts+1)
-# 			   wave(ibreak:ibreak+npts)=wave(ibreak)+	$
-# 					delwl*indgen(npts+1)
-# 			   endif
-
-                dx = np.diff(wave)
-                if not (np.all(dx<=0) or (np.all(dx>=0))):
-                    msg = "Wavelength array {} not monotonic".format(wave)
-                    raise ValueError(msg)
+                wave = make_monotonic(wave, indx)
             wav1st = wave
             
             # 2nd order
@@ -337,14 +374,9 @@ def reduce_wave_axe(input_table, params):
             if len(indx[0]) > 0:
                 wave[indx] = 2*(a0 + a1*(indx[0]-xc))
                 wav1st[indx] = a0 + a1*(indx[0]-xc)
-                
-                # Check for monotonic
-                dx = np.diff(wave)
-                if not (np.all(dx<=0) or (np.all(dx>=0))):
-                    # For now just die on an exception if not monotonic.
-                    msg = "Wavelength array {} not monotonic".format(wave)
-                    raise ValueError(msg)
-            
+                wave = make_monotonic(wave, indx)
+                wav1st = make_monotonic(wav1st, indx)
+                        
             # 3rd order is commented out in IDL code, provided below:
 #             params = { 'a': 2.17651e+03, 'b': 0., 'c': 5.01084e-02,
 #                        'd': 0., 'e': 0., 'f': 0. }
@@ -386,12 +418,7 @@ def reduce_wave_axe(input_table, params):
             indx = np.where(wave < 300)
             if len(indx[0]) > 0:
                 wave[indx] = -(a0 + a1*(indx[0]-xc))
-                
-                # Check for monotonic
-                dx = np.diff(wave)
-                if not (np.all(dx<=0) or (np.all(dx>=0))):
-                    msg = "Wavelength array {} not monotonic".format(wave)
-                    raise ValueError(msg)
+                wave = make_monotonic(wave, indx)
             wav1st = wave
 
             # 2nd order
@@ -407,12 +434,8 @@ def reduce_wave_axe(input_table, params):
             if len(indx[0]) > 0:
                 wave[indx] = 2*(a0 + a1*(indx[0]-xc))
                 wav1st[indx] = a0 + a1*(indx[0]-xc)
-                
-                # Check for monotonic
-                dx = np.diff(wave)
-                if not (np.all(dx<=0) or (np.all(dx>=0))):
-                    msg = "Wavelength array {} not monotonic".format(wave)
-                    raise ValueError(msg)
+                wave = make_monotonic(wave, indx)
+                wav1st = make_monotonic(wav1st, indx)
 
             # 3rd order is commented out in IDL code, provided below:
 #             params = { 'a': 3.00187e+03, 'b': 1.04205e-01, 'c': -1.18134e-03,
@@ -429,9 +452,21 @@ def reduce_wave_axe(input_table, params):
 #                 wav1st[indx] = a0 + a1*(indx[0]-xc)
 
             angle = np.radians(0.44)
+
+        # Check for monotonic
+        dx = np.diff(wave)
+        if not (np.all(dx<=0) or (np.all(dx>=0))):
+            if verbose:
+                for i in range(1, len(wave)):
+                    if wave[i] < wave[i-1]:
+                        msg = "{}: Not monotonic at {}: {}-{}"
+                        print(msg.format(preamble, i, wave[i-1], wave[i]))
+            # For now just die on an exception if not monotonic.
+            msg = "Wavelength array {} not monotonic".format(wave)
+            raise ValueError(msg)
         
         wave += params['wl_offset']
-        wave1st += params['wl_offset']
+        wav1st += params['wl_offset']
         
         if ns < 1014:
             ibeg = ltv1
@@ -439,8 +474,8 @@ def reduce_wave_axe(input_table, params):
             wave = wave[ibeg:iend]
             wav1st = wav1st[ibeg:iend]
             if verbose:
-                msg = "Wave minmax = {},{} Ref. (1014)px at ({},{})"
-                print(msg.format(min(wave), max(wave), xc, yc))
+                msg = "{}: wave minmax = {},{} Ref. (1014)px at ({},{})"
+                print(msg.format(preamble, min(wave), max(wave), xc, yc))
        
     with fits.open(file, mode='update') as f:
         f[0].header['XC'] = (xcin, 'Dir img ref X position used for AXE WLs')
@@ -453,11 +488,14 @@ def reduce_wave_axe(input_table, params):
         f[0].header['A1+2ND'] = (a1p2, 'Linear Term of the +2nd order disp.')
 #         f[0].header['A0+3RD'] = (a0p3, 'Constant Term of the +3rd order disp.')
 #         f[0].header['A1+3RD'] = (a1p3, 'Linear Term of the +3rd order disp.')
+    
+    if verbose:
+        print("{}: finishing.".format(preamble))
 
     return x_arr, wave, angle, wav1st
 
 
-def reduce_wave_zord(input_table, params):
+def reduce_wave_zord(row, params):
     """
     Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
     this should only be used for the Zeroth Order (ZORD) solution. The AXE
@@ -465,8 +503,8 @@ def reduce_wave_zord(input_table, params):
     
     Parameters
     ----------
-    input_table : abscal.common.exposure_data_table.AbscalDataTable
-        Table containing the input data
+    row : abscal.common.exposure_data_table.AbscalDataTable.Row
+        Row of astropy Table containing the input data
     params : dict
         Dictionary of parameters, including:
             xc, yc : float
@@ -485,25 +523,34 @@ def reduce_wave_zord(input_table, params):
     wav1st : np.ndarray
         First-order wavelengths for flatfielding with FF cube data.
     """
-    task = "wfc3_grism_reduce_wave_axe"
+    task = "wfc3_grism_reduce_wave_zord"
+    root = row['root']
+    preamble = "{}: {}".format(task, root)
     file = os.path.join(row["path"], row["filename"])
     zxposin = params['xin']
     zyposin = params['yin']
     verbose = params['verbose']
+
+    np_formatter = {'float_kind':lambda x: "{:7.1f}".format(x)}
+    np_opt = {'max_line_width': 175, 'formatter': np_formatter,
+              'threshold': 2000000}
+    
+    if verbose:
+        print("{}: starting.".format(preamble))
     
     with fits.open(file) as inf:
         image = inf['SCI'].data
         filter = row['filter']
-        x_arr = np.arange(1014, dtype='int8')
+        x_arr = np.arange(1014, dtype='int32')
         zxpos, zypos = zxposin, zyposin
 
-        if ns < 1014:
-            ltv1, ltv2 = inf[0].header['ltv1'], inf[0].header['ltv2']
+        if image.shape[1] < 1014:
+            ltv1, ltv2 = inf[1].header['ltv1'], inf[1].header['ltv2']
             zxpos, zypos = zxposin + ltv1, zyposin + ltv2
             if verbose:
-                msg = "{}: {}: subarray shifts Z-ord ref px by ({},{})"
-                print(msg.format(task, row['root'], ltv1, ltv2))
-        
+                msg = "{}: subarray shifts Z-ord ref px by ({},{})"
+                print(msg.format(preamble, ltv1, ltv2))
+
         if filter == 'G102':
 
             # First Order        
@@ -513,6 +560,13 @@ def reduce_wave_zord(input_table, params):
             m = m_coeff[0] + m_coeff[1]*zxpos + m_coeff[2]*zypos
             bp1, mp1 = b, m
             wave = b + m*(x_arr - zxpos)
+#             print("Wave after first order")
+#             print(np.array2string(wave, **np_opt))
+            
+#             print("Wave: ", end='')
+#             for i in range(len(wave)):
+#                 print("{:.1f}".format(wave[i]), end=', ')
+#             print("done wave.")
             
             # Negative First Order
             b_coeff = [205.229, -0.015426, -0.019207]
@@ -524,8 +578,14 @@ def reduce_wave_zord(input_table, params):
             indx = np.where(wave < -7000)
             if len(indx[0]) > 0:
                 wave[indx] = b + m*(indx[0] - zxpos)
-            
+#                 print("Wave after negative first order")
+#                 print(np.array2string(wave, **np_opt))
+                wave = make_monotonic(wave, indx)
             wav1st = deepcopy(wave)
+#             print("Wave: ", end='')
+#             for i in range(len(wave)):
+#                 print("{:.1f}".format(wave[i]), end=', ')
+#             print("done wave.")
             
             # Second Order
             b_coeff = [213.571, 0.561877, -0.040419]
@@ -537,14 +597,18 @@ def reduce_wave_zord(input_table, params):
             indx = np.where(wave > 14000)
             if len(indx[0]) > 0:
                 wave[indx] = b + m*(indx[0] - zxpos)
-                wave1st[indx] = (b + m*(indx[0] - zxpos))//2
+#                 print("Wave after second order")
+#                 print(np.array2string(wave, **np_opt))
+                wav1st[indx] = (b + m*(indx[0] - zxpos))//2
+                wave = make_monotonic(wave, indx)
+                wav1st = make_monotonic(wav1st, indx)
+#             print("Wave: ", end='')
+#             for i in range(len(wave)):
+#                 print("{:.1f}".format(wave[i]), end=', ')
+#             print("done wave.")
+#             print("Wave after monotonic Correction")
+#             print(np.array2string(wave, **np_opt))
 
-            # Check for monotonic
-            dx = np.diff(wave)
-            if not (np.all(dx<=0) or (np.all(dx>=0))):
-                msg = "Wavelength array {} not monotonic".format(wave)
-                raise ValueError(msg)
-            
             angle = np.radians(0.61)
         
         elif filter == 'G141':
@@ -567,7 +631,7 @@ def reduce_wave_zord(input_table, params):
             indx = np.where(wave < -8000)
             if len(indx[0]) > 0:
                 wave[indx] = b + m*(indx[0] - zxpos)
-            
+                wave = make_monotonic(wave, indx)
             wav1st = deepcopy(wave)
             
             # Second Order
@@ -580,27 +644,37 @@ def reduce_wave_zord(input_table, params):
             indx = np.where(wave > 18000)
             if len(indx[0]) > 0:
                 wave[indx] = b + m*(indx[0] - zxpos)
-                wave1st[indx] = (b + m*(indx[0] - zxpos))//2
+                wav1st[indx] = (b + m*(indx[0] - zxpos))//2
+                wave = make_monotonic(wave, indx)
+                wav1st = make_monotonic(wav1st, indx)
 
-            # Check for monotonic
-            dx = np.diff(wave)
-            if not (np.all(dx<=0) or (np.all(dx>=0))):
-                msg = "Wavelength array {} not monotonic".format(wave)
-                raise ValueError(msg)
-            
             angle = np.radians(0.42)
 
+        # Check for monotonic
+        dx = np.diff(wave)
+        if not (np.all(dx<=0) or (np.all(dx>=0))):
+            if verbose:
+                for i in range(1, len(wave)):
+                    if wave[i] < wave[i-1]:
+                        msg = "{}: Not monotonic at {}: {}-{}"
+                        print(msg.format(preamble, i, wave[i-1], wave[i]))
+            # For now just die on an exception if not monotonic.
+            msg = "Wavelength array {} not monotonic".format(wave)
+            raise ValueError(msg)
+        
+        if verbose:
+            print("{}: Adding offset {}".format(preamble, params['wl_offset']))
         wave += params['wl_offset']
-        wave1st += params['wl_offset']
+        wav1st += params['wl_offset']
 
-        if ns < 1014:
+        if image.shape[1] < 1014:
             ibeg = ltv1
             iend = ltv1 + ns - 1
             wave = wave[ibeg:iend]
             wav1st = wav1st[ibeg:iend]
             if verbose:
-                msg = "Wave minmax = {},{} Ref. (1014)px at ({},{})"
-                print(msg.format(min(wave), max(wave), xc, yc))
+                msg = "{}: Wave minmax = {},{} Ref. (1014)px at ({},{})"
+                print(msg.format(preamble, min(wave), max(wave), xc, yc))
 
     with fits.open(file, mode='update') as f:
         f[0].header['B+1ST'] = (bp1, 'Constant Term of the +1st order disp.')
@@ -609,37 +683,11 @@ def reduce_wave_zord(input_table, params):
         f[0].header['M-1ST'] = (mm1, 'Linear Term of the -1st order disp.')
         f[0].header['B+2ND'] = (bp2, 'Constant Term of the +2nd order disp.')
         f[0].header['M+2ND'] = (mp2, 'Linear Term of the +2nd order disp.')
+    
+    if verbose:
+        print("{}: finishing.".format(preamble))
    
     return x_arr, wave, angle, wav1st
-
-
-# pro wfc_wavecal,hdr,zxposin,zyposin,x,wave,angle,wav1st
-# ; INPUTS: 
-# ;	hdr - header
-# ;	zxpos,zypos-x,y posit of the zero order. Must be px w/ a 1014x1014 ref. 
-# ; OUTPUTS:
-# ;	x=indgen(1014)
-# ;	wave - wavelength vector, customized for each order. For subarr, wave
-# ;		is the X-size of subarr and w/ the actual (eg 512px) coverage.
-# ;	angle - slope of spectrum
-# ;	wav1st - 1st order WLs for flat fielding w/ FF data cube
-# ; FORMULAE
-# ;	wave=b+m*delx			;delx=dist from Z-order
-# ;	b=b0+b1*zxpos+b2*zypos		coef from wlmake.pro
-# ;	m=m0+m1*zxpos+m2*zxpos
-
-# ;-1 formula is better than +1 order for finding pixel of 0-order.
-# ;;		indx=where(wave lt 300,npts)
-# ;;		if npts gt 0 then begin
-# ;;		 wave(indx)=-(a0+a1*(indx-xc))
-# ; enforce monotonicity: btwn -1 & +1 orders:
-# ;;		 ibreak=max(indx)
-# ;;		 bad=where(wave(ibreak+1:1013) lt wave(ibreak),npts)
-# ;;		  	if npts gt 0 then begin
-# ;;			   delwl=((wave(ibreak+1+npts)-wave(ibreak))>1)/(npts+1)
-# ;;			   wave(ibreak:ibreak+npts)=wave(ibreak)+	$
-# ;;					delwl*indgen(npts+1)
-# ;;			   endif
 
 
 def reduce_scan(input_table, params, arg_list):
@@ -647,8 +695,8 @@ def reduce_scan(input_table, params, arg_list):
     Reduces scan-mode grism data
     """
     verbose = arg_list.verbose
-    interactive = arg_list.user_interaction
-    flat_before_bkg = arg_list.flat_before_bkg
+    interactive = arg_list.trace
+    bkg_flat_order = arg_list.bkg_flat_order
     
     file = os.path.join(row["path"], row["filename"])
 
@@ -841,33 +889,52 @@ def reduce_stare(row, params, arg_list):
     Reduces stare-mode grism data
     """
     verbose = arg_list.verbose
-    interactive = arg_list.user_interaction
-    flat_before_bkg = arg_list.flat_before_bkg
+    interactive = arg_list.trace
+    bkg_flat_order = arg_list.bkg_flat_order
     task = "wfc3_grism_reduce_stare"
     file = os.path.join(row["path"], row["filename"])
+    root = row['root']
+    target = row['target']
+    ref = row['filter_root']
+    filter = row['filter']
+    preamble = '{}: {}'.format(task, root)
 
-    with fits.open(file, mode='update') as inf:
+    np_formatter = {'float_kind':lambda x: "{:8.2f}".format(x)}
+    np_opt = {'max_line_width': 175, 'formatter': np_formatter,
+              'threshold': 2000000}
+    
+    if verbose:
+        print("{}: starting {}.".format(preamble, row['filename']))
+
+    with fits.open(file) as inf:
         image = inf['SCI'].data
+        sci_hdr = inf['sci'].header
         filter = row['filter']
         xsize, ysize = image.shape[1], image.shape[0]
         err = inf['ERR'].data
         time = inf['TIME'].data
         dq = inf['DQ'].data
+        ltv1, ltv2 = inf[1].header['LTV1'], inf[1].header['LTV2']
         
         if inf[0].header["IMAGETYP"] == "FLAT":
+            if verbose:
+                print("{}: IMAGETYP=FLAT".format(preamble))
             good = np.where(time>0.)
             image[good] = image[good] / time[good]
             err[good] = err[good] / time[good]
         
-        wcs = wcs.WCS(inf['SCI'].header)
-        ra, dec = row['crval1'], row['crval2']
-        targ = wcs.wcs_world2pix([ra, dec], 0)
-        x1, y1 = targ[1], targ[0]
-        refpx1, refpx2 = inf[0].header['crpix1']-1, inf[0].header['crpix2']-1
+        img_wcs = wcs.WCS(inf['SCI'].header)
+#         hdr = img_wcs.to_header()
+#         for item in hdr.tostring(sep='\\n').split('\\n'):
+#             print(item)
+        ra, dec = float(row['crval1']), float(row['crval2'])
+        targ = img_wcs.wcs_world2pix([ra], [dec], 0, ra_dec_order=True)
+        x1, y1 = targ[1][0], targ[0][0]
+        refpx1, refpx2 = inf[1].header['crpix1']-1, inf[1].header['crpix2']-1
         xdither, ydither = x1-refpx1, y1-refpx2
         if verbose:
             msg = "{}: x,y-dither from dir image at ({},{}) is ({},{}) px."
-            print(msg.format(task, refpx1, refpx2, xdither, ydither))
+            print(msg.format(preamble, refpx1, refpx2, xdither, ydither))
         if (params['xc'] < 0 and 'xc' in params['set']) or \
            (params['yc'] < 0 and 'yc' in params['set']):
             msg = " No/Bad result in locating target from filter image."
@@ -902,8 +969,8 @@ def reduce_stare(row, params, arg_list):
         
         if (xc < 4 or yc < 4 or xc > 998 or yc > 998):
             if verbose:
-                msg = "{}: {}: Predicted Z-ord position ({},{}) is off grism."
-                print(msg.format(task, row['root'], xc, yc))
+                msg = "{}: Predicted Z-ord position ({},{}) is off grism."
+                print(msg.format(preamble, xc, yc))
                 msg = "\tDistortion-sensitive measured position ({},{})"
                 print(msg.format(xdither, ydither))
                 msg = "\tUse Predicted position ({},{}) per astrometry"
@@ -916,36 +983,67 @@ def reduce_stare(row, params, arg_list):
                           }
             x_arr, wave, angle, wav1st = reduce_wave_axe(row, wave_params)
             if verbose:
-                print('WAVELENGTH solution per AXE coef. No Z-order.')
+                msg = '{}: WAVELENGTH solution per AXE coef. No Z-order.'
+                print(msg.format(preamble))
             axeflg = True
         else:
             if verbose:
-                msg = '1st Z-ord centroid from astrom+ Petro starts at ({},{})'
-                print(msg.format(xc, yc))
+                msg = '{}: 1st Z-ord centroid from astrom+ Petro starts at '
+                msg += '({},{})'
+                print(msg.format(preamble, xc, yc))
+
             xbeg, ybeg = int(round(xc)), int(round(yc))
+            xb, xe = max(xbeg-20, 0), min(xbeg+20, image.shape[1])
+            yb, ye = max(ybeg-20, 0), min(ybeg+20, image.shape[0])
+            sbimg = image[yb:ye,xb:xe]
+            # Threshold of 10 counts, FWHM of 2. Only return brightest result.
+            star_finder = DAOStarFinder(10., 2., brightest=1)
+            star_table = star_finder.find_stars(sbimg)
+            star_x = star_table['xcentroid'][0] + xb
+            star_y = star_table['ycentroid'][0] + yb
+            if verbose:
+                print("Testing centroiding methods...")
+                print("\tDAOFind: xc={}, yc={}".format(star_x, star_y))
+
+            np_formatter = {'float_kind':lambda x: "{:10.6f}".format(x)}
+            star_opt = {'max_line_width': 375, 'formatter': np_formatter,
+                        'threshold': 2000000}
+
             ywidth = params['ywidth']
             ns = 31
             ibeg = max(xbeg-ns//2, 0)
             iend = xbeg+ns//2
-            xpos_arr, ypos_arr = centroid_sources(image, xc, yc, box_size=ns,
-                                                  centroid_func=centroid_com)
-            xpos, ypos = xpos_arr[0], ypos_arr[0]
-            xc, yc = xpos, ypos
-            if xpos < ibeg or xpos > iend:
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g1)
+            if verbose:
+                print("\t1d Gaussian: xc,yc={},{}".format(xp, yp))
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g2)
+            if verbose:
+                print("\t2d Gaussian: xc,yc={},{}".format(xp, yp))
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=com)
+            if verbose:
+                print("\t2d Moments: xc,yc={},{}".format(xp, yp))
+
+            xc, yc = star_x, star_y
+#             xc, yc = xpos, ypos
+            if xc < ibeg or xc > iend:
                 if verbose:
-                    msg = "{}: {}: Peak too close to edge. Use approx. pos ({},{})"
-                    print(msg.format(task, row['root'], xbeg, ybeg))
-                xpos, ypos = xbeg, ybeg
+                    msg = "{}: Peak too close to edge. Use approx. pos ({},{})"
+                    print(msg.format(preamble, xbeg, ybeg))
+                xc, yc = xbeg, ybeg
+
+
+            star_x, star_y = int(round(star_x)), int(round(star_y))
+            
             wave_params = {
-                            'xin': xpos,
-                            'yin': ypos,
+                            'xin': xc,
+                            'yin': yc,
                             'wl_offset': params['wl_offset'],
                             'verbose': verbose
                           }
             x_arr, wave, angle, wav1st = reduce_wave_zord(row, wave_params)
             if verbose:
-                msg = "{}: {}: Zero-ord centroid at ({},{})"
-                print(msg.format(task, row['root'], xbeg, ybeg))
+                msg = "{}: Zero-ord centroid at ({},{})"
+                print(msg.format(preamble, xc, yc))
                 print("\tSearch area {}X{} pix".format(ns, ns))
                 print("\tX,Y astrom error=({},{})".format(xastr-xc, yastr-yc))
             axeflg = False
@@ -958,7 +1056,8 @@ def reduce_stare(row, params, arg_list):
         if interactive:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.set_title('Direct Image with Detected Source')
+            targ_str = "{} - {} ({})".format(root, target, filter)
+            ax.set_title('{} Direct Image with Detected Source'.format(targ_str))
             plt.imshow(np.log10(np.where(image>=0.1,image,0.1)))
             plt.plot([xc, xc], [yc-8, yc-18], color='white')
             plt.plot([xc, xc], [yc+8, yc+18], color='white')
@@ -970,68 +1069,97 @@ def reduce_stare(row, params, arg_list):
         
         # ***** Start of wfc_flatscal.pro
         #   Move to its own function?
+        # *****
+
+        # Get flatfield data cube
+        if verbose:
+            print("{}: Beginning flatfield.".format(preamble))
         cal_data = get_data_file("abscal.wfc3", "calibration_files.json")
-        cal_files = json.loads(cal_data)
+        with open(cal_data, 'r') as inf:
+            cal_files = json.load(inf)
         flat_file_name = cal_files["flatfield"]["wfc3"][row["filter"]]
         flat_file = get_data_file("abscal.wfc3", flat_file_name)
+        if verbose:
+            msg = "{}: wfc_flatscl: Using flatfield {}"
+            print(msg.format(preamble, flat_file_name))
+
         with fits.open(flat_file) as in_flat:
             flat = in_flat[0].data
-            hdr = in_flat[0].header
-        nl, ns = image.shape[0], image.shape[1]
-        ltv1, ltv2 = hdr["LTV1"], hdr["LTV2"]
-        flat = flat[ltv1:ltv1+ns-1,ltv2:ltv2+nl-1]
-        xpos = np.arange(ns, dtype='int8')
+        ns, nl = image.shape[0], image.shape[1]
+        flat = flat[int(ltv1):int(ltv1)+ns,int(ltv2):int(ltv2)+nl]
+        xpos = np.arange(ns, dtype='int32')
         sclfac = nl/1014.
-        sc_low, sc_high = int(100*sclfac), int(900*sclfac)
-        xmin, xmax = min(xpos), max(xpos)
-        # Collapse and sum along x axis
-        imav = np.sum(image[xmin:xmax,:], axis=1)
-        bkav = np.sum(flat[xmin:xmax,:], axis=1)
+        sc_low, sc_high = int(round(100*sclfac)), int(round(900*sclfac))+1
+        xmin, xmax = min(xpos), max(xpos)+1
+
+        # Collapse and average along x axis
+        imav = np.mean(image[:,xmin:xmax], axis=1)
+        bkav = np.mean(flat[:,xmin:xmax], axis=1)
         # Remove spikes
-        smimav = signal.median2d(imav, kernel_size=61)
-        smbkav = signal.median2d(bkav, kernel_size=21)
+        smimav = ndimage.median_filter(imav, size=61, mode='nearest')
+        smimav[:30] = imav[:30]
+        smimav[-30:] = imav[-30:]
+        smbkav = ndimage.median_filter(bkav, size=21, mode='nearest')
+        smbkav[:20] = bkav[:20]
+        smbkav[-20:] = bkav[-20:]
         rat = smimav/smbkav
         avrat = np.mean(rat[sc_low:sc_high])
         sigma = np.std(rat[sc_low:sc_high])
         avgbkg = np.mean(smimav[sc_low:sc_high])*params['gwidth']
         if verbose:
-            msg = "{}: {}: wfc_flatscl: Avg bkg = {} +/- {} for gwidth={}"
-            print(msg.format(task, row['root'], avgbkg, sigma, params['gwidth']))
+            msg = "{}: wfc_flatscl: Avg bkg = {} +/- {} for gwidth={}"
+            print(msg.format(preamble, avgbkg, sigma, params['gwidth']))
+            msg = "{}: wfc_flatscl: Flatfield Scale Ratio = {}"
+            print(msg.format(preamble, avrat))
         flat *= avrat
+        if verbose:
+            print("{}: Finished flatfield".format(preamble))
         # ***** End of wfc_flatscal.pro
         
         image -= flat
+
         if len(flat) > 1:
             sky_image = raw_image/(np.where(flat>0.001, flat, 0.001))
         else:
             sky_image = np.zeros_like(raw_image)
         
-        if flat_before_bkg:
+        if bkg_flat_order == 'flat_first':
             ff_params = {
+                            "root": row['root'][0],
                             "image": image,
-                            "hdr": inf[0].header,
+                            "hdr": sci_hdr,
                             "flat": flat,
-                            "wave": wave,
+                            "wave": wav1st,
+                            "ltv1": ltv1,
+                            "ltv2": ltv2,
+                            "filter": filter,
                             "verbose": verbose
                         }
-            image, flatfile = reduce_flatfield(row, ff_params)
+            image, flatfile = reduce_flatfield(row, ff_params)            
          
         # Extract
         y_offset = params['y_offset']
-        y_shift = params['y_shift']
+        y_shift = params['yshift']
         yapprox = yc + y_offset + (x_arr-xc)*np.sin(angle) + y_shift
-        
-        image_edits = json.loads(get_data_file("abscal.wfc3", "image_edits.json"))
+
+        image_edit_file = get_data_file("abscal.wfc3", "image_edits.json")
+        with open(image_edit_file, 'r') as inf:
+            image_edits = json.load(inf)
+        issues = []
+        if "reduce" in image_edits:
+            issues = image_edits["reduce"]
         overrides = params.get('overrides', {})
         img = {"sci": image, "err": err, "dq": dq}
-        img = set_image(img, row, image_edits, overrides, verbose)
+        img = set_image(img, row, issues, preamble, overrides, verbose)
         image, err, dq = img["sci"], img["err"], img["dq"]
         
         fimage = deepcopy(image)
 
-        for i in range(fimage.shape[1]):
-            fimage[:,i] = signal.median2d(image[:,i], kernel_size=7)
-        
+        for i in range(fimage.shape[0]):
+            fimage[i,:] = ndimage.median_filter(image[i,:], size=7, mode='nearest')
+            fimage[i,:4] = image[i,:4]
+            fimage[i,-4:] = image[i,-4:]
+
         if fit_slope:
             x1bin, x2bin = {}, {}
             xfound, yfound = {0: xc}, {0: yc}
@@ -1039,57 +1167,62 @@ def reduce_stare(row, params, arg_list):
                 yfound[0] = -yc
             
             for iord in [-1, 1, 2]:
+                if verbose:
+                    print("{}: Starting iord={}".format(preamble, iord))
                 wlrangs = {
-                             -1: ['wlrang_m1_low', 'wlrang_m1_high'],
-                            1: ['wlrang_p1_low', 'wlrang_p1_high'],
-                            2: ['wlrang_p2_low', 'wlrang_p2_high'],
+                            -1: ['wlrang_m1_low', 'wlrang_m1_high'],
+                             1: ['wlrang_p1_low', 'wlrang_p1_high'],
+                             2: ['wlrang_p2_low', 'wlrang_p2_high'],
                           }
-                wlrang = [params[wlrangs[iord][0]], params[wlrangs[iord][1]]]
+                wlrang = wlrangs[iord]
+                wl_low, wl_high = iord*params[wlrang[0]], iord*params[wlrang[1]]
                 
                 if iord > 0:
-                    xrang = wave[np.where(wave >= iord*wlrang[0] and wave <= iord*wlrang[1])]
+                    xrang = np.where((wave >= wl_low) & (wave <= wl_high))[0]
                 else:
-                    xrang = wave[np.where(wave >= iord*wlrang[1] and wave <= iord*wlrang[0])]
+                    xrang = np.where((wave >= wl_high) & (wave <= wl_low))[0]
+                npts = len(xrang)
                 
                 # if no points or minimum too high, order is too close to the
-                #   edge, so turn it into a zero-element array.
-                if len(xrang[0] == 0) or xrang[0][0] >= 985:
-                    xrang = np.array(())
-                    xrang = np.append(xrang, np.array(()))
+                #   edge, so set npts to zero.
+                if (npts == 0) or (xrang[0] >= 985):
+                    npts = 0
                 
-                if len(xrang[0]) >= 50:
-                    x1bin[iord] = xrang[0][0]
-                    x2bin[iord] = min(max(xrang[0]), 990)
-                    xfound[iord] = np.mean(xrang[0])
+                if npts >= 50:
+                    x1bin[iord] = xrang[0]
+                    x2bin[iord] = min(max(xrang), 990)
+                    xfound[iord] = np.mean(xrang)
                     
                     x1, x2 = x1bin[iord], x2bin[iord]
-                    y1 = max(yapprox[int(round((x1+x2)/2)-ywidth/2)], 0)
+                    y1 = max(int(round(yapprox[(x1+x2)//2]))-ywidth//2, 0)
                     y2 = min((y1 + params['ywidth']-1), (ysize-1))
                     if verbose:
-                        msg = "{}: {}: iord={}; x,y search range=({},{}), ({},{})"
-                        print(msg.format(task, row['root'], iord, x1, x2, y1, y2))
+                        msg = "{}: iord={}; x,y search range=({},{}), ({},{})"
+                        print(msg.format(preamble, iord, x1, x2, y1, y2))
                     y1pred = 0
                     if iord == 1:
-                        y1pred = yapprox[int(round((x1+x2)/2)-ywidth/2)]
+                        y1pred = yapprox[(x1+x2)//2]
                     elif iord == 2:
-                        ydel = yfound[iord-1] - yapprox[int((x1bin[iord-1]+x2bin[iord-1])/2)]
+                        ydel = yfound[iord-1]
+                        ydel -= yapprox[(x1bin[iord-1]+x2bin[iord-1])//2]
                         y1 = int(round(y1+ydel))
                         y2 = int(round(y2+ydel))
                         if verbose:
                             msg = "\t2nd ord yposit tweak yrange={},{} by {}"
                             print(msg.format(y1, y2, ydel))
                     ny = y2 - y1 + 1
-                    
+
                     profile = np.zeros((ny,), dtype='float64')
                     iter = 0
                     iterate = True
                     while iterate:
                         iter += 1
                         for j in range(ny):
-                            profile[j] = np.sum(fimage[y1+j,x1:x2])
+                            profile[j] = np.sum(fimage[y1+j,x1:x2+1])
                         
                         profile -= np.median(profile)
                         profile = np.where(profile>0., profile, 0.)
+                        
 #           ; patch for PN-G045.4-02 w/ low contin. & another spec just above:
 # 			if keyword_set(star) then begin
 #               if star eq 'PN' then begin
@@ -1099,21 +1232,23 @@ def reduce_stare(row, params, arg_list):
                         yprofile = np.arange(ny, dtype='int16') + y1
                         pmax, maxpos = np.max(profile), np.argmax(profile)
                         if pmax <= 0:
-                            err = "{}: {}: ERROR ".format(task, row['root'])
-                            err += "in Profile Iteration at {}".format(iter)
-                            err += "Maximum value of profile is negative."
+                            err = "{}: ERROR in Profile ".format(preamble)
+                            err += "Iteration at {}. Maximum ".format(iter)
+                            err += "value of profile is negative."
                             err += "Profile={}".format(profile)
                             raise ValueError(err)
+                        if verbose:
+                            msg = "{}: Profile maximum {} at {} ({})"
+                            print(msg.format(preamble, pmax, maxpos, yprofile[maxpos]))
                         if maxpos <= 0 or maxpos > ny or pmax <= 2:
                             yfound[iord] = -999
                         else:
-                            total = np.sum(yprofile[maxpos-1:maxpos+1])
-                            total *= np.sum(profile[maxpos-1:maxpos+1])
-                            total /= np.sum(profile[maxpos-1:maxpos+1])
-                            yfound[iord] = total
+                            yp = yprofile[maxpos-1:maxpos+2]
+                            pf = profile.astype('float64')[maxpos-1:maxpos+2]
+                            yfound[iord] = np.sum(yp*pf)/np.sum(pf)
                         if verbose or interactive:
                             xf, yf = xfound[iord], yfound[iord]
-                            msg = "{}: {}: order {}, ".format(task, row['root'], iord)
+                            msg = "{}: order {}, ".format(preamble, iord)
                             msg += "contin. x,y position=({},{})".format(xf, yf)
                             print(msg)
                             
@@ -1126,8 +1261,8 @@ def reduce_stare(row, params, arg_list):
                                 y1 = min(guess, ceiling)
                             y2 = min((y1 + params['ywidth'] - 1), (ysize-1))
                             if verbose:
-                                msg = "{}: {}: Iterating with search ({},{})"
-                                print(msg.format(task, row['root'], y1, y2))
+                                msg = "{}: Iterating with search ({},{})"
+                                print(msg.format(preamble, y1, y2))
                         else:
                             iterate = False
 
@@ -1145,17 +1280,30 @@ def reduce_stare(row, params, arg_list):
                     if interactive:
                         fig = plt.figure()
                         ax = fig.add_subplot(111)
-                        ax.set_title('Trace Image')
-                        ax.xlabel("Y (column) Pixel (px)")
-                        ax.ylabel("Signal")
+                        targ_str = "{} - {} ({})".format(root, target, filter)
+                        ax.set_title('{}: Trace Image'.format(targ_str))
+                        plt.xlabel("Y (column) Pixel (px)")
+                        plt.ylabel("Signal")
                         ax.scatter(yprofile, profile)
                         ax.text(.15, .88, 'order={}'.format(iord), 
                                 transform=ax.transAxes)
                         plt.show()
-            good = np.where(xfound >= 4 & yfound >= 0)
-            if len(good[0]) == 1:
+                # end if npts > 50
+            # end iord loop
+            
+            # Initially don't allow negative found positions, and don't
+            #   count a result as good if aXe was used instead of zeroth-order
+            good = []
+            for iord in [-1, 0, 1, 2]:
+                if iord in xfound and iord in yfound:
+                    if xfound[iord] >= 4 and yfound[iord] >= 0:
+                        good.append(iord)
+            if verbose:
+                print("{}: Initial good orders are {}".format(preamble, good))
+
+            if len(good) == 1:
                 if verbose:
-                    msg = "{}: {} Only one order. ".format(task, row['root'])
+                    msg = "{}: Only one order. ".format(preamble)
                     msg += "Try using predicted Z-order position. Adjust "
                     msg += "Z-order for Y error in first order. "
                     msg += "Found={}, pred={}, found-pred={}."
@@ -1163,38 +1311,63 @@ def reduce_stare(row, params, arg_list):
                     msg = "\tWLs differ by <1A for corr. dir img at {},{}"
                     print(msg.format(ix, yfound[0]))
                 yfound[0] = abs(yfound[0]) + (yfound[1]-y1pred)
-            good = np.where(xfound >= -500 & yfound != -999 & yfound != 0)
-            if len(good[0]) <= 1:
-                msg = "{}: {} Only one order. ".format(task, row['root'])
+            
+            # This time allow negative found positions, and allow the zeroth
+            #   order even via aXe.
+            good = []
+            for iord in [-1, 0, 1, 2]:
+                if iord in xfound and iord in yfound:
+                    if xfound[iord] >= -500 and yfound[iord] != 0 and yfound[iord] != -999:
+                        good.append(iord)
+            if verbose:
+                print("{}: Final good orders are {}".format(preamble, good))
+
+            if len(good) <= 1:
+                msg = "{}: Only one order. ".format(preamble)
                 msg += "Cannot measure spectral angle for subarray of "
                 msg += "({},{}). Aborting.".format(xsize, ysize)
                 raise ValueError(msg)
-            if (len(good[0]) >= 3) and axeflg:
+            
+            if (len(good) >= 3) and axeflg:
+                good = []
+                for iord in [-1, 0, 1, 2]:
+                    if iord in xfound and iord in yfound:
+                        if yfound[iord] > 0:
+                            good.append(iord)
                 if verbose:
                     msg = "{}: {}: PROFILE yfound ".format(task, row['root'])
                     msg += "for AXE case={}".format(yfound)
                     print(msg)
-                good = np.where(yfound>0)
             else:
-                yfound = abs(yfound)
+                for iord in [-1, 0, 1, 2]:
+                    if iord in yfound:
+                        yfound[iord] = abs(yfound[iord])
             
-            coef = np.polyfit(xfound[good], yfound[good], 1)
-            fit_angle = np.atan(coef[1])*180./np.pi
+            poly_x = np.array([xfound[i] for i in good])
+            poly_y = np.array([yfound[i] for i in good])
+            msg = "{}: X and Y found values: {}, {}"
+            print(msg.format(preamble, poly_x, poly_y))
+            coef = np.polyfit(poly_x, poly_y, 1)
+            fit_angle = np.arctan(coef[0])*180./np.pi
+            print("{}: Found coefficients {} angle {}".format(preamble, coef, fit_angle))
             if interactive:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
                 t_axes = ax.transAxes
-                ax.set_title('Fit Plot')
-                ax.xlabel("X-pixel (px)")
-                ax.ylabel("Y-pixel (px)")
-                ax.scatter(xfound[good], yfound[good])
-                ax.plot(x, yapprox)
-                ax.text(.7, .15, 'angle={}'.format(fit_angle), transform=t_axes)
-                ax.text(.15, .85, 'Dash is approx. location of orders', transform=t_axes)
-                ax.text(.18, .75, row['filter'])
+                targ_str = "{} - {} ({})".format(root, target, filter)
+                ax.set_title('{}: Fit Plot'.format(targ_str))
+                plt.xlabel("X-pixel (px)")
+                plt.ylabel("Y-pixel (px)")
+                ax.scatter(poly_x, poly_y, label="Found Orders")
+                ax.plot(x_arr, yapprox, label="Initial Trace Approximation")
+                y_fit = coef[1] + coef[0]*x_arr
+                ax.plot(x_arr, y_fit, label="Fitted Trace")
+                ax.text(.7, .15, 'angle={:.3f}'.format(fit_angle), transform=t_axes)
+                ax.legend()
                 plt.show()
                 if verbose:
-                    print("{}: {}: filter={}, angle={}".format(task, row['root'], row['filter'], fit_angle))
+                    msg = "{}: {}:, angle={}"
+                    print(msg.format(preamble, filter, fit_angle))
         else:
             # Don't fit slope
             profile = np.zeros((ywidth,), dtype='float64')
@@ -1212,36 +1385,45 @@ def reduce_stare(row, params, arg_list):
             coef = np.polyfit(x, ypos, 1)
         
         if verbose:
-            print("{}: {}: Coef of trace fit={}".format(task, row['root'], coef))
-        yfit = coef[0] + coef[1]*x_arr
+            print("{}: Coef of trace fit={}".format(preamble, coef))
+        yfit = coef[1] + coef[0]*x_arr
         
         # Extract Background Spectra
+        if verbose:
+            print("{}: Extract background spectra".format(preamble))
         ns = len(x_arr)
         nsb = ns
-        x_b = x_arr
+        x_b = deepcopy(x_arr)
         b_lower = np.zeros((nsb,), dtype='float64')
         b_upper = np.zeros((nsb,), dtype='float64')
         sky_b_lower = np.zeros((nsb,), dtype='float64')
         sky_b_upper = np.zeros((nsb,), dtype='float64')
-        yfit_b = coef[0] + coef[1]*x_b
+        yfit_b = coef[1] + coef[0]*x_b
         
+        half_bwidth = params['bwidth']//2
         for i in range(nsb):
             ypos = int(round(yfit_b[i] - params['lbdist']))
-            y1 = max((ypos - params['bwidth']//2), 0)
-            y2 = min((ypos + params['bwidth']//2), (image.shape[0]-1))
+            y1 = max((ypos - half_bwidth), 0)
+            y2 = min((ypos + half_bwidth + 1), image.shape[0])
             b_lower[i] = np.median(image[y1:y2,x_b[i]])
             sky_b_lower[i] = np.median(sky_image[y1:y2,x_b[i]])
+            
             ypos = int(round(yfit_b[i] + params['ubdist']))
-            y1 = max((ypos - params['bwidth']//2), 0)
-            y2 = min((ypos + params['bwidth']//2), (image.shape[1]-1))
+            y1 = max((ypos - half_bwidth), 0)
+            y2 = min((ypos + half_bwidth + 1), image.shape[0])
             b_upper[i] = np.median(image[y1:y2,x_b[i]])
             sky_b_upper[i] = np.median(sky_image[y1:y2,x_b[i]])
         
         # Average upper and lower background, and smooth.
-        raw_sky_back = (sky_b_lower + sky_b_upper)/2
+        raw_sky_back = (sky_b_lower + sky_b_upper)/2.
 
-        if params['bmedian'] > 1:
-            sky_back = signal.median2d(raw_sky_back, kernel_size=params['bmedian'])
+        bmedian = params['bmedian']
+        half_bmedian = bmedian//2
+        if bmedian > 1:
+            sky_back = ndimage.median_filter(raw_sky_back, size=bmedian,
+                                             mode='nearest')
+            sky_back[:half_bmedian] = raw_sky_back[:half_bmedian]
+            sky_back[-half_bmedian:] = raw_sky_back[-half_bmedian:]
         else:
             sky_back = raw_sky_back        
 
@@ -1250,71 +1432,123 @@ def reduce_stare(row, params, arg_list):
         if params['bmean2'] > 1:
             sky_back = convolve(sky_back, Box1DKernel(params['bmean2']))
         
-        s_back_lo = signal.medfilt(b_lower, kernel_size=params['bmedian'])
-        s_back_up = signal.medfilt(b_upper, kernel_size=params['bmedian'])
+        back = (b_lower + b_upper)/2
+        
+        s_back_lo = ndimage.median_filter(b_lower, size=bmedian, mode='nearest')
+        s_back_lo[:half_bmedian] = b_lower[:half_bmedian]
+        s_back_lo[-half_bmedian:] = b_lower[-half_bmedian:]
+
+        s_back_up = ndimage.median_filter(b_upper, size=bmedian, mode='nearest')
+        s_back_up[:half_bmedian] = b_upper[:half_bmedian]
+        s_back_up[-half_bmedian:] = b_upper[-half_bmedian:]
         
         x_b_f = x_b.astype('float64')
 
-        res = np.polyfit(x_b_f, s_back_lo, 3, full=True)
-        lo_coef, lo_error, rank, singular_values, rcond = res
+        # Do a two-pass iteration
+        
+        # First pass
+        lo_res = np.polyfit(x_b_f, s_back_lo, 3, full=True)
+        lo_coef = lo_res[0]
+        lo_error = np.sqrt(lo_res[1]/(len(x_b_f)-2))[0]
         p = np.poly1d(lo_coef)
         lo_fit = p(x_b_f)
 
-        res = np.polyfit(x_b_f, s_back_up, 3, full=True)
-        up_coef, up_error, rank, singular_values, rcond = res
+        up_res = np.polyfit(x_b_f, s_back_up, 3, full=True)
+        up_coef = up_res[0]
+        up_error = np.sqrt(up_res[1]/(len(x_b_f)-2))[0]
         p = np.poly1d(up_coef)
         up_fit = p(x_b_f)
         
-        sigless = lo_err<up_err
+        sigless = min(lo_error, up_error)
+        if verbose:
+            msg = "{}: loerr={}, uperr={}, sigless={}"
+            print(msg.format(preamble, lo_error, up_error, sigless))
         
-        good_lo = np.where(abs(s_back_lo-lo_fit) < sigless)
-        res = np.polyfit(x_b_f[good_lo], s_back_lo[good_lo], 3, full=True)
-        lo_coef, lo_error, rank, singular_values, rcond = res
+        # Second Pass
+        good_lo = np.where(np.abs(s_back_lo-lo_fit) < sigless)
+        n_good_lo = len(good_lo[0])
+        if verbose:
+            msg = "{}: {} of {} low bkg points have residual < standard error."
+            print(msg.format(preamble, n_good_lo, len(lo_fit)))
+        lo_res = np.polyfit(x_b_f[good_lo], s_back_lo[good_lo], 3, full=True)
+        lo_coef = lo_res[0]
+        lo_error = np.sqrt(lo_res[1]/(n_good_lo-2))[0]
+        if verbose:
+            msg = "{}: Lower fit has error {} on second pass."
+            print(msg.format(preamble, lo_error))
         p = np.poly1d(lo_coef)
         lo_fit = p(x_b_f)
 
-        good_up = np.where(abs(s_back_up-up_fit) < sigless)
-        res = np.polyfit(x_b_f[good_up], s_back_up[good_up], 3, full=True)
-        up_coef, up_error, rank, singular_values, rcond = res
+        good_up = np.where(np.abs(s_back_up-up_fit) < sigless)
+        n_good_up = len(good_up[0])
+        if verbose:
+            msg = "{}: {} of {} high bkg points have residual < standard error."
+            print(msg.format(preamble, n_good_up, len(up_fit)))
+        up_res = np.polyfit(x_b_f[good_up], s_back_up[good_up], 3, full=True)
+        up_coef = up_res[0]
+        up_error = np.sqrt(up_res[1]/(n_good_up-2))[0]
+        if verbose:
+            msg = "{}: Upper fit has error {} on second pass."
+            print(msg.format(preamble, up_error))
         p = np.poly1d(up_coef)
         up_fit = p(x_b_f)
         
-        lo_slp = lo_coef[1] + 2*lo_coef[2]*x_b_f + 3*lo_coef[3]*x_b_f*x_b_f
-        up_slp = up_coef[1] + 2*up_coef[2]*x_b_f + 3*up_coef[3]*x_b_f*x_b_f
+        lo_slp = lo_coef[2] + 2*lo_coef[1]*x_b_f + 3*lo_coef[0]*x_b_f*x_b_f
+        up_slp = up_coef[2] + 2*up_coef[1]*x_b_f + 3*up_coef[0]*x_b_f*x_b_f
 
-        s_back = lo_fit
-        if np.mean(up_fit)< np.mean(lo_fit):
+        if verbose:
+            msg = "{}: {} points, {} good low points, {} good high points"
+            print(msg.format(preamble, nsb, n_good_lo, n_good_up))
+        
+        if np.mean(up_fit) < np.mean(lo_fit):
+            if verbose:
+                print("{}: Setting initial fit to upper fit".format(preamble))
             s_back = up_fit
-        
-        bettr = np.where((abs(up_fit) - abs(s_back) > 3*sigless) & (up_fit < lo_fit))
+        else:
+            if verbose:
+                print("{}: Setting initial fit to lower fit".format(preamble))
+            s_back = lo_fit
+
+        bettr = np.where((abs(up_fit)-abs(s_back) > 3*sigless) & (up_fit < lo_fit))
         if len(bettr[0]) > 0:
+            if verbose:
+                msg = "{}: Setting {} points to upper fit"
+                print(msg.format(preamble, len(bettr[0])))
             s_back[bettr] = up_fit[bettr]
-        bettr = np.where((abs(lo_fit) - abs(s_back) > 3*sigless) & (lo_fit < up_fit))
+        bettr = np.where((abs(lo_fit)-abs(s_back) > 3*sigless) & (lo_fit < up_fit))
         if len(bettr[0]) > 0:
+            if verbose:
+                msg = "{}: Setting {} points to lower fit"
+                print(msg.format(preamble, len(bettr[0])))
             s_back[bettr] = lo_fit[bettr]
         
         if len(good_lo[0]) < nsb/5:
+            if verbose:
+                print("{}: Setting fit to upper fit.".format(preamble))
             s_back = up_fit
         if len(good_up[0]) < nsb/5:
+            if verbose:
+                print("{}: Setting fit to lower fit.".format(preamble))
             s_back = lo_fit
         
         if interactive:
             fig = plt.figure()
             ax = fig.add_subplot(111)
+            targ_str = "{} - {} ({})".format(root, target, filter)
+            ax.set_title("{} Background Fit".format(targ_str))
             t_axes = ax.transAxes
-            ax.scatter(x_b_f[good_lo], s_back_lo[good_lo])
-            ax.plot(x_b_f, lo_fit)
-            ax.scatter(x_b_f[good_up], s_back_up[good_up])
-            ax.plot(x_b_f, up_fit)
-            ax.plot(x_b_f, s_back)
-            targ_str = '{} {} {}'.format(row['target'], row['filter'], row['root'])
-            ax.text(.15, .15, targ_str, transform=t_axes)
+            ax.scatter(x_b_f[good_lo], s_back_lo[good_lo], label="Low Points")
+            ax.plot(x_b_f, lo_fit, label="Low Fit")
+            ax.scatter(x_b_f[good_up], s_back_up[good_up], label="High Points")
+            ax.plot(x_b_f, up_fit, label='High Fit')
+            ax.plot(x_b_f, s_back, label='Final Fit')
+            ax.legend()
             plt.show()
         
         if (len(good_lo[0]) < nsb/5) and (len(good_up[0]) < nsb/5):
             raise ValueError("Not enough good points to fit.")
-        if abs(np.mean(s_back)) > 2:
-            raise ValueError("Average absolute fit is greater than 2(?)")
+        if abs(np.mean(s_back)) > 3:
+            raise ValueError("Average absolute fit is greater than 3(?)")
         
         # Full image subtraction
         for i in range(nsb):
@@ -1326,10 +1560,12 @@ def reduce_stare(row, params, arg_list):
         raw_sky_back = raw_sky_back * params['gwidth']
         
         # Make Background results for optional output
+        br_gross = rebin(raw_image[:,x_b[0]:x_b[0]+nsb-1], (5, 256), np.sum)
+        br_net = rebin(image[:,x_b[0]:x_b[0]+nsb-1], (5, 256), np.sum)
         back_results = {
                         'sback': rebin(s_back, 5, func=np.sum)/params['gwidth'],
-                        'gross': np.transpose(rebin(raw_image[:,x_b[0]:x_b[0]+nsb-1], (5, 256), np.sum)),
-                        'net': np.transpose(rebin(image[:,x_b[0]:x_b[0]+nsb-1], (5, 256), np.sum)),
+                        'gross': np.transpose(br_gross),
+                        'net': np.transpose(br_net),
                         'wave': rebin(wave, 5),
                         'bupper': rebin(b_upper, 5, np.sum),
                         'blower': rebin(b_lower, 5, np.sum),
@@ -1344,28 +1580,31 @@ def reduce_stare(row, params, arg_list):
             imagt = image
             ytmp = yfit
             if np.max(yfit) > 700:
-                imagt = image(500:1013,:)
+                imagt = image[500:1013,:]
                 ytmp -= 500
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            t_axes = ax.transAxes
+            targ_str = "{} - {} ({})".format(root, target, filter)
+            ax.set_title('{} Trace Fit on Source'.format(targ_str))
             plt.imshow(np.log10(np.where(imagt>=0.1,imagt,0.1)))
-            ax.plot(x, ytmp+gwidth//2)
-            ax.plot(x, ytmp-gwidth//2)
-            ax.plot(x, ytmp+ubdist+bwidth//2)
-            ax.plot(x, ytmp+ubdist-bwidth//2)
-            ax.plot(x, ytmp-lbdist+bwidth//2)
-            ax.plot(x, ytmp-lbdist-bwidth//2)
-            targ_str = '{} {}'.format(row['target'], row['filter'])
-            ax.text(.05, .05, targ_str, transform=t_axes)
+            ax.plot(x_arr, ytmp+params['gwidth']//2)
+            ax.plot(x_arr, ytmp-params['gwidth']//2)
+            ax.plot(x_arr, ytmp+params['ubdist']+params['bwidth']//2)
+            ax.plot(x_arr, ytmp+params['ubdist']-params['bwidth']//2)
+            ax.plot(x_arr, ytmp-params['lbdist']+params['bwidth']//2)
+            ax.plot(x_arr, ytmp-params['lbdist']-params['bwidth']//2)
             plt.show()
 
-        if not flat_before_bkg:
+        if bkg_flat_order == 'bkg_first':
             ff_params = {
+                            "root": row['root'][0],
                             "image": image,
-                            "hdr": inf[0].header,
+                            "hdr": sci_hdr,
                             "flat": flat,
-                            "wave": wave,
+                            "wave": wav1st,
+                            "ltv1": ltv1,
+                            "ltv2": ltv2,
+                            "filter": filter,
                             "verbose": verbose
                         }
             image, flatfile = reduce_flatfield(row, ff_params)
@@ -1377,43 +1616,47 @@ def reduce_stare(row, params, arg_list):
         spec_time = np.zeros((ns,))
 
         nn_img = np.where(image>0, image, 0)        
-        hwidth = gwidth/2
+        hwidth = params['gwidth']//2
         for i in range(ns):
             y1 = max((yfit[i] - hwidth), 0)
-            y2 = max(min((yfit[i] + hwidth), image.shape[0]), y1)
+            y2 = max(min((yfit[i] + hwidth), image.shape[0]), y1+1)
             iy1 = int(round(y1))
             iy2 = int(round(y2))
             
             for irow in range(iy1, iy2+1):
-                if (dq[irow,i] & 24) and (x_arr[i] != 0) and (x_arr[i] != ns-1):
-                    image[irow,i] = (image[irow,i-1] + image[irow,i+1])/2
+                if (dq[i,irow] & 24) and (x_arr[i] != 0) and (x_arr[i] != ns-1):
+                    image[i,irow] = (image[i-1,irow] + image[i+1,irow])/2
             
             frac1 = 0.5 + iy1-y1 # frac of pixel i1y
             frac2 = 0.5 + y2-iy2 # frac of pixel iy2
             ifull1 = iy1 + 1     # range of full pixels to extract - low
-            ifull2 = iy2 - 1     # range of full pixels to extract - high
+            ifull2 = iy2         # range of full pixels to extract - high
             
             if ifull2 >= ifull1:
-                tot = np.sum(image[ifull1:ifull2,x[i]])
-                var = np.sum(err[ifull1:ifull2,x[i]])**2
-                tot_time = np.sum(time[ifull1:ifull2,x[i]]*nn_img[ifull1:ifull2,x[i]])
-                time_weight = np.sum(nn_img[ifull1:ifull2,x[i]])
+                tot = np.sum(image[ifull1:ifull2,x_arr[i]])
+                var = np.sum(err[ifull1:ifull2,x_arr[i]])**2
+                tt = time[ifull1:ifull2,x_arr[i]]
+                nn = nn_img[ifull1:ifull2,x_arr[i]]
+                tot_time = np.sum(tt*nn)
+                time_weight = np.sum(nn_img[ifull1:ifull2,x_arr[i]])
             else:
                 tot = 0.
                 var = 0.
                 time_weight = 0.
                 tot_time = 0.
-            tot += frac1*image[iy1,x[i]] + frac2*image[iy2,x[i]]
-            var += frac1*err[iy1,x[i]]**2 + frac2*err[iy2,x[i]]**2
-            tot_time += frac1*time[iy1,x[i]]*nn_img[iy1,x[i]] + frac2*time[iy2,x[i]]*nn_img[iy2,x[i]]
-            time_weight += frac1*nn_img[iy1,x[i]] + frac2*nn_img[iy2,x[i]]
+            tot += frac1*image[iy1,x_arr[i]] + frac2*image[iy2,x_arr[i]]
+            var += frac1*err[iy1,x_arr[i]]**2 + frac2*err[iy2,x_arr[i]]**2
+            tot_time += frac1*time[iy1,x_arr[i]]*nn_img[iy1,x_arr[i]] 
+            tot_time += frac2*time[iy2,x_arr[i]]*nn_img[iy2,x_arr[i]]
+            time_weight += frac1*nn_img[iy1,x_arr[i]] 
+            time_weight += frac2*nn_img[iy2,x_arr[i]]
             if time_weight > 0:
                 ave_time = tot_time/time_weight
             else:
-                ave_time = np.max(time[iy1:iy2,x[i]])
+                ave_time = np.max(time[iy1:iy2+1,x_arr[i]])
             e = 0
             for j in range(iy1, iy2+1):
-                e = e | dq[j,x[i]]
+                e = e | dq[j,x_arr[i]]
             
             flux[i] = tot
             errf[i] = np.sqrt(var)
@@ -1421,6 +1664,9 @@ def reduce_stare(row, params, arg_list):
             spec_time[i] = ave_time
         
         # Correct response to +1 order dispersion at y-centre
+        # This code exists in the IDL, but is followed by a direct assignment of
+        #   dcorr which, as far as I can see, makes the rest of it effectively
+        #   obsolete.
 #         indx = np.where(wave >= 10900)
 #         npts = len(indx[0])
 #         indx = indx[0][0]
@@ -1435,7 +1681,7 @@ def reduce_stare(row, params, arg_list):
 #             dcorr = 46.5/disp
         dcorr = 1. # apparently big improvement as of 2018-06-19?
         if verbose:
-            print("{}: {}: End reduction".format(task, row['root']))
+            print("{}: extraction finished.".format(preamble))
         
         flux *= dcorr
         s_back *= dcorr
@@ -1460,24 +1706,27 @@ def reduce_stare(row, params, arg_list):
         if interactive:
             fig = plt.figure()
             ax = fig.add_subplot(111)
-            ax.plot(wave, flux)
-            ax.plot(wave, gross)
-            ax.plot(wave, s_back)
-            ax.plot(wave, sky_back)
+            targ_str = "{} - {} ({})".format(root, target, filter)
+            ax.set_title('{}: Extracted Spectrum'.format(targ_str))
+            ax.plot(wave, flux, label='flux')
+            ax.plot(wave, gross, label='gross')
+            ax.plot(wave, s_back, label='background')
+            ax.plot(wave, sky_back, label='sky background')
+            ax.legend()
             plt.show()
         
         # Write results
         extracted_file_name = "{}_{}_x1d.fits".format(row['root'], row['target'])
         
         x_col = fits.Column(name='x', format='E', array=x_arr)
-        fit_col = fits.Column(name='y_fit', format='E', array=y_fit)
+        fit_col = fits.Column(name='y_fit', format='E', array=yfit)
         wave_col = fits.Column(name='wavelength', format='E', array=wave)
         net_col = fits.Column(name='net', format='E', array=flux)
         gross_col = fits.Column(name='gross', format='E', array=gross)
         back_col = fits.Column(name='background', format='E', array=s_back+sky_back)
         eps_col = fits.Column(name='eps', format='E', array=epsf)
         err_col = fits.Column(name='err', format='E', array=errf)
-        x_back_col = fits.Column(name='x_background', format='E', array=x_back)
+        x_back_col = fits.Column(name='x_background', format='E', array=x_b)
         b_lower_col = fits.Column(name='background_lower', format='E', array=b_lower)
         b_upper_col = fits.Column(name='background_upper', format='E', array=b_upper)
         time_col = fits.Column(name='time', format='E', array=spec_time)
@@ -1496,6 +1745,7 @@ def reduce_stare(row, params, arg_list):
         params['coef_1'] = coef[1]
         params['ref'] = ref
         params['angle'] = angle
+        params['axeflg'] = axeflg
         
         hdr = fits.Header()
         hdr = set_hdr(hdr, params)
@@ -1507,13 +1757,13 @@ def reduce_stare(row, params, arg_list):
         if out_dir == '':
             out_dir = os.getcwd()
         spec_dir = os.path.join(out_dir, arg_list.spec_dir)
-        os.makedirs(spec_dir)
+        Path(spec_dir).mkdir(parents=True, exist_ok=True)
         extracted_dest = os.path.join(spec_dir, extracted_file_name)
-        extracted_file.writeto(extracted_dest)
+        extracted_file.writeto(extracted_dest, overwrite=True)
         row['extracted'] = os.path.join(arg_list.spec_dir, extracted_file_name)
         
     with fits.open(file, mode='update') as f:
-        set_header(f[0].header, params)
+        set_hdr(f[0].header, params)
 
     return row
 
@@ -1523,23 +1773,66 @@ def reduce(input_table, overrides, arg_list):
     Reduces grism data
     """
     verbose = arg_list.verbose
-    flat_before_bkg = arg_list.flat_before_bkg
-    interactive = arg_list.user_interaction
+    interactive = arg_list.trace
+    task = "grism_reduce"
     
     if verbose:
-        print("Starting WFC3 data reduction for GRISM data.")
+        print("{}: Starting WFC3 data reduction for GRISM data.".format(task))
     
-    # 32 and 512 OK "per icqv02i3q RCB 2015may26"
-    flags = 4 | 8 | 16 | 64 | 128 | 256
-    filters = ['G102', 'G141']
-    
-    known_issues = json.loads(get_data_file("abscal.wfc3", "known_issues.json"))
+    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
+    with open(known_issues_file, 'r') as inf:
+        known_issues = json.load(inf)
     input_table.adjust(known_issues['metadata'])
-    issues = known_issues["reduction"]["reduce_grism"]
+    issues = []
+    if "reduction" in known_issues:
+        if "reduce_grism" in known_issues["reduction"]:
+            issues = known_issues["reduction"]["reduce_grism"]
     
     for row in input_table:
         root = row['root']
+        target = row['target']
         ref = row['filter_root']
+        preamble = "{}: {}".format(task, root)
+        
+        # Don't extract if there's already an extracted version of
+        #   the file present.
+        if row['extracted'] != '':
+            out_dir, out_table = os.path.split(arg_list.out_file)
+            if out_dir == '':
+                out_dir = os.getcwd()
+            ext_file = os.path.join(out_dir, row['extracted'])
+            if os.path.isfile(ext_file):
+                if arg_list.force:
+                    if verbose:
+                        msg = "{}: {}: extracted file exists. Re-extracting."
+                        print(msg.format(task, root))
+                else:
+                    if verbose:
+                        msg = "{}: {}: skipping extraction because file exists."
+                        print(msg.format(task, root))
+                    continue
+        else:
+            out_dir, out_table = os.path.split(arg_list.out_file)
+            if out_dir == '':
+                out_dir = os.getcwd()
+            spec_dir = os.path.join(out_dir, arg_list.spec_dir)
+            extracted_file_name = "{}_{}_x1d.fits".format(root, target)
+            extracted_dest = os.path.join(spec_dir, extracted_file_name)
+            
+            # If there is already an extracted file for this input, skip.
+            if os.path.isfile(extracted_dest):
+                ext_str = os.path.join(arg_list.spec_dir, extracted_file_name)
+                if arg_list.force:
+                    if verbose:
+                        msg = "{}: {}: extracted file exists. Re-extracting."
+                        print(msg.format(task, root))
+                else:
+                    row['extracted'] = ext_str
+                    if verbose:
+                        msg = "{}: {}: skipping extraction because file exists."
+                        print(msg.format(task, root))
+                    continue
+
         # Only reduce grism data in the reduce function.
         if row['use'] and row['filter'][0] == 'G':
             defaults = {
@@ -1548,7 +1841,7 @@ def reduce(input_table, overrides, arg_list):
                         'yc': -1., 
                         'yerr': -1., 
                         'ywidth': 11, 
-                        'yoffset': 0,
+                        'y_offset': 0,
                         'gwidth': 6.,
                         'bwidth': 13, 
                         'bmedian': 7,
@@ -1579,15 +1872,16 @@ def reduce(input_table, overrides, arg_list):
                 defaults['wlrang_p2_low'] = 8000.
                 defaults['wlrang_p2_high'] = 10000.
             elif row['filter'] == 'G141':
-                defaults['ix_shift'] = 0
-                defaults['iy_shift'] = 0
+                defaults['ix_shift'] = 188
+                defaults['iy_shift'] = 1
                 defaults['wlrang_m1_low'] = 10800.
                 defaults['wlrang_m1_high'] = 16000.
                 defaults['wlrang_p1_low'] = 10800.
                 defaults['wlrang_p1_high'] = 16000.
                 defaults['wlrang_p2_low'] = 10800.
                 defaults['wlrang_p2_high'] = 13000.
-            params = set_params(defaults, row, issues, overrides, verbose)
+            params = set_params(defaults, row, issues, preamble, overrides, 
+                                verbose)
             if 'bwidth' in params['set']:
                 if 'bdist' not in params['set']:
                     params['bdist'] = 25 + params['bwidth']/2
@@ -1597,7 +1891,9 @@ def reduce(input_table, overrides, arg_list):
                     params['lbdist'] = 25 + params['bwidth']/2
                         
             if verbose:
-                print("Reducing {} ({})".format(root, row['filter']))
+                print("{}: Reducing {} ({})".format(task, root, row['filter']))
+            
+            print("{}: Reference Image is {}".format(task, ref))
             # Only get the position if there
             #   - is a known filter reference (not NONE or unknown)
             #   - that reference is in the table (so we can find it)
@@ -1605,30 +1901,69 @@ def reduce(input_table, overrides, arg_list):
                 ref_row = input_table[input_table['root'] == ref]
                 # Process the filter image only if its XC and YC haven't been
                 #   set to an actual value yet.
-                if ref_row['xc'] < 0 or ref_row['yc'] < 0:
-                    processed = locate_image(ref_row, verbose)
-                    ref_row['xc'] = processed['xc']
-                    ref_row['yc'] = processed['yc']
-                    ref_row['xerr'] = processed['xerr']
-                    ref_row['yerr'] = processed['yerr']
+                if float(ref_row['xc'][0]) < 0 or float(ref_row['yc'][0]) < 0:
+                    processed = locate_image(ref_row, verbose, interactive)
+                    ref_row['xc'] = float(processed['xc'][0])
+                    ref_row['yc'] = float(processed['yc'][0])
+                    ref_row['xerr'] = float(processed['xerr'][0])
+                    ref_row['yerr'] = float(processed['yerr'][0])
                 for item in ['xc', 'yc', 'xerr', 'yerr']:
-                    params[item] = ref_row[item]
+                    params[item] = float(ref_row[item])
                     if item not in params['set']:
                         params['set'].append(item)
-                scan_rate = row['scan_rate']
 
-                if scan_rate > 0:
-                    reduced = reduce_scan(row, params, arg_list)
-                else:
-                    reduced = reduce_stare(row, params, arg_list)
+            # Check scan rate to determine extraction type
+            scan_rate = row['scan_rate']
+
+            if scan_rate > 0:
+                print("{}: Reducing SCAN MODE data.".format(task))
+                reduced = reduce_scan(row, params, arg_list)
+            else:
+                print("{}: Reducing STARE MODE data.".format(task))
+                reduced = reduce_stare(row, params, arg_list)
                 
-                row['extracted'] = reduced['extracted']
+            row['extracted'] = reduced['extracted']
                 
         elif verbose:
-            msg = "Skipping {} because it's been set to don't use (reason: {})."
-            print(msg.format(root, row['notes']))
+            msg = "{}: Skipping {} because it's been set to don't use "
+            msg += "(reason: {})."
+            if row['filter'][0] != 'G':
+                reason = 'Imaging exposure ({})'.format(row['filter'])
+            else:
+                reason = row['notes']
+            print(msg.format(task, root, reason))
     
     return input_table
+
+
+def additional_args():
+    """
+    Additional command-line arguments. Used when a single command may run
+    another command, and need to add arguments from it.
+    """
+    
+    additional_args = {}
+    
+    table_help = "The input metadata table to use."
+    table_args = ['table']
+    table_kwargs = {'help': table_help}
+    additional_args['table'] = (table_args, table_kwargs)
+
+    bkg_help = "Whether to subtract background before or after applying "
+    bkg_help += "flatfield. Default is 'flat_first'. Available options are "
+    bkg_help += "'flat_first', 'bkg_first' and 'bkg_only'."
+    bkg_args = ['-b', '--bkg_flat_order']
+    bkg_kwargs = {'dest': 'bkg_flat_order', 'default': 'flat_first',
+                  'help': bkg_help}
+    additional_args['bkg_flat_order'] = (bkg_args, bkg_kwargs)
+    
+    trace_help = "Include result plots while running."
+    trace_args = ["-t", "--trace"]
+    trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
+                    'help': trace_help}
+    additional_args['trace'] = (trace_args, trace_kwargs)
+
+    return additional_args
 
 
 def parse_args():
@@ -1638,16 +1973,7 @@ def parse_args():
     description_str = 'Process files from metadata table.'
     default_output_file = 'ir_grism_stare_reduced.log'
     
-    table_help = "The input metadata table to use."
-    table_args = ['table']
-    table_kwargs = {'help': table_help}
-    
-    flat_help = "Flatfield before background subtraction"
-    flat_args = ['-f', '--flat_before_bkg']
-    flat_kwargs = {'dest': 'flat_before_bkg', 'default': False,
-                   'action': 'store_true', 'help': flat_help}
-    
-    additional_args = [(table_args, table_kwargs), (flat_args, flat_kwargs)]
+    additional_args = additional_args()
     
     res = parse(description_str, default_output_file, additional_args)
     

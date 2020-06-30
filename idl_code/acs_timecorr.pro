@@ -1,4 +1,4 @@
-function acs_timecorr,date,wave		; XYCTE version
+function acs_timecorr,date,wave
 ;+
 ; compute the sensitivity degradation correction for ACS CCD photom before SM4
 ;	from quartic fit vs. WL found in tchang.pro. 
@@ -17,8 +17,6 @@ function acs_timecorr,date,wave		; XYCTE version
 ; 16may16 - update for elim 1st HRC obs @ 6.2" off-center.& HRC-UV @ half wgt
 ; 16may26 - better post-SM4 fit from use of fit pre-SM4 slopes in tchang
 ; 16may26 - Fix totcor result to be 9033A value at all longer WLs
-; 17jun23 - Update to use XYCTE results from tchang.pro
-; 17sep25-26 -updates w/ small changes
 ;-
 filt=['F220W','F250W','F330W','F344N','F435W','F475W','F502N','F555W',  $
        'F550M','F606W','F625W','F658N','F660N','F775W','F814W','F892N','F850LP']
@@ -36,7 +34,6 @@ pivwl =   [2257.,2714,3362,3433,4319,4747,5023,5361,		$
 	5581,5921,6311,6584,6599,7692,8057,8915,9033]
 if datatype(wave(0)) eq 'STR' then begin
 	indx=where(filt eq wave)
-	if min(indx) lt 0 then stop			; idiot ck
 	wav=pivwl(indx)  &  wav=wav(0)
 ;	print,'ACS_timecorr conv filter to pivwl:',wave,wav
      end else wav=double(wave)
@@ -46,37 +43,21 @@ if datatype(wave(0)) eq 'STR' then begin
 ; ###change
 ;  WFC+HRC pre-SM4 fitted corrections from tchang.pro w CTE corr:
 ;coef=[-0.03180,2.035e-05,-5.184e-09,5.652e-13,-2.189e-17]	; 2012feb3
-;coef=[-0.051830d,3.5780e-05,-9.0922e-09,9.7476e-13,-3.7240e-17] ; 2016feb22 9:44
-;coef=[-0.051871d,3.5807e-05,-9.0984e-09,9.7538e-13,-3.7263e-17] ;2016feb22 10:22
+;coef=[-0.051830d,3.5780e-05,-9.0922e-09,9.7476e-13,-3.7240e-17] ; 2016feb229:44
+;coef=[-0.051871d,3.5807e-05,-9.0984e-09,9.7538e-13,-3.7263e-17] ;2016feb2210:22
 ;coef=[-0.034118d,2.1933e-05,-5.4512e-09,5.8219e-13,-2.2369e-17] ;2016mar28
 ;coef=[-0.034094d,2.1919e-05,-5.4489e-09,5.8202e-13,-2.2364e-17] ;2016mar31
 ;coef=[-0.044523d,3.0351e-05,-7.7263e-09,8.3685e-13,-3.2538e-17] ;2016mayresid=.989
 ;coef=[-0.044566d,3.0381e-05,-7.7338e-09,8.3766e-13,-3.2569e-17] ;2016mayresid=.988
-;coef=[-0.044561d,3.0376e-05,-7.7328e-09,8.3760e-13,-3.2569e-17] ;2016may26
-; **************** XYCTE implemented:
-;coef=[-0.040568d,2.7271e-05,-6.9294e-09,7.5119e-13,-2.9318e-17] ;2017sep26
-;coef=[-0.040570d,2.7273e-05,-6.9301e-09,7.5127e-13,-2.9321e-17] ;2017sep26
-;coef=[-0.040570d,2.7274e-05,-6.9301e-09,7.5128e-13,-2.9322e-17] ;2017sep26
-coef=[-0.040576d,2.7280e-05,-6.9323e-09,7.5156e-13,-2.9334e-17] ;2017sep28 conv
+coef=[-0.044561d,3.0376e-05,-7.7328e-09,8.3760e-13,-3.2569e-17] ;2016may26
 
 ; coef for rel. sensitiv. at 2009.4 from tchang:
 ;coef09=[1.210,-9.644e-05,1.372e-08,-6.077e-13]			; 2012feb3
 ;coef09=[1.2226d,-1.0220e-04,1.4740e-08,-6.6649e-13]	; 2016feb16-val @ 2009.4
 ;coef09=[1.2062d,-9.4125e-05,1.3510e-08,-6.0762e-13]	; 2016mar28-val @ 2009.4
-;coef09=[1.1536d,-7.2839e-05,1.0806e-08,-5.0274e-13]	; 2016may27
-; **************** XYCTE implemented:
-;coef09=[1.1331d,-6.5197e-05,9.7902e-09,-4.5887e-13]	; 2017sep26
-;coef09=[1.1329d,-6.5119e-05,9.7719e-09,-4.5787e-13]	; 2017sep26
-;coef09=[1.1329d,-6.5112e-05,9.7704e-09,-4.5780e-13]	; 2017sep26
-; flip flopping - avg above 2:
-;coef09=[1.1329d,-6.5116e-05,9.7712e-09,-4.5784e-13]	; 2017sep26
-;coef09=[1.1330d,-6.5154e-05,9.7767e-09,-4.5809e-13]	; 2017sep28
-coef09=[1.1330d,-6.5176e-05,9.7799e-09,-4.5824e-13]	; 2017sep28
+coef09=[1.1536d,-7.2839e-05,1.0806e-08,-5.0274e-13]	; 2016may27
 ;postslope=-0.00057					; avg post-SM4 loss rate
-;postslope=-0.000615					;2016may26 +/- 0.00020
-; **************** XYCTE implemented:
-;postslope=-0.001070				;2017sep26 +/-0.00014
-postslope=-0.001162				;2017sep26 +/-0.00013 conv
+postslope=-0.000615					;2016may26 +/- 0.00020
 
 ; frac/year:
 corr=coef(0)+coef(1)*wav+coef(2)*wav^2+coef(3)*wav^3+coef(4)*wav^4

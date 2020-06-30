@@ -32,10 +32,10 @@ __all__ = ['parse']
 def parse(description_str, default_out_file, arg_list):
     path_help = "A comma-separated list of input paths."
     
-    in_help = "Optional input table file. If provided, the program will begin "
-    in_help += "by reading the input table and adding all of its exposures to "
-    in_help += "the metadata table. See the duplicates flag for options on "
-    in_help += "processing duplicate entries."
+    in_help = "Optional additional input table file. If provided, the program "
+    in_help += "will begin by reading the input table and adding all of its "
+    in_help += "exposures to the metadata table. See the duplicates flag for "
+    in_help += "options on processing duplicate entries."
     
     out_help = "Output metadata file. The default value is "
     out_help += "{} ".format(default_out_file)
@@ -43,14 +43,15 @@ def parse(description_str, default_out_file, arg_list):
     out_help += "(and associated filter images), 'filter' is filter files, and "
     out_help += "'scan' is all scan-mode files."
     
-    spec_help = "Subdirectory where extracted and co-added spectra are stored."
+    spec_help = "Subdirectory where extracted and co-added spectra are stored. "
+    spec_help += "The default value is 'spec'."
     
     compat_help = "Activate strict compatibility mode. In this mode, the "
     compat_help += "script will produce output that is as close as possible to "
     compat_help += "indistinguishable from the IDL code"
     
-    user_help = "Include user interaction, and result plots while running."
-
+    force_help = "Force steps to run even if output already exists."
+    
     verbose_help = "Print diagnostic information while running."
 
     parser = argparse.ArgumentParser(description=description_str)
@@ -63,11 +64,12 @@ def parse(description_str, default_out_file, arg_list):
                         default='spec')
     parser.add_argument('-c', '--strict_compat', dest="compat", 
                         action='store_true', default=False, help=compat_help)
-    parser.add_argument('-i', '--interactive', dest="user_interaction",
-                        action='store_true', default=False, help=user_help)
+    parser.add_argument('-f', '--force', dest="force", action="store_true",
+                        default=False, help=force_help)
     parser.add_argument('-v', '--verbose', dest="verbose",
                         action='store_true', default=False, help=verbose_help)
-    for args,kwargs in arg_list:
+    for arg_name in arg_list.keys():
+        args, kwargs = arg_list[arg_name]
         parser.add_argument(*args, **kwargs)
 
     res = parser.parse_args()

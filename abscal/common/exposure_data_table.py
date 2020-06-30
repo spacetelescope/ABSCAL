@@ -65,13 +65,13 @@ class AbscalDataTable(Table):
         """
         # Persistent Metadata
         self.create_time = datetime.datetime.now()
-        self.search_str = self._get_kwarg('search_str', 'i*flt.fits', **kwargs)
-        self.search_dirs = self._get_kwarg('search_dirs', os.getcwd(), **kwargs)
-        self.duplicates = self._get_kwarg('duplicates', 'both', **kwargs)
+        self.search_str, kwargs = self._get_kwarg('search_str', 'i*flt.fits', kwargs)
+        self.search_dirs, kwargs = self._get_kwarg('search_dirs', os.getcwd(), kwargs)
+        self.duplicates, kwargs = self._get_kwarg('duplicates', 'both', kwargs)
         
         # Creation Flags
-        idl_mode = self._get_kwarg('idl_mode', False, **kwargs)
-        initial_table = self._get_kwarg('table', None, **kwargs)
+        idl_mode, kwargs = self._get_kwarg('idl', False, kwargs)
+        initial_table, kwargs = self._get_kwarg('table', None, kwargs)
         
         if initial_table is not None:
             if data is not None:
@@ -88,6 +88,7 @@ class AbscalDataTable(Table):
         super().__init__(data=data, masked=masked, names=names, dtype=dtype,
                          meta=meta, copy=copy, rows=rows,
                          copy_indices=copy_indices, **kwargs)
+        self._fix_columns()
     
     
     def read(*args, **kwargs):
@@ -138,10 +139,13 @@ class AbscalDataTable(Table):
             False in the case of duplicate columns.
         """
         for column in self.standard_columns:
-            idl = self.standard_columns[column]['idl']
-            default = self.standard_columns[column]['default']
-            if (not idl) and (default != 'N/A') and (column not in metadata_dict):
-                metadata_dict[column] = default
+            if column not in metadata_dict:
+                idl = self.standard_columns[column]['idl']
+                default = 'N/A'
+                if 'default' in self.standard_columns[column]:
+                    default = self.standard_columns[column]['default']
+                if (not idl) and (default != 'N/A'):
+                    metadata_dict[column] = default
         
         if metadata_dict['root'] in self['root']:
             if self.duplicates == 'both':
@@ -161,6 +165,7 @@ class AbscalDataTable(Table):
                 raise ValueError(msg.format(self.duplicates))
         else:
             self.add_row(metadata_dict)
+        self._fix_columns()
         return True
     
     
@@ -206,6 +211,37 @@ class AbscalDataTable(Table):
         
         return
     
+    
+    def set_filter_images(self):
+        """
+        For any grism exposures, look for the nearest associated filter
+        exposure and, if one is found, associate it using the filter_root
+        column.
+        """
+        filter_table = deepcopy(self)
+        filter_list = [f[0] != 'F' for f in filter_table['filter']]
+        filter_table.remove_rows(filter_list)
+        
+        grism_table = deepcopy(self)
+        grism_list = [f[0] != 'G' for f in grism_table['filter']]
+        grism_table.remove_rows(grism_list)
+        
+        for row in grism_table:
+            base_mask = [r == row['root'] for r in self['root']]
+            obset = row['obset']
+            check_mask = [r == obset for r in filter_table['obset']]
+            check_table = filter_table[check_mask]
+            if len(check_table) > 0:
+                check_dates = [abs(row['date']-t) for t in check_table['date']]
+                minimum_time_index = check_dates.index(min(check_dates))
+                minimum_time_row = check_table[minimum_time_index]
+                self["filter_root"][base_mask] = minimum_time_row["root"]
+            else:
+                msg = "No corresponding filter exposure found."
+                self["note"][base_mask] += " {}".format(msg)
+                self["filter_root"][base_mask] = "NONE"
+        return
+       
     
     def filtered_copy(self, filter_or_filters):
         """
@@ -360,7 +396,7 @@ class AbscalDataTable(Table):
         
         for row in grism_check_table:
             
-            base_mask = [r == row['root'] for r in self['root']]
+            base_mask = [r == row['root'] for r in grism_table['root']]
             obset = row['obset']
             check_mask = [r == obset for r in filter_table['obset']]
             check_table = filter_table[check_mask]
@@ -370,13 +406,14 @@ class AbscalDataTable(Table):
                 minimum_time_row = check_table[minimum_time_index]
                 if minimum_time_row['root'] not in grism_table['root']:
                     grism_table.add_row(minimum_time_row)
-                self[base_mask]["filter_root"] = minimum_time_row["root"]
+                new_mask = [r == row['root'] for r in grism_table['root']]
+                grism_table["filter_root"][new_mask] = minimum_time_row["root"]
             else:
                 row_mask = [r == row['root'] for r in grism_table['root']]
                 msg = "No corresponding filter exposure found."
-                grism_table[row_mask]["note"] += " {}".format(msg)
-                self[base_mask]["note"] += " {}".format(msg)
-                self[base_mask]["filter_root"] = "NONE"
+                grism_table["note"][row_mask] += " {}".format(msg)
+                grism_table["note"][base_mask] += " {}".format(msg)
+                grism_table["filter_root"][base_mask] = "NONE"
         
         grism_table.sort(['root'])
         return grism_table
@@ -417,6 +454,7 @@ class AbscalDataTable(Table):
             t = self._read_from_idl(file_name)
         
         return t
+
         
     @staticmethod
     def _write_to_idl(file_name, table, **kwargs):
@@ -513,8 +551,8 @@ class AbscalDataTable(Table):
             meta_file.write("search_str={}\n".format(search_str))
             for dir in search_dirs:
                 meta_file.write("search_dirs={}\n".format(dir))
-            for column in self.standard_columns:
-                if not self.standard_columns[column]['idl']:
+            for column in AbscalDataTable.standard_columns:
+                if not AbscalDataTable.standard_columns[column]['idl']:
                     for item in table[column]:
                         meta_file.write("{}={}\n".format(column, item))
 
@@ -566,8 +604,8 @@ class AbscalDataTable(Table):
         search_str = "i*flt.fits"
         search_dirs = []
         extra_columns = {}
-        for column in self.standard_columns:
-            if not self.standard_columns[column]["idl"]:
+        for column in AbscalDataTable.standard_columns:
+            if not AbscalDataTable.standard_columns[column]["idl"]:
                 extra_columns[column] = []
         meta_file = table_file+".meta"
         if os.path.isfile(meta_file):
@@ -601,38 +639,41 @@ class AbscalDataTable(Table):
         if len(search_dirs) == 0:
             search_dirs.append(os.getcwd())
         
-        t = AbscalDataTable(duplicates=duplicates, search_str=search_str,
-                            search_dirs=search_dirs, idl_mode=True)
-        t.create_time = create_time
-        t['root'] = idl_table['ROOT']
-        t['obset'] = [r[:6] for r in idl_table['ROOT']]
-        t['filter'] = idl_table['MODE']
-        t['aperture'] = idl_table['APER']
-        t['exposure_type'] = idl_table['TYPE']
-        t['target'] = idl_table['TARGET']
+        c = {}
+        c['root'] = Column(name='root', data=idl_table['ROOT'])
+        c['obset'] = Column(name='obset', data=[r[:6] for r in idl_table['ROOT']])
+        c['filter'] = Column(name='filter', data=idl_table['MODE'])
+        c['aperture'] = Column(name='aperture', data=idl_table['APER'])
+        c['exposure_type'] = Column(name='exposure_type', data=idl_table['TYPE'])
+        c['target'] = Column(name='target', data=idl_table['TARGET'])
         img_x = [int(i[:4].strip()) for i in idl_table['IMG SIZE']]
-        t['xsize'] = Column(img_x)
+        c['xsize'] = Column(name='xsize', data=img_x)
         img_y = [int(i[5:].strip()) for i in idl_table['IMG SIZE']]
-        t['ysize'] = Column(img_y)
+        c['ysize'] = Column(name='ysize', data=img_y)
         dt = zip(idl_table["DATE"], idl_table["TIME"])
         dates = [parse_fn("{} {}".format(d,t), parse_str) for d,t in dt]
-        t['date'] = Column(dates)
-        t['proposal'] = idl_table["PROPID"]
-        t['exptime'] = idl_table["EXPTIME"]
-        postarg_1 = [float(p[:6].strip()) for p in idl_table["POSTARG X,Y"]]
-        t['postarg1'] = Column(postarg_1)
+        c['date'] = Column(name='date', data=dates)
+        c['proposal'] = Column(name='proposal', data=idl_table["PROPID"])
+        c['exptime'] = Column(name='exptime', data=idl_table["EXPTIME"])
+        postarg_1 = [float(p[:5].strip()) for p in idl_table["POSTARG X,Y"]]
+        c['postarg1'] = Column(name='postarg1', data=postarg_1)
         postarg_2 = [float(p[8:].strip()) for p in idl_table["POSTARG X,Y"]]
-        t['postarg2'] = Column(postarg_2)
-        t['scan_rate'] = idl_table["SCAN_RAT"]
-        for column in self.standard_columns:
-            t[column] = Column(standard_columns[column])
-        t.comments = idl_table.comments
+        c['postarg2'] = Column(name='postarg2', data=postarg_2)
+        c['scan_rate'] = Column(name='scan_rate', data=idl_table["SCAN_RAT"])
+        for column in AbscalDataTable.standard_columns:
+            if column not in c:
+                c[column] = Column(name=column, data=extra_columns[column])
+        col_names = list(AbscalDataTable.standard_columns.keys())
+
+        t = Table(data=c, names=col_names)
+        t.create_time = create_time
+        t.meta = idl_table.meta
         
         return t
     
     
     @staticmethod
-    def _get_kwarg(key, default, **kwargs):
+    def _get_kwarg(key, default, kwargs):
         """
         Get an abscal-specific kwarg from the kwarg dictionary (if present),
         otherwise returning a default value.
@@ -647,8 +688,16 @@ class AbscalDataTable(Table):
             The keyword dictionary to search.
         """
         if key in kwargs:
-            return kwargs.pop(key)
-        return default
+            return kwargs.pop(key), kwargs
+        return default, kwargs
+    
+    def _fix_columns(self):
+        """
+        Adjust all columns to replace fixed-length strings with objects.
+        """
+        for col in self.itercols():
+            if col.dtype.kind in 'SU':
+                self.replace_column(col.name, col.astype('object'))
     
     
     default_format = 'ascii.ipac'
@@ -670,7 +719,7 @@ class AbscalDataTable(Table):
                             'scan_rate': {'dtype': 'f8', 'idl': True},
                             'path': {'dtype': 'O', 'idl': False, 
                                      'default': 'N/A'},
-                            'use': {'dtype': '?1', 'idl': False, 
+                            'use': {'dtype': '?', 'idl': False, 
                                     'default': True},
                             'filter_root': {'dtype': 'S10', 'idl': False,
                                             'default': 'unknown'},
@@ -691,7 +740,9 @@ class AbscalDataTable(Table):
                             'dec_targ': {'dtype': 'f8', 'idl': False, 
                                          'default': 0.},
                             'extracted': {'dtype': 'O', 'idl': False, 
-                                          'default': ''}
+                                          'default': ''},
+                            'coadded': {'dtype': 'O', 'idl': False, 
+                                        'default': ''},
                             'notes': {'dtype': 'O', 'idl': False, 
                                       'default': 'N/A'},
                        }

@@ -1,23 +1,29 @@
-#!/usr/bin/env python
-
-# Licensed under a 3-clause BSD style license - see LICENSE.rst
-
-import builtins
-
 from setuptools import setup
-from setuptools.config import read_configuration
+from setuptools import find_packages
 
-# Create a dictionary with setup command overrides. Note that this gets
-# information about the package (name and version) from the setup.cfg file.
-cmdclass = register_commands()
+import os
 
-# Freeze build information in version.py. Note that this gets information
-# about the package (name and version) from the setup.cfg file.
-version = generate_version_py()
+file_dir = os.path.abspath(__file__)
+version_str = '0.0.dev7'
+# jist_dir = os.path.join(os.path.dirname(file_dir), "jist", "__init__.py")
+# with open(jist_dir) as inf:
+#     version_str = inf.readline().strip()
 
-# Get configuration information from all of the various subpackages.
-# See the docstring for setup_helpers.update_package_files for more
-# details.
-package_info = get_package_info()
-
-setup(version=version, cmdclass=cmdclass, **package_info)
+setup(
+    name = 'abscal',
+    description = 'HST WFC3 and STIS absolute flux calibration',
+    url = 'https://github.com/spacetelescope/ABSCAL',
+    author = 'Brian York, Ralph Bohlin, Susana Deustua',
+    author_email = 'york@stsci.edu, bohlin@stsci.edu, deustua@stsci.edu',
+    keywords = ['astronomy'],
+    classifiers = ['Programming Language :: Python'],
+    packages = find_packages(),
+    install_requires = [
+                        "numpy", 
+                        "scipy", 
+                        "astropy>=3", 
+                        "photutils",
+                       ],
+    version = version_str,
+    include_package_data=True
+    )

@@ -216,10 +216,14 @@ root=strupcase(strmid(fulroot,0,9))
 ; wd1327 & wd2341 OCWGA1050 & OCWGA2050 are too broad & noisy to believe shifts
 ; 04June FASTEX WDs At Lyman-alpha per wlck.pro:
 			'OBNK01010': offset=-.77 	;WD0308-565 16sep15 eye
+			'OE7Q01040': offset=-0.60       ; 20mar G140L WD0308-565
 			'O5K007030': offset=-0.20       ; 19Jul WD1657 
 			'O5K008030': offset=-0.33       ; 19Jul WD1657 
 			'O69U04030': offset= 0.71       ; 19Jul WD1657 
 			'O8H111040': offset=-0.19       ; 19Jul WD1657 
+			'OE7Q07020': offset=-0.91       ; 20mar WD1657 G140L
+			'OE7Q07030': offset=-0.86       ; 20mar WD1657 G140L
+			'OE7Q07040': offset=-0.79       ; 20mar WD1657 G140L
 			'O5K001030': offset= 0.51       ; 19Jul WD0320 
 			'O5K002030': offset=-0.34       ; 19Jul WD0320 
 			'O5K003030': offset= 0.49       ; 19Jul WD0947 
@@ -231,6 +235,8 @@ root=strupcase(strmid(fulroot,0,9))
 			'O8H106040': offset=-0.50       ; 19Jul WD1026 
 			'O5K005030': offset= 1.09       ; 19Jul WD1057 
 			'O5K006030': offset= 1.02       ; 19Jul WD1057 
+			'OE7Q05010': offset=-0.50       ; 20mar WD1057 G140L
+			'OE7Q05020': offset=-0.41       ; 20mar WD1057 G140L
 			else: begin   &  endelse  &  endcase
 			
 		'2376':case root of			;G230L
@@ -264,7 +270,9 @@ root=strupcase(strmid(fulroot,0,9))
 			'OBNL04020': offset= 1.24       ; 19Jul 175713 G230L
 			'OBNL05020': offset= 0.11       ; 19Jul 180834 G230L
 
-; Eye says ~0 shift		'OBNK01020': offset=-0.92 	;WD0308-565 wlck.pro
+; Eye says ~0 shift	'OBNK01020': offset=-0.92 	;WD0308-565 wlck.pro
+			'OE7Q01020': offset=-0.58       ; 20mar WD0308 G230L
+			'OE7Q01030': offset=-0.39       ; 20mar WD0308 G230L
 ; 19May-HZ21 is 90% He, so try HeII lines:. No radial Vel meas. Line at 
 ;	2734.10A bit noisy, maybe assym.
 ; Also try 1640.42: px offset needed=(1640.42-1654.)/1.545= -8.8 px
@@ -382,6 +390,7 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODVKL2010': offset=-0.94       ; 19Jul AGK+81 G230LBE1; 			'ODVKL3010': offset=-1.05       ; 19aug AGK+81 G230LBE1
 			'OE36L1010': offset=-1.24       ; 19dec AGK+81 G230LBE1
 			'OE36L1020': offset=-0.38       ; 19dec AGK+81 G230LB
+			'OE36L2010': offset=-0.88       ; 20mar AGK+81 G230LBE1
 ; END AGK			
 ; 06jun7-G230LB 52x2E1 prime WDs from wlabsrat.wd3-g230lb
 			'O6IG10020': offset=-1.1  ; 06jun G191 Bad
@@ -744,6 +753,8 @@ root=strupcase(strmid(fulroot,0,9))
 			'ODVKL3040': offset=-1.11       ; 19aug AGK+81 G430LE1
 			'OE36L1030': offset=-0.18       ; 19dec AGK+81 G430L
 			'OE36L1040': offset=-1.63       ; 19dec AGK+81 G430LE1
+			'OE36L2030': offset=+0.28	; 20mar AGK+81 G430L
+			'OE36L2040': offset=-1.11	; 20Mar AGK+81 G430LE1
 ; END AGK
 ; Prime WD offsets in wlerr.g430l-wd. For Primary WDs:
 			'O3TT42020': offset= 0.37       ; 19Jul GD153 
@@ -845,7 +856,9 @@ root=strupcase(strmid(fulroot,0,9))
 			'O6N3A30D0': offset=-0.64       ; 19Jul HD2094 G430L
 			'O6N303010': offset=-3.47       ; 19Jul HD2094 G430L
 
-			'OBNK01030': offset=-1.97       ; 19Jul WD0308 E1
+			'OBNK01030': offset=-1.96       ; 19Jul WD0308 E1
+			'OE7Q01010': offset=-2.21       ; 20mar WD0308 G430L-E1
+			'OE7Q06010': offset= 0.18       ; 20mar WD1057 G430L-E1
 ;06June FASTEX G430L WDs confirmed/tweaked w/ wlabsrat.pro (from Line symmetry)
 ; old not so good	'O5K007020': offset=-0.6        ;WD1657 wlabsrat
 ; old			'O8V101010': offset=-0.8        ;WD1657 wlabsrat
@@ -1222,6 +1235,8 @@ root=strupcase(strmid(fulroot,0,9))
 			'OCWGA2010': offset=+0.20	; 19jul WD2341+322
 
 			'OBNK01040': offset=-1.23       ; 19Jul WD0308 
+			'OE7Q06020': offset= 0.51       ; 20mar WD1057 
+; all noise		'OE7Q08010': offset= 0.29       ; 20mar WD1657 G750L
 			'O8V101030': offset= 0.36       ; 19Jul WD1657 .16to.56
 ; 06June FASTEX G750L WDs confirmed/tweaked w/ wlabsrat.pro (from Line symmetry):
 			'O8V102030': offset=+0.7  ;snap-1 skip

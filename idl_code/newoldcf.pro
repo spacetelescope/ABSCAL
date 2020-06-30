@@ -12,12 +12,13 @@ pro newoldcf,filespec
 ;	(dat/*mrg gets new stars-NG! Fouls up weird names & odd old *.mrg files)
 ;	    newoldcf,'g750lhgt7/*mrg' run in stiscal,
 ;		before making hgt=11 default in dat/
-; newoldcf,''  to do all files in doc/new.names (assumes input is in /deliv)
-;		and do the skipmrg edit below to cf. w/ new .mrg files
+; newoldcf,''  to do all files in doc/new.names-all (assumes input is in /deliv)
+;	and do the skipmrg edit below to cf. w/ new .mrg files. 
+;	OR edit below for input doc/new.names from Run in calspec
 ; newoldcf,'sirius_stis_003', run in calspec, & comment skipmrg
-; 2017may - 'all' & comment skipmrg below to cf new mrg w/ current calspec
-;		(misses new stars, but see them AFTER making the deliv. files.)
-; newoldcf,'all'  to do all CALSPEC stars & run in calspec dir
+; newoldcf,'all' to cf all CALSPEC stars w/ new *.mrg & run in calspec dir
+; 	& comment skipmrg below to cf w/ current calspec
+;	(misses new stars, but see them AFTER making the deliv. files.)
 
 ; HISTORY
 ; 14feb - new WD data, new ttcorr. NOTE that small Teff diff, eg 60K at ~8000K
@@ -29,9 +30,10 @@ pro newoldcf,filespec
 fils=findfile(filespec+'*.fits')				; new for deliv
 if fils(0) eq '' then fils=findfile(filespec)			;dat, g750lhgt11
 if filespec eq '' and strpos(filespec,'g750l') lt 0 then begin
+; ###change - new.names or new.names-all:
 	readcol,'doc/new.names',fils,f='(a)'
 	good=where(strpos(fils,'#') lt 0)
-	fils='deliv/'+fils(good)
+	fils='deliv/'+fils(good)+'.fits'
 	endif
 if filespec eq 'all' then begin					; 2017may11
 	filall=findfile('*stis*.fits')				; in calspec dir
@@ -63,23 +65,20 @@ for ifil=0,nfils-1 do begin
 	    else begin				; for hgt7 or hgt11 runs
 	    rdf,fils(ifil),1,d
 	    wn=d(*,0)  &  fn=d(*,2)  &  endelse
+; compute oldfil:						; 2020feb
 	fdecomp,fils(ifil),disk,dir,name,ext
 	tmp=name				; assume old is in calspec dir
 	newfil=tmp
-	dum=gettok(tmp,'_00')			; find version (good to 9 !)
-	if tmp eq '' then begin
-		dum=gettok(tmp,'_0')		; find version (good to 99 !)
-		ver=fix(tmp)
-		oldfil=replace_char(name,'_0'+string(ver,'(i2)'),	$
+	dum=gettok(tmp,'_0')			; find version (good to 9 !)
+	if strpos(fils(ifil),'sf1615') ge 0 or				$
+		strpos(fils(ifil),'wd1327_083') ge 0 then dum=gettok(tmp,'_0')
+	ver=fix(tmp)
+	oldfil=replace_char(name,'_'+tmp,				$
 			'_0'+string(ver-1,'(i2)'))
-		if ver eq 10 then oldfil=replace_char(name,'_010','_009')
-	    end else begin
-		if strpos(fils(ifil),'sf1615') ge 0 then dum=gettok(tmp,'_00')
-		ver=fix(tmp)
-		oldfil=replace_char(name,'00'+string(ver,'(i1)'),	$
-			'00'+string(ver-1,'(i1)'))
-		endelse
+	oldfil=replace_char(oldfil,' ','0')
 	oldfil=oldfil+'.'+ext
+	help,tmp,oldfil,ver,name,fils(ifil)
+
 	if strpos(fils(ifil),'stisnic_001') ge 0 then begin
 		tmp=fils(ifil)
 		star=gettok(tmp,'_stisnic')
@@ -101,13 +100,10 @@ for ifil=0,nfils-1 do begin
 ;		if nproblem gt 0 then stop		$	; and fix
 ;		else oldfil=oldfil(-1)
 ;		endif
-; ###change: UNcom 2 lines to cf new files in /deliv to old ver in calspec
-;	star=gettok(name,'_')			; comment to cf. *.mrg files
-;	oldfil=findfile(star+'*_0*')  &  oldfil=oldfil(-1)
-; end change
-; ###change: to cf current calspec w/ new NICMOS or STIS .mrg files:
-;normal:	goto,skipmrg	; normally UN-comment to cf calspec versions
-       oldfil=fils(ifil)		; old=latest calspec to cf to *.mrg
+
+; ###change: comment ff to cf current calspec w/ new NICMOS or STIS .mrg files:
+	goto,skipmrg	; normally UN-comment to cf calspec versions
+	oldfil=fils(ifil)		; old=latest calspec to cf to *.mrg
        
 ; ###change - temp total change for Sirius:
 ;;;	oldfil='sirius_stis_001.fits'
@@ -133,19 +129,24 @@ for ifil=0,nfils-1 do begin
 ;       wn=d(*,0)*1e4  &  fn=d(*,2)		    	; nicmos
        wn=d(*,0)  &  fn=d(*,2)  	    		; end ###change
 skipmrg:
+	oldfil=findfile(oldfil)
 	if oldfil eq '' then goto,onlyone		; NO old file, ie _001
 
 	print,'Previous (old) file=',oldfil
-	if strpos(oldfil,'.fits') gt 0 then ssreadfits,oldfil,ho,wo,fo
+	if strpos(oldfil,'.fits') gt 0 then ssreadfits,oldfil[0],ho,wo,fo
 	good=where(wn ge wo(0))
 	wn=wn(good)  &  fn=fn(good)
 ; 2019Aug23 - absratio seems to be screwy. Do the ratio right, anyhow.
 ;	absratio,wn,fn>1e-16,wo,fo>1e-16,0,0,0,0,wr,rat
 ;	rat=smooth(smooth(rat,5),5)		; approp for new R=500 BOSZ
 ; NG for models	numer=smooth(smooth(fn>5e-17,5),5)	;smooth before dividing!
-	numer=smooth(smooth(fn,5),5)		; smooth before dividing!
+	fo=double(fo)  &  fn=double(fn)			;2020feb
+	linterp,wo,fo,wn,fo,missing=1		;?/NoINTERP
+; 2020mar19 - elim 0/0
+	good=where(fo ne 0 and fn ne 0)
+	wn=wn(good)  &  fn=fn(good)  &  wo=wo(good)  &  fo=fo(good)
 	wr=wn					; wn=master WL
-	linterp,wo,fo,wr,fo,missing=1		;?/NoINTERP
+	numer=smooth(smooth(fn,5),5)		; smooth before dividing!
 	denom=smooth(smooth(fo,5),5)
 	rat=numer/denom
 
@@ -180,7 +181,7 @@ skipmrg:
 		oplot,[9000,4e5],[1,1],lin=2
 		endif
 onlyone:
-	if oldfil eq '' then plot_oo,wn,fn
+	if oldfil eq '' then plot_oo,wn,fn>5e-18
 	plotdate,'newoldcf'
 	if !d.name eq 'X' then read,st
 	endfor

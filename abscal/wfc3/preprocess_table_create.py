@@ -130,22 +130,24 @@ def populate_table(data_table, **kwargs):
     file_template = data_table.search_str
     idl_strict = kwargs.get('compat', False)
     verbose = kwargs.get('verbose', False)
+    task = "create_table"
 
     for path in paths:
         if verbose:
-            print("Searching {}...".format(path))
+            print("{}: searching {}...".format(task, path))
         all_files = glob.glob(os.path.join(path, file_template))
         
         for file_name in all_files:
             if verbose:
-                print("\tAdding {}".format(file_name))
+                print("{}: adding {}".format(task, file_name))
             loc = "START"
             file_metadata = {}
 
             file_path, base_name = os.path.split(file_name)
             file_ext = base_name[-8:-5]
             
-            file_metadata['root'] = base_name[:9]
+            root = base_name[:9]
+            file_metadata['root'] = root
             file_metadata['obset'] = base_name[:6]
             file_metadata['path'] = file_path
             file_metadata['filename'] = base_name
@@ -195,9 +197,9 @@ def populate_table(data_table, **kwargs):
                             pstrtime = spt_hdr0['PSTRTIME']
                             delta_from_epoch = absdate(pstrtime) - 2000.
                     else:
-                        msg = "Could not find SPT file for " + base_name + ". "
+                        msg = "{}: Could not find SPT file for {}. "
                         msg += "Setting scan rate to 0."
-                        print(msg)
+                        print(msg.format(task, base_name))
                         expstart = Time(phdr["EXPSTART"], format='mjd')
                         pstrtime = expstart.datetime.strftime("%Y.%j:%H:%M:%S")
                         delta_from_epoch = absdate(expstart) - 2000.
@@ -212,12 +214,19 @@ def populate_table(data_table, **kwargs):
                     epoch_dec = standard_star['dec']
                     pm_ra = standard_star['pm_ra']
                     pm_dec = standard_star['pm_dec']
-                    delta_ra = pm_ra + delta_from_epoch/1000.
-                    delta_dec = pm_dec + delta_from_epoch/1000.
+                    delta_ra = pm_ra * delta_from_epoch/1000.
+                    delta_dec = pm_dec * delta_from_epoch/1000.
                     corrected_ra = epoch_ra + delta_ra/3600.
                     corrected_dec = epoch_dec + delta_dec/3600.
                     new_ra = (corrected_ra, 'Updated for PM by wfcdir.py')
                     new_dec = (corrected_dec, 'Updated for PM by wfcdir.py')
+                    if verbose:
+                        msg = "{}: {}: Target Star: {}"
+                        print(msg.format(task, root, file_metadata['target']))
+                        print("\tEpoch RA,DEC = {},{}".format(epoch_ra, epoch_dec))
+                        print("\tTime Since Epoch = {}".format(delta_from_epoch))
+                        print("\tDelta RA,DEC = {},{}".format(delta_ra, delta_dec))
+                        print("\tFinal RA,DEC = {},{}".format(corrected_ra, corrected_dec))
                 else:
                     msg = file_metadata['target'] + " not a WFC3 standard star" 
                     new_target = (file_metadata['target'], msg)
@@ -235,14 +244,16 @@ def populate_table(data_table, **kwargs):
                 loc = "DONE"
                     
             except Exception as e:
-                print("{}: {} {}".format(file_name, e, loc))
+                print("{}: {}: ERROR: {} {}".format(task, file_name, e, loc))
                 for key in data_table.columns:
                     if key not in file_metadata:
-                        print("\t\t{} missing".format(key))
+                        print("\t{} missing".format(key))
                 msg = "ERROR: Exception {} while processing.".format(str(e))
                 file_metadata['notes'] += " {}".format(msg)
             
             data_table.add_exposure(file_metadata)
+    
+    data_table.set_filter_images()
 
     if data_table.n_exposures == 0:
         error_str = "wfcdir error: no files found for filespec {}"

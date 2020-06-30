@@ -1,8 +1,6 @@
-pro prewfc,dir,display=display
+pro prewfc,dir,dirlog,display=display
 ;+
 ; EXAMPLE:
-;	nic_process,'snap-1','n8u407',/before,grism='G206'
-;	nic_coadd,'snap-1','n8u407',dlam=nicwlfix('n8u407'),/ps,/double
 ; WFC3 Platescale is 0.13arcsec/px
 ; wfc3 _ima fails as there is not enuf signal in zero-read of IMA file
 ; ###change: /dirimg names the files in wfc_process to be *q.fits, while
@@ -10,19 +8,29 @@ pro prewfc,dir,display=display
 ;	filename switch is in calwfc_spec.pro
 ; STARE mode always applies FF. Option is for scanned:
 ; Name these *axe.fits if ever redoing the PN case:	,/dirimg
+; DOCUMENTATION
+;--------------
+; wfc_process - extract spectra in 6 char visit-by-visit designations
+; wfc_coadd   - Plot and Co-add wfc3 spectra visit-by-visit. These co-adds are 
+;	just for quick look, as mrgall.pro does final global co-adds of each
+;	target across all visits.
 ;-
+st=''
 !x.style=0
 !y.style=1
 !p.noclip=0
 loadct,0
 grism=['G102','G141']			; info
 
-;!textout=2				; to not pause on Don's msgs.
+; YORK 2020-06-16: I get '% Not a legal system variable: !TEXTOUT.' when I
+;	have this next line in the code (as opposed to commented out).
+;	Same with '!dump=1'
+; !textout=2				; to not pause on Don's msgs.
 ;!dump=1					; to see don's msgs & interpr. err msgs
+
 ; ###change:
-; 2019-11-22-BQ: turn the directory into a parameter, as per wfcdir.pro
 if N_PARAMS(0) EQ 0 THEN dir='~/internal2/wfc3/stare/ir/'
-dirlog='dirirstare.log'			; 2018apr13 
+if N_PARAMS(1) EQ 0 THEN dirlog='dirirstare.log'
 ;dirlog='dirscan.log'
 ;dirlog='dirpneb.log'
 
@@ -31,6 +39,14 @@ wfcobs,dirlog,obs,grat,aper,star,'','',''			; everything
 ;wfcobs,dirlog,obs,grat,aper,star,'','','WD1657_343'
 ;wfcobs,dirlog,obs,grat,aper,star,'','','WD1327_083'	;WD2341+322' Tremblay
 ;wfcobs,dirlog,obs,grat,aper,star,'','','C26202'
+; ** Must run wfcmrg immediately ff one of the next 2 lines (or fix *.fits files
+;	to incl star name ** otherwise cannot do 'everything' here at once!!!
+;wfcobs,dirlog,obs,grat,aper,star,'','','GAIA593_1968'
+;wfcobs,dirlog,obs,grat,aper,star,'','','GAIA593_9680'
+;wfcobs,dirlog,obs,grat,aper,star,'','','GD71'		; 2020feb7
+;wfcobs,dirlog,obs,grat,aper,star,'','','WD1657_343'	; 2020jun3
+
+; cut to 1st 6 char to uniquely ID visits:
 obs=strmid(obs,0,6)
 
 good=where(strmid(obs,0,5) ne 'iab9a')	; 2 obs that should be part of iab90*
@@ -77,7 +93,7 @@ print,obs,star
 nobs=n_elements(obs)
 ; ###change - main part of prog to do whole dirlog
 for i=0,nobs-1 do begin
-;for i=7,7 do begin
+;for i=5,5 do begin
 ; find each slope angle. /slope means use avg slope:
 	xstar=0  &  ystar=0
         if obs(i) eq 'ibhj10' then begin			; C26202
@@ -88,22 +104,23 @@ help,i,obs(i)
 		xstar=xstar,ystar=ystar,				$
 ;dir img aXe disp ref, not ZO. Change code to name 'axe' if redoing.
 ;		/dirimg							$
-		/displ,/trace,						$
+;		/displ,/trace,						$
 ;		grism='g141'
 ;	 	flatfile='none',					$
  		flatfile='ref/sedFFcube-both.fits',  		$;2018aprDEFAULT
 ;		flatfile='ref/ryanFFcube-both.fits', $
 ;		subdir='spec/noflat'
-; 		subdir='spec'						;default
- 		subdir='test'						;default
-help,i,obs(i)
+ 		subdir='spec'						;default
+; 		subdir='test'
+	help,i,obs(i)
+	print,'********** START Co=add *************'
 ;	read,st
 ; /ps puts .ps file in subdir for debugging/ checking
 ; 05mar14- double for coadds of mult obs:
 	wfc_coadd,star(i),obs(i),/double,/ps,	$
 ;			dirlog=dirlog,subdir='spec/sedff'
-;			dirlog=dirlog,subdir='spec'
-			dirlog=dirlog,subdir='test'
+			dirlog=dirlog,subdir='spec'
+;			dirlog=dirlog,subdir='test'
 ;			dirlog=dirlog,subdir='spec/noflat'
 	print,obs(i),' ------------*** END ***---------------'
 	endfor

@@ -16,7 +16,7 @@ Use
 
 __all__ = []
 
-from abscal.wfc3.create_table import main as do_create
+from abscal.wfc3.preprocess_table_create import main as do_create
 
 
 def main():

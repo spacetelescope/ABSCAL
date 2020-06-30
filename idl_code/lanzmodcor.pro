@@ -3,7 +3,7 @@ pro lanzmodcor,nam,wstar,fstar,wmod,fmod,ebv,teff,logg,logz
 ;
 ; PURPOSE:
 ;	create a corrected Lanz model w/ param as pub in BOSZ paper 
-;		and norm to the wstar,fstar input flux @ 6-9000A
+;		and norm to the wstar,fstar input flux @ 6800-7700A-2020feb
 ;
 ; INPUT
 ;	nam - star name
@@ -25,5 +25,5 @@ vmg=vmag(nam,ebv,spty,bvri,teff,logg,logz,model='lanz')
 lanzmod,teff,logg,logz,wmod,fmod,wrange=[1000,32e4]
 chiar_red,wmod,fmod,-(ebv),fmod
 if n_elements(wstar) gt 1 then						$
-	fmod=fmod*tin(wstar,fstar,6000,9000)/tin(wmod,fmod,6000,9000)
+	fmod=fmod*tin(wstar,fstar,6800,7700)/tin(wmod,fmod,6800,7700)
 end

@@ -27,6 +27,7 @@ for iz=0,1 do begin
 	name='am'+pm+zasc+'cp00op00t'+string(modt,'(i4)')
 	if modt gt 9800 then name='am'+pm+zasc+'cp00op00t'+string(modt,'(i5)')
 	name=name+'g'+string(modg*10,'(i2)')+'v20modrt0b300000rs.asc'
+	name=replace_char(name,' ','0')				; 2020feb23
 	print,modt,modg,modz,z,' ',name
 	fil='../models/BOSZ3e5/'+name
 	ckit=findfile(fil)

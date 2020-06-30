@@ -7,7 +7,9 @@ PRO wfcMRG,F1,F2,FOUT,number,TITLE=TITLE
 ;
 ; INPUT:
 ;	F1 - FILE NAME OF SHORT WAVELENGTH SPECTRUM (Ascii file)
+;			(G102 or G141, if NO G102)
 ;	F2 - FILE NAME OF LONG WAVELENGTH SPECTRUM  (Ascii file)
+;			(G141, or '' if NO G102 or NO G141)
 ; 	FOUT - FILE NAME OF OUTPUT MERGED SPECTRUM  (Ascii file)
 ;	number - OPTIONAL output file number (DEFAULT=1)
 ;	TITLE  - OPTIONAL OUTPUT TITLE FOR LINE after ### IN ASCII OUTPUT FILE
@@ -77,12 +79,12 @@ print,'Wmerge = ',wmerge
 ; ck plot:
 if f1 ne '' and f2 ne'' then begin
 	!y.style=1
-	!mtitle=!mtitle+' diamonds'
+	!mtitle=!mtitle+' Diam:G102, Sq:G141'
 	ind=where(w1 ge wmerge-500 and w1 le wmerge+500)
 	yrang=minmax(flux1(ind))
 	yrang=[0.8*yrang(0),1.25*yrang(1)]
-	plot,w1(ind),flux1(ind),yr=yrang,psym=-4,xr=[wmerge-500,wmerge+500]
-	oplot,w2,flux2,psym=-6
+	plot,w1,flux1,yr=yrang,psym=-4,xr=[wmerge-500,wmerge+500]
+	oplot,w2,flux2,psym=-6				; squares for G141
 	oplot,[wmerge,wmerge],[0,!y.crange(1)]
 	plotdate,'nidl/wfcmrg'
 	if !d.name eq 'X' then read,st
