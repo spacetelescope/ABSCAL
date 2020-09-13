@@ -1,4 +1,4 @@
-pro prewfc,dir,dirlog,display=display
+pro prewfc,directory,logfile,subdir,display=display,trace=trace
 ;+
 ; EXAMPLE:
 ; WFC3 Platescale is 0.13arcsec/px
@@ -28,11 +28,20 @@ grism=['G102','G141']			; info
 ; !textout=2				; to not pause on Don's msgs.
 ;!dump=1					; to see don's msgs & interpr. err msgs
 
-; ###change:
-if N_PARAMS(0) EQ 0 THEN dir='~/internal2/wfc3/stare/ir/'
-if N_PARAMS(1) EQ 0 THEN dirlog='dirirstare.log'
-;dirlog='dirscan.log'
-;dirlog='dirpneb.log'
+; Input Data File
+dirlog = 'dirirstare.log'
+if n_params('logfile') ne 0 then dirlog = logfile
+
+; Output Spectra File
+specdir = 'spec'
+if n_params('subdir') ne 0 then specdir = subdir
+
+dir = ''
+if n_params('directory') ne 0 then begin
+	dir = directory
+	dirlog = directory + '/' + dirlog
+	specdir = directory + '/' + specdir
+endif
 
 ; ###change
 wfcobs,dirlog,obs,grat,aper,star,'','',''			; everything
@@ -101,27 +110,19 @@ for i=0,nobs-1 do begin
 ; 2018apr11-Default FF seems to be AXE, NOT none. But always use sedFFcube.
 help,i,obs(i)
 	wfc_process,star(i),obs(i),/before,direct=dir,dirlog=dirlog,	$
-		xstar=xstar,ystar=ystar,				$
+		xstar=xstar,ystar=ystar,display=display,trace=trace,		$
 ;dir img aXe disp ref, not ZO. Change code to name 'axe' if redoing.
 ;		/dirimg							$
-;		/displ,/trace,						$
 ;		grism='g141'
-;	 	flatfile='none',					$
  		flatfile='ref/sedFFcube-both.fits',  		$;2018aprDEFAULT
 ;		flatfile='ref/ryanFFcube-both.fits', $
-;		subdir='spec/noflat'
- 		subdir='spec'						;default
-; 		subdir='test'
+ 		subdir=specdir						;default
 	help,i,obs(i)
 	print,'********** START Co=add *************'
 ;	read,st
 ; /ps puts .ps file in subdir for debugging/ checking
 ; 05mar14- double for coadds of mult obs:
-	wfc_coadd,star(i),obs(i),/double,/ps,	$
-;			dirlog=dirlog,subdir='spec/sedff'
-			dirlog=dirlog,subdir='spec'
-;			dirlog=dirlog,subdir='test'
-;			dirlog=dirlog,subdir='spec/noflat'
+	wfc_coadd,star(i),obs(i),/double,/ps,dirlog=dirlog,subdir=specdir
 	print,obs(i),' ------------*** END ***---------------'
 	endfor
 

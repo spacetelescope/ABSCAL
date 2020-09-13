@@ -10,5 +10,10 @@
 									"G102": "sedFFcube-both.fits",
 									"G141": "sedFFcube-both.fits"
 								}
-					  }
+					  },
+	"ic5117_data": {
+					"wfc3": {
+								"pnref/IC5117_rudy.txt"
+							}
+				   }
 }

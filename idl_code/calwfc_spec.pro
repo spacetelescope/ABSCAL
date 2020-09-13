@@ -432,7 +432,7 @@ if n_params(0) eq 0 then begin
 	print,'calwfc_spec,file,xco,yco,xerr,yerr,wave,flux,errf,epsf'
 	print,'KEYWORD INPUTS: ywidth, gwidth, bwidth, bdist'
 	print,'                bmedian, bmean1, bmean2, imagefile'
-	print,'                /display, /trace, subdir
+	print,'                /display, /trace, subdir'
 	print,'                star, /before, /slope'
 	print,'		       slope, Ubdist, Lbdist, crval1, crval2'
 	return

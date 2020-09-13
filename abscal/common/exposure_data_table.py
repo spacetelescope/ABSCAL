@@ -743,6 +743,8 @@ class AbscalDataTable(Table):
                                           'default': ''},
                             'coadded': {'dtype': 'O', 'idl': False, 
                                         'default': ''},
+                            'planetary_nebula': {'dtype': '?', 'idl': False,
+                                                 'default': False},
                             'notes': {'dtype': 'O', 'idl': False, 
                                       'default': 'N/A'},
                        }

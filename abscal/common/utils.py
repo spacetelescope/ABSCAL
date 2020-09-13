@@ -19,6 +19,7 @@ __all__ = ['absdate', 'get_data_file']
 import os
 
 from astropy.time import Time
+from copy import deepcopy
 from datetime import datetime
 
 from .standard_stars import starlist
@@ -220,3 +221,132 @@ def set_image(images, row, issues, pre, overrides={}, verbose=False):
                 
     
     return images
+
+
+def air2vac(air):
+    """
+    Convert a set of wavelengths from air to vacuum.
+    
+    Parameters
+    ----------
+    air : array-like
+        Air wavelengths
+    
+    Returns
+    -------
+    vac : array-like
+        Vacuum wavelengths
+    """
+    vac = []
+    c0 = 0.00008336624212083
+    c1 = 0.02408926869968
+    c2 = 0.0001599740894897
+    
+    for wl_air in air:
+        s = 1.e4/wl_air
+        n = 1 + c0 + c1 / (130.1065924522 - s*s) + c2 / (38.92568793293 - s*s)
+        wl_vac = wl_air * n
+        vac.append(wl_vac)
+    
+    return vac
+
+
+def smooth_model(wave, flux, fwhm):
+    """
+    Smooth a model spectrum with a non-uniform sampling interval. Based on Ralph
+    Bohlin's "smomod.pro", which itself references "tin.pro"
+    
+    Parameters
+    ----------
+    wave : array-like
+        Wavelength array
+    
+    flux : array-like
+        Flux array
+    fwhm : float
+        FWHM of delta function.
+    
+    Returns
+    -------
+    smoothed : array-like
+        Smoothed flux array.
+    """
+    wmin = wave - dlam/2.
+    wmax = wave + dlam/2.
+    
+    good = np.where((wmin > np.min(wave)) and (wmax < np.max(wave)))
+    smoothed = deepcopy(flux)
+    smoothed[good] = trapezoidal(wave, flux, wmin[good], wmax[good])
+    smoothed[good] = trapezoidal(wave, smoothed, wmin[good], wmax[good])
+    
+    return smoothed
+
+def trapezoidal(wave, flux, wmin, wmax):
+    """
+    Trapezoidal 'integral' (really an average) from Ralph Bohlin's 'tin.pro'
+    and 'integral.pro'. Uses wmin and wmax to set limits
+    
+    Parameters
+    ----------
+    wave : array-like
+        Wavelength array
+    flux : array-like
+        Flux array
+    wmin : array-like
+        Wavelength array shifted bluewards by FWHM/2
+    wmax : array-like
+        Wavelength array shifted redwards by FWHM/2
+    
+    Returns
+    trapint : array-like
+        Flux array after trapezoidal integral
+    """
+    trapint = integral(wave, flux, wmin, wmax)/(wmax - wmin)
+    return trapint
+
+def integral(x, y, xmin, xmax):
+    rmin = tabinv(x, xmin)
+    rmax = tabinv(x, xmax)
+    n = len(x)
+    dx = np.roll(x, -1) - x
+    if (np.max(xmin) > np.max(xmax)) or (np.min(xmax) < np.min(xmin)) or (np.min(xmax - xmin) < 0.):
+        raise ValueError("Invalid integral limits")
+    dx = np.roll(x, -1) - x
+    dy = np.roll(y, -1) - y
+    
+    dint = (np.roll(y, -1) + y)/(2.*dx)
+    imin = int(np.floor(rmin))
+    imax = int(np.floor(rmax))
+    
+    dxmin = xmin - x[imin]
+    ymin = y[imin] + dxmin*(y[imin+1]-y[imin])/(dx[imin] + np.where(dx[imin]==0, 1, 0))
+    dxmax = xmax - x[imax]
+    ymax = y[imax] + dxmax*(y[np.min(imax+1, len(y)-1)] - y[imax])/(dx[imax]+np.where(dx[imax]==0, 1, 0))
+    
+    int = np.zeros_like(xmin)
+    for i in range(len(xmin)):
+        if imax[i] != imin[i]:
+            int[i] = np.sum(dint[imin[i]:imax[i]]-1)
+    
+    int -= (y[imin] + ymin)/(2.*dxmin)
+    int += (y[imax] + ymax)/(2.*dxmax)
+    
+    return int
+
+def tabinv(xarr, xv):
+    """
+    Find the effective index in xarr of each element in xv. The effective index
+    is the value i such that xarr[i] <= xv <= xarr[i+1], to which is added an
+    interpolation
+    """
+    indl = np.searchsorted(xarr, xv, side='left')
+    ieff = deepcopy(indl).astype(np.float32)
+    indr = np.searchsorted(xarr, xv, side='right')
+    good = np.where((indr > 0) and (indl < len(xarr)))
+    if len(good[0]) > 0:
+        neff = indl[good]
+        x0 = xarr[neff]
+        diff = xv[good]
+        ieff[good] = neff + diff / (xarr[neff+1] - x0)
+    
+    return ieff

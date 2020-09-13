@@ -1,4 +1,4 @@
-pro wfcdir,filespec
+pro wfcdir,filespec,dir=dir
 ;+
 ;			wfcdir
 ;
@@ -38,6 +38,12 @@ pro wfcdir,filespec
 ; find files to process
 ;
 if N_PARAMS(0) EQ 0 THEN filespec='*raw.fits'
+if n_elements(dir) eq 0 then begin
+	outfile = 'dirtemp.log'
+endif else begin
+	outfile = dir + '/dirtemp.log'
+	filespec = dir + '/' + filespec
+endelse
 lst = findfile(filespec,count=n)
 print,n,' wfcdir - files found for given filespec'
 
@@ -48,7 +54,7 @@ strout=strarr(n)			; output string array for sorting
 ;
 ; open output file
 ;
-openw,unit,'dirtemp.log',/get_lun
+openw,unit,outfile,/get_lun
 PRINTF,UNIT,'WFCDIR '+!stime
 printf,unit,'SEARCH FOR '+filespec
 printf,unit,'  ROOT	  MODE	      APER     TYPE '+			$

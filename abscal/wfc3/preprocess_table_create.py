@@ -210,6 +210,7 @@ def populate_table(data_table, **kwargs):
                 new_target = (file_metadata['target'], 'Updated by wfcdir.py')
                 standard_star = find_standard_star_by_name(new_target[0])
                 if standard_star is not None:
+                    file_metadata['planetary_nebula'] = standard_star['planetary_nebula']
                     epoch_ra = standard_star['ra']
                     epoch_dec = standard_star['dec']
                     pm_ra = standard_star['pm_ra']
@@ -228,6 +229,7 @@ def populate_table(data_table, **kwargs):
                         print("\tDelta RA,DEC = {},{}".format(delta_ra, delta_dec))
                         print("\tFinal RA,DEC = {},{}".format(corrected_ra, corrected_dec))
                 else:
+                    file_metadata['planetary_nebula'] = False
                     msg = file_metadata['target'] + " not a WFC3 standard star" 
                     new_target = (file_metadata['target'], msg)
                     new_ra = (phdr["RA_TARG"], msg)

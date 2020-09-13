@@ -97,9 +97,14 @@ pro wfc_process,target,subobs,directory=directory,			      $
 ;2013Mar flag for em line obj
 	if strpos(target,'PN') ge 0 or strpos(target,'VY2-2') ge 0 or	$
 					target eq 'IC-5117' then star='PN'
-	if n_elements(subdir) eq 0 then subdir = 'spec'
-	logfil='dirwfc.log'
-	if keyword_set(dirlog) then logfil=dirlog
+	if not keyword_set(subdir) then subdir = 'spec'
+	logfil = 'dirwfc.log'
+	if keyword_set(dirlog) then logfil = dirlog
+	
+	if keyword_set(directory) then begin
+		if strpos(logfil, '/') lt 0 then logfil = directory + '/' + dirlog
+		if strpos(subdir, '/') lt 0 then subdir = directory + '/' + subdir
+	endif
 	wfcobs,logfil,allobs,allfilt,allaper,stardum,'','',target
 ; Rm Bad obs:
 	good=where(strpos(allobs,'iab907jdq') lt 0 and  $; wrong signed postarg
@@ -148,7 +153,7 @@ pro wfc_process,target,subobs,directory=directory,			      $
 		filter = filter(sub)
 		endif
 	file = obs+'_flt.fits'
-	lst = directory+file
+	lst = directory+'/'+file
 
 ; none yet for WFC3  nic_coadd_dither,lst,filter;co-adds @ same dither position
 	print,'WFC_process reducing ',file
@@ -159,7 +164,7 @@ pro wfc_process,target,subobs,directory=directory,			      $
 	    	if filter(i) ne 'Blank' then begin	; skip scan mode darks
 	    	     calwfc_imagepos,lst(i),xc,yc,crval1,crval2,xerr,	$
 		     		yerr,display=display,xstar=xstar,	$
-				ystar=ystar,target=target
+					ystar=ystar,target=target
 		     dirimnam=obs(i)
 		     endif
 	      end else begin					; grism obs
