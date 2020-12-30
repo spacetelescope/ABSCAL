@@ -12,8 +12,6 @@
 								}
 					  },
 	"ic5117_data": {
-					"wfc3": {
-								"pnref/IC5117_rudy.txt"
-							}
+						"wfc3": "pnref/IC5117_rudy.txt"
 				   }
 }

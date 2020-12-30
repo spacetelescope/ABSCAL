@@ -39,6 +39,7 @@ from astropy.io import ascii, fits
 from astropy.table import Table, Column
 from astropy.time import Time
 from copy import deepcopy
+from matplotlib.widgets import TextBox
 from pathlib import Path
 from photutils.centroids import centroid_sources
 from photutils.centroids import centroid_1dg as g1
@@ -306,7 +307,9 @@ def reduce_wave_axe(row, params):
     xcin = params['xin']
     ycin = params['yin']
     root = row['root']
+    wl_offset = params['wl_offset']
     preamble = '{}: {}'.format(task, root)
+    verbose = params['verbose']
     
     if verbose:
         print("{}: starting.".format(preamble))
@@ -314,9 +317,9 @@ def reduce_wave_axe(row, params):
     with fits.open(file) as inf:
         image = inf['SCI'].data
         filter = row['filter']
-        x_arr = np.arange(1014, dtype='i16')
+        x_arr = np.arange(1014, dtype=np.int32)
         xc, yc = xcin, ycin
-        ns = inf[0].header['naxis1']
+        ns = inf['SCI'].header['naxis1']
         if ns < 1014:
             ltv1, ltv2 = inf[1].header['ltv1'], inf[1].header['ltv2']
             xc, yc = xcin + ltv1, ycin + ltv2
@@ -325,26 +328,26 @@ def reduce_wave_axe(row, params):
             # Order information taken from WFC3 ISR 2016-15 - AXE.
         
             # First Order
-            params = { 'a': 6344.081, 'b': 0.20143085, 'c': 0.080213136,
-                       'd': -0.00019613, 'e': 0.0000301396, 'f': -0.0000843157 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': 24.00123, 'b': -0.00071606, 'c': 0.00084115,
-                       'd': 8.9775481e-7, 'e': -3.160441e-7, 'f': 7.1404362e-7 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': 6344.081, 'b': 0.20143085, 'c': 0.080213136,
+                           'd': -0.00019613, 'e': 0.0000301396, 'f': -0.0000843157 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': 24.00123, 'b': -0.00071606, 'c': 0.00084115,
+                           'd': 8.9775481e-7, 'e': -3.160441e-7, 'f': 7.1404362e-7 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0p1, a1p1 = a0, a1
-            wave = a0 + a1*(x - xc)
+            wave = a0 + a1*(x_arr - xc)
             
             # Zeroth Order: 
             #   'Susana says the ISR is crap and seems true to me... 
             #   Ignore 0-order.'
             
             # -1st order:
-            params = { 'a': -6376.843, 'b': 0., 'c': -1.11124775,
-                       'd': 0., 'e': 0., 'f': 0.00095901 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': -24.27561, 'b': 0., 'c': -0.003251784,
-                       'd': 0., 'e': 0., 'f': 1.4988e-6 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': -6376.843, 'b': 0., 'c': -1.11124775,
+                           'd': 0., 'e': 0., 'f': 0.00095901 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': -24.27561, 'b': 0., 'c': -0.003251784,
+                           'd': 0., 'e': 0., 'f': 1.4988e-6 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0m1, a1m1 = a0, a1
             
             # Paraphrased from calwfc_spec.pro, 'the -1 formula seems better 
@@ -361,12 +364,12 @@ def reduce_wave_axe(row, params):
             wav1st = wave
             
             # 2nd order
-            params = { 'a': 3189.9195, 'b': 0.291324446, 'c': 0.039748254,
-                       'd': 0.000405844, 'e': 6.5079365e-6, 'f': -0.00003221 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': 12.08004, 'b': -0.00046352, 'c': 0.000670315,
-                       'd': 5.7894508e-7, 'e': 0., 'f': 5.667e-8 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': 3189.9195, 'b': 0.291324446, 'c': 0.039748254,
+                           'd': 0.000405844, 'e': 6.5079365e-6, 'f': -0.00003221 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': 12.08004, 'b': -0.00046352, 'c': 0.000670315,
+                           'd': 5.7894508e-7, 'e': 0., 'f': 5.667e-8 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0p2, a1p2 = a0, a1
             
             # Replace points with wave>14000 with 2nd order
@@ -378,12 +381,12 @@ def reduce_wave_axe(row, params):
                 wav1st = make_monotonic(wav1st, indx)
                         
             # 3rd order is commented out in IDL code, provided below:
-#             params = { 'a': 2.17651e+03, 'b': 0., 'c': 5.01084e-02,
-#                        'd': 0., 'e': 0., 'f': 0. }
-#             a0 = calculate_order(params, xc, yc)
-#             params = { 'a': 8.00453, 'b': 0., 'c': 4.28339e-04,
-#                        'd': 0., 'e': 0., 'f': 0. }
-#             a1 = calculate_order(params, xc, yc)
+#             ord_params = { 'a': 2.17651e+03, 'b': 0., 'c': 5.01084e-02,
+#                            'd': 0., 'e': 0., 'f': 0. }
+#             a0 = calculate_order(ord_params, xc, yc)
+#             ord_params = { 'a': 8.00453, 'b': 0., 'c': 4.28339e-04,
+#                            'd': 0., 'e': 0., 'f': 0. }
+#             a1 = calculate_order(ord_params, xc, yc)
 #             a0p3, a1p3 = a0, a1
 # 
 #             index = np.where(wave > 23500)
@@ -397,22 +400,22 @@ def reduce_wave_axe(row, params):
             # WFC3 ISR 2009-17
 
             # First Order
-            params = { 'a': 8951.386, 'b': 0.08044033, 'c': -0.00927970,
-                       'd': 0.000021857, 'e': -0.000011048, 'f': 0.000033527 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': 44.972279, 'b': 0.000492789, 'c': 0.00357824,
-                       'd': -9.175233345e-7, 'e': 2.235506e-7, 'f': -9.25869e-7 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': 8951.386, 'b': 0.08044033, 'c': -0.00927970,
+                           'd': 0.000021857, 'e': -0.000011048, 'f': 0.000033527 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': 44.972279, 'b': 0.000492789, 'c': 0.00357824,
+                           'd': -9.175233345e-7, 'e': 2.235506e-7, 'f': -9.25869e-7 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0p1, a1p1 = a0, a1
             wave = a0 + a1*(x - xc)
             
             #Negative First Order
-            params = { 'a': -46.4855, 'b': 0., 'c': -0.8732184,
-                       'd': 0., 'e': 0., 'f': 0.0009233797 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': 44.972279, 'b': 0., 'c': -0.004813895,
-                       'd': 0., 'e': 0., 'f': 2.0768286663e-6 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': -46.4855, 'b': 0., 'c': -0.8732184,
+                           'd': 0., 'e': 0., 'f': 0.0009233797 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': 44.972279, 'b': 0., 'c': -0.004813895,
+                           'd': 0., 'e': 0., 'f': 2.0768286663e-6 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0p1, a1p1 = a0, a1
 
             indx = np.where(wave < 300)
@@ -422,12 +425,12 @@ def reduce_wave_axe(row, params):
             wav1st = wave
 
             # 2nd order
-            params = { 'a': 4474.5297, 'b': 0.17615670, 'c': 0.046354019,
-                       'd': -0.00012965, 'e': 0.00001513, 'f': -0.00002961 }
-            a0 = calculate_order(params, xc, yc)
-            params = { 'a': 22.8791467, 'b': -0.0002159637, 'c': 0.00133454,
-                       'd': 4.277729e-8, 'e': -8.522518e-8, 'f': 6.08125e-8 }
-            a1 = calculate_order(params, xc, yc)
+            ord_params = { 'a': 4474.5297, 'b': 0.17615670, 'c': 0.046354019,
+                           'd': -0.00012965, 'e': 0.00001513, 'f': -0.00002961 }
+            a0 = calculate_order(ord_params, xc, yc)
+            ord_params = { 'a': 22.8791467, 'b': -0.0002159637, 'c': 0.00133454,
+                           'd': 4.277729e-8, 'e': -8.522518e-8, 'f': 6.08125e-8 }
+            a1 = calculate_order(ord_params, xc, yc)
             a0p2, a1p2 = a0, a1
 
             indx = np.where(wave > 19000)
@@ -438,12 +441,12 @@ def reduce_wave_axe(row, params):
                 wav1st = make_monotonic(wav1st, indx)
 
             # 3rd order is commented out in IDL code, provided below:
-#             params = { 'a': 3.00187e+03, 'b': 1.04205e-01, 'c': -1.18134e-03,
-#                        'd': 0., 'e': 0., 'f': 0. }
-#             a0 = calculate_order(params, xc, yc)
-#             params = { 'a': 1.52552e+01, 'b': -2.08555e-04, 'c': 9.55645e-04,
-#                        'd': 0., 'e': 0., 'f': 0. }
-#             a1 = calculate_order(params, xc, yc)
+#             ord_params = { 'a': 3.00187e+03, 'b': 1.04205e-01, 'c': -1.18134e-03,
+#                            'd': 0., 'e': 0., 'f': 0. }
+#             a0 = calculate_order(ord_params, xc, yc)
+#             ord_params = { 'a': 1.52552e+01, 'b': -2.08555e-04, 'c': 9.55645e-04,
+#                            'd': 0., 'e': 0., 'f': 0. }
+#             a1 = calculate_order(ord_params, xc, yc)
 #             a0p3, a1p3 = a0, a1
 # 
 #             index = np.where(wave > 31000)
@@ -465,8 +468,8 @@ def reduce_wave_axe(row, params):
             msg = "Wavelength array {} not monotonic".format(wave)
             raise ValueError(msg)
         
-        wave += params['wl_offset']
-        wav1st += params['wl_offset']
+        wave += wl_offset
+        wav1st += wl_offset
         
         if ns < 1014:
             ibeg = ltv1
@@ -478,16 +481,16 @@ def reduce_wave_axe(row, params):
                 print(msg.format(preamble, min(wave), max(wave), xc, yc))
        
     with fits.open(file, mode='update') as f:
-        f[0].header['XC'] = (xcin, 'Dir img ref X position used for AXE WLs')
-        f[0].header['YC'] = (ycin, 'Dir img ref Y position used for AXE WLs')
-        f[0].header['A0+1ST'] = (a0p1, 'Constant Term of the +1st order disp.')
-        f[0].header['A1+1ST'] = (a1p1, 'Linear Term of the +1st order disp.')
-        f[0].header['A0-1ST'] = (a0m1, 'Constant Term of the -1st order disp.')
-        f[0].header['A1-1ST'] = (a1m1, 'Linear Term of the -1st order disp.')
-        f[0].header['A0+2ND'] = (a0p2, 'Constant Term of the +2nd order disp.')
-        f[0].header['A1+2ND'] = (a1p2, 'Linear Term of the +2nd order disp.')
-#         f[0].header['A0+3RD'] = (a0p3, 'Constant Term of the +3rd order disp.')
-#         f[0].header['A1+3RD'] = (a1p3, 'Linear Term of the +3rd order disp.')
+        f[0].header['XC'] = (xcin[0], 'Dir img ref X position used for AXE WLs')
+        f[0].header['YC'] = (ycin[0], 'Dir img ref Y position used for AXE WLs')
+        f[0].header['A0p1ST'] = (a0p1[0], 'Constant Term of the +1st order disp.')
+        f[0].header['A1p1ST'] = (a1p1[0], 'Linear Term of the +1st order disp.')
+        f[0].header['A0m1ST'] = (a0m1[0], 'Constant Term of the -1st order disp.')
+        f[0].header['A1m1ST'] = (a1m1[0], 'Linear Term of the -1st order disp.')
+        f[0].header['A0p2ND'] = (a0p2[0], 'Constant Term of the +2nd order disp.')
+        f[0].header['A1p2ND'] = (a1p2[0], 'Linear Term of the +2nd order disp.')
+#         f[0].header['A0p3RD'] = (a0p3[0], 'Constant Term of the +3rd order disp.')
+#         f[0].header['A1p3RD'] = (a1p3[0], 'Linear Term of the +3rd order disp.')
     
     if verbose:
         print("{}: finishing.".format(preamble))
@@ -905,6 +908,8 @@ def reduce_stare(row, params, arg_list):
     
     if verbose:
         print("{}: starting {}.".format(preamble, row['filename']))
+#         for item in params:
+#             print("{}: starting parameter {}={}.".format(preamble, item, params[item]))
 
     with fits.open(file) as inf:
         image = inf['SCI'].data
@@ -928,6 +933,7 @@ def reduce_stare(row, params, arg_list):
 #         for item in hdr.tostring(sep='\\n').split('\\n'):
 #             print(item)
         ra, dec = float(row['crval1']), float(row['crval2'])
+#         print("ra,dec of centre is {},{}".format(ra, dec))
         targ = img_wcs.wcs_world2pix([ra], [dec], 0, ra_dec_order=True)
         x1, y1 = targ[1][0], targ[0][0]
         refpx1, refpx2 = inf[1].header['crpix1']-1, inf[1].header['crpix2']-1
@@ -946,15 +952,25 @@ def reduce_stare(row, params, arg_list):
             if verbose:
                 msg = "{}: {}: manually searching for target image."
                 print(msg.format(task, row['root']))
-            tra = row['ra_targ']
-            tdec = row['dec_targ']
-            targ = row['target']
-            targ = wcs.wcs_world2pix([tra, tdec], 0)
-            ix, iy = targ[1], targ[0]
+            tra = float(row['ra_targ'])
+            tdec = float(row['dec_targ'])
+#             print("WCS input is (ra,dec) = ({},{})".format(tra, tdec))
+            targ = img_wcs.wcs_world2pix([tra], [tdec], 0, ra_dec_order=True)
+#             print("WCS results are: {}".format(targ))
+            ix, iy = targ[0], targ[1]
             xerr, yerr = 0., 0.
         else:
             ix, iy = params['xc'], params['yc']
             xerr, yerr = params['xerr'], params['yerr']
+
+        if isinstance(ix, np.ndarray):
+            ix = ix[0]
+        if isinstance(iy, np.ndarray):
+            iy = iy[0]
+        if isinstance(xerr, np.ndarray):
+            xerr = xerr[0]
+        if isinstance(yerr, np.ndarray):
+            yerr = yerr[0]
             
         if verbose:
             msg = "{}: {}: Predicted target image position ({},{})"
@@ -996,44 +1012,195 @@ def reduce_stare(row, params, arg_list):
             xb, xe = max(xbeg-20, 0), min(xbeg+20, image.shape[1])
             yb, ye = max(ybeg-20, 0), min(ybeg+20, image.shape[0])
             sbimg = image[yb:ye,xb:xe]
-            # Threshold of 10 counts, FWHM of 2. Only return brightest result.
-            star_finder = DAOStarFinder(10., 2., brightest=1)
-            star_table = star_finder.find_stars(sbimg)
-            star_x = star_table['xcentroid'][0] + xb
-            star_y = star_table['ycentroid'][0] + yb
-            if verbose:
-                print("Testing centroiding methods...")
-                print("\tDAOFind: xc={}, yc={}".format(star_x, star_y))
-
-            np_formatter = {'float_kind':lambda x: "{:10.6f}".format(x)}
-            star_opt = {'max_line_width': 375, 'formatter': np_formatter,
-                        'threshold': 2000000}
 
             ywidth = params['ywidth']
             ns = 31
             ibeg = max(xbeg-ns//2, 0)
             iend = xbeg+ns//2
-            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g1)
-            if verbose:
-                print("\t1d Gaussian: xc,yc={},{}".format(xp, yp))
-            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g2)
-            if verbose:
-                print("\t2d Gaussian: xc,yc={},{}".format(xp, yp))
-            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=com)
-            if verbose:
-                print("\t2d Moments: xc,yc={},{}".format(xp, yp))
 
-            xc, yc = star_x, star_y
-#             xc, yc = xpos, ypos
+            if verbose:
+                print("{}: Testing centroiding methods...".format(preamble))
+
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g1)
+            x_g1, y_g1 = xp[0], yp[0]
+            if verbose:
+                print("\t1d Gaussian: xc,yc={},{}".format(x_g1, y_g1))
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=g2)
+            x_g2, y_g2 = xp[0], yp[0]
+            if verbose:
+                print("\t2d Gaussian: xc,yc={},{}".format(x_g2, y_g2))
+            xp, yp = centroid_sources(image, xc, yc, box_size=ns, centroid_func=com)
+            x_com, y_com = xp[0], yp[0]
+            if verbose:
+                print("\t2d Centre of Mass: xc,yc={},{}".format(x_com, y_com))
+
+            x_dao, y_dao = -1, -1
+            try:
+                # Threshold of 10 counts, FWHM of 2. Only return brightest result.
+                star_finder = DAOStarFinder(10., 2., brightest=1)
+                star_table = star_finder.find_stars(sbimg)
+                x_dao = star_table['xcentroid'][0] + xb
+                y_dao = star_table['ycentroid'][0] + yb
+                if verbose:
+                    print("\tDAOFind: xc={}, yc={}".format(x_dao, y_dao))
+
+                np_formatter = {'float_kind':lambda x: "{:10.6f}".format(x)}
+                star_opt = {'max_line_width': 375, 'formatter': np_formatter,
+                            'threshold': 2000000}
+
+            except Exception as e:
+                # probably the issue is being unable to find a point source.
+                if verbose:
+                    print("\tDAOFind Failed: {}".format(e))
+
+            if interactive:
+                if row['planetary_nebula'] == "True":
+                    default = "Centre of Mass"
+                else:
+                    default = "DAOFind"
+        
+                cmd = {"choice": "default"}
+        
+                fig, ax = plt.subplots()
+                fig.subplots_adjust(bottom=0.2)
+            
+                targ_str = "{} - {} ({})".format(root, target, filter)
+                ax.set_title('{} Direct Image with Detected Source'.format(targ_str))
+                plt.imshow(np.log10(np.where(image>=0.1,image,0.1)))
+                if x_dao > 0 and y_dao > 0:
+                    plt.plot([x_dao, x_dao], [y_dao-8, y_dao-18], color='red', 
+                             label='1. DAOFind Centroid')
+                    plt.plot([x_dao, x_dao], [y_dao+8, y_dao+18], color='red')
+                    plt.plot([x_dao-8, x_dao-18], [y_dao, y_dao], color='red')
+                    plt.plot([x_dao+8, x_dao+18], [y_dao, y_dao], color='red')
+                if x_g1 > 0 and y_g1 > 0:
+                    plt.plot([x_g1, x_g1], [y_g1-8, y_g1-18], color='green', 
+                             label='2. 1D Gaussian Centroid')
+                    plt.plot([x_g1, x_g1], [y_g1+8, y_g1+18], color='green')
+                    plt.plot([x_g1-8, x_g1-18], [y_g1, y_g1], color='green')
+                    plt.plot([x_g1+8, x_g1+18], [y_g1, y_g1], color='green')
+                if x_g2 > 0 and y_g2 > 0:
+                    plt.plot([x_g2, x_g2], [y_g2-8, y_g2-18], color='blue', 
+                             label='3. 2D Gaussian Centroid')
+                    plt.plot([x_g2, x_g2], [y_g2+8, y_g2+18], color='blue')
+                    plt.plot([x_g2-8, x_g2-18], [y_g2, y_g2], color='blue')
+                    plt.plot([x_g2+8, x_g2+18], [y_g2, y_g2], color='blue')
+                if x_com > 0 and y_com > 0:
+                    plt.plot([x_com, x_com], [y_com-8, y_com-18], color='orange', 
+                             label='4. Centre of Mass Centroid')
+                    plt.plot([x_com, x_com], [y_com+8, y_com+18], color='orange')
+                    plt.plot([x_com-8, x_com-18], [y_com, y_com], color='orange')
+                    plt.plot([x_com+8, x_com+18], [y_com, y_com], color='orange')
+                plt.legend()
+
+                text_axes = fig.add_axes([0.25, 0.05, 0.65, 0.075])
+                text_box = TextBox(text_axes, "Choose a centroid:")
+            
+                def submit(choice):
+                    if choice in ["1", "2", "3", "4"]:
+                        cmd["choice"] = choice
+                        plt.close("all")
+                    else:
+                        text_box.set_val("Please choose one of the supplied fit options.")
+            
+                text_box.on_submit(submit)
+
+                plt.show()
+                
+                cmd = cmd["choice"]
+            
+                if verbose:
+                    msg = "{}: Chosen centroiding method is {}.".format(preamble, cmd)
+                    print(msg)
+
+                if cmd == "1":
+                    xc, yc = x_dao, y_dao
+                    if verbose:
+                        print("\tCentroid set to DAO at ({},{})".format(xc, yc))
+                elif cmd == "2":
+                    xc, yc = x_g1, y_g1
+                    if verbose:
+                        print("\tCentroid set to 1D Gaussian at ({},{})".format(xc, yc))
+                elif cmd == "3":
+                    xc, yc, = x_g2, y_g2
+                    if verbose:
+                        print("\tCentroid set to 2d Gaussian at ({},{})".format(xc, yc))
+                elif cmd == "4":
+                    xc, yc = x_com, y_com
+                    if verbose:
+                        print("\tCentroid set to Centre of Mass at ({},{})".format(xc, yc))
+                else:
+                    if row['planetary_nebula'] == 'True':
+                        xc, yc = x_com, y_com
+                        if verbose:
+                            print("\tCentroid set to Centre of Mass at ({},{})".format(xc, yc))
+                    else:
+                        xc, yc = x_dao, y_dao
+                        if verbose:
+                            print("\tCentroid set to DAO at ({},{})".format(xc, yc))
+            else:
+                if verbose:
+                    print("{}: Using default centroiding".format(preamble))
+                # Default ordering:
+                # For planetary nebulae:
+                #   - daofind may or may not work
+                #   - centre-of-mass seems good
+                #   - 2D gaussian seems okay
+                #   - 1D gaussian doesn't seem the best
+                # Otherwise:
+                #   - daofind
+                #   - COM
+                #   - 2DG
+                #   - 1DG
+                if row['planetary_nebula'] == 'True':
+                    if x_com > 0 and y_com > 0:
+                        xc, yc = x_com, y_com
+                        if verbose:
+                            print("\tCentroid set to Centre of Mass at ({},{})".format(xc, yc))
+                    elif x_g2 > 0 and y_g2 > 0:
+                        xc, yc, = x_g2, y_g2
+                        if verbose:
+                            print("\tCentroid set to 2d Gaussian at ({},{})".format(xc, yc))
+                    elif x_g1 > 0 and y_g1 > 0:
+                        xc, yc = x_g1, y_g1
+                        if verbose:
+                            print("\tCentroid set to 1D Gaussian at ({},{})".format(xc, yc))
+                    elif x_dao > 0 and y_dao > 0:
+                        xc, yc = x_dao, y_dao
+                        if verbose:
+                            print("\tCentroid set to DAO at ({},{})".format(xc, yc))
+                    else:
+                        xc, yc = -1, -1
+                        if verbose:
+                            print("\tCentroid set to Not Found at ({},{})".format(xc, yc))
+                else:
+                    if x_dao > 0 and y_dao > 0:
+                        xc, yc = x_dao, y_dao
+                        if verbose:
+                            print("\tCentroid set to DAO at ({},{})".format(xc, yc))
+                    elif x_com > 0 and y_com > 0:
+                        xc, yc = x_com, y_com
+                        if verbose:
+                            print("\tCentroid set to Centre of Mass at ({},{})".format(xc, yc))
+                    elif x_g2 > 0 and y_g2 > 0:
+                        xc, yc, = x_g2, y_g2
+                        if verbose:
+                            print("\tCentroid set to 2d Gaussian at ({},{})".format(xc, yc))
+                    elif x_g1 > 0 and y_g1 > 0:
+                        xc, yc = x_g1, y_g1
+                        if verbose:
+                            print("\tCentroid set to 1D Gaussian at ({},{})".format(xc, yc))
+                    else:
+                        xc, yc = -1, -1
+                        if verbose:
+                            print("\tCentroid set to Not Found at ({},{})".format(xc, yc))
+                
             if xc < ibeg or xc > iend:
                 if verbose:
                     msg = "{}: Peak too close to edge. Use approx. pos ({},{})"
                     print(msg.format(preamble, xbeg, ybeg))
                 xc, yc = xbeg, ybeg
 
-
-            star_x, star_y = int(round(star_x)), int(round(star_y))
-            
             wave_params = {
                             'xin': xc,
                             'yin': yc,
@@ -1052,19 +1219,7 @@ def reduce_stare(row, params, arg_list):
         if 'slope' in params['set']:
             fit_slope = False
             angle = np.radians(params['slope'])
-        
-        if interactive:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            targ_str = "{} - {} ({})".format(root, target, filter)
-            ax.set_title('{} Direct Image with Detected Source'.format(targ_str))
-            plt.imshow(np.log10(np.where(image>=0.1,image,0.1)))
-            plt.plot([xc, xc], [yc-8, yc-18], color='white')
-            plt.plot([xc, xc], [yc+8, yc+18], color='white')
-            plt.plot([xc-8, xc-18], [yc, yc], color='white')
-            plt.plot([xc+8, xc+18], [yc, yc], color='white')
-            plt.show()
-        
+                
         raw_image = deepcopy(image)
         
         # ***** Start of wfc_flatscal.pro
@@ -1223,12 +1378,13 @@ def reduce_stare(row, params, arg_list):
                         profile -= np.median(profile)
                         profile = np.where(profile>0., profile, 0.)
                         
-#           ; patch for PN-G045.4-02 w/ low contin. & another spec just above:
-# 			if keyword_set(star) then begin
-#               if star eq 'PN' then begin
-# 				    profile(0)=0  &  profile(ny-1)=0  
-#               endif
-#           endif
+                        if row['planetary_nebula'] == 'True':
+                            # Patch for PN-G045.4-02 which has low continuum and
+                            # another spectrum just above it -- set the ends of
+                            # the profile to 0.
+                            profile[0] = 0.
+                            profile[-1] = 0.
+                        
                         yprofile = np.arange(ny, dtype='int16') + y1
                         pmax, maxpos = np.max(profile), np.argmax(profile)
                         if pmax <= 0:
@@ -1265,16 +1421,21 @@ def reduce_stare(row, params, arg_list):
                                 print(msg.format(preamble, y1, y2))
                         else:
                             iterate = False
-
-#           ; std above continuum technique fails for PN em line and faint -1 order, SO,
-#           ;		try the brightest px in the range:
-# 			if iord eq -1 and star eq 'PN' then begin
-# 				imax=where(image(x1:x2,y1:y2) eq max(image(x1:x2,y1:y2)))
-# 				nsamp=fix(x2-x1+1)
-# 				xfound(nbins)=x1+imax mod nsamp
-# 				yfound(nbins)=y1+imax/nsamp
-# 				print,'PN em line at ',xfound(nbins), yfound(nbins),' for ordr=-1'
-# 			endif
+                    
+                    # Standard continuum technique (above) fails for planetary
+                    #   nebula emission lines and faint -1 order. So, instead,
+                    #   try the brightest pixel in the range.
+                    if iord == -1 and row['planetary_nebula'] == "True":
+                        im = deepcopy(image)[y1:y2+1, x1:x2+1]
+                        pos = np.unravel_index(np.argmax(im, axis=None), im.shape)
+                        xpos, ypos = position[1], position[0]
+                        nsamp = int(x2-x1+1)
+                        xfound[nbins] = x1 + xpos
+                        yfound[nbins] = y1 + ypos
+                        if verbose:
+                            print("{}: Planetary Nebula".format(preamble))
+                            msg = "\tEmission Line at {},{} for order=-1"
+                            print(msg.format(xfound[nbins], yfound[nbins]))
                     
                     # Replaces the separate trace flag
                     if interactive:
@@ -1594,6 +1755,24 @@ def reduce_stare(row, params, arg_list):
             ax.plot(x_arr, ytmp-params['lbdist']+params['bwidth']//2)
             ax.plot(x_arr, ytmp-params['lbdist']-params['bwidth']//2)
             plt.show()
+            
+            imaget = dq.astype(np.uint32)
+            ytmp = yfit
+            if np.max(yfit) > 700:
+                imagt = dq[500:1013,:].astype(np.uint32)
+                ytmp -= 500
+            fig = plt.figure()
+            ax = fig.add_subplot(111)
+            targ_str = "{} - {} ({})".format(root, target, filter)
+            ax.set_title('{} Trace Fit on DQ'.format(targ_str))
+            plt.imshow(np.where(imagt.astype(np.uint32) & 24, 1, 0))
+            ax.plot(x_arr, ytmp+params['gwidth']//2)
+            ax.plot(x_arr, ytmp-params['gwidth']//2)
+            ax.plot(x_arr, ytmp+params['ubdist']+params['bwidth']//2)
+            ax.plot(x_arr, ytmp+params['ubdist']-params['bwidth']//2)
+            ax.plot(x_arr, ytmp-params['lbdist']+params['bwidth']//2)
+            ax.plot(x_arr, ytmp-params['lbdist']-params['bwidth']//2)
+            plt.show()
 
         if bkg_flat_order == 'bkg_first':
             ff_params = {
@@ -1624,8 +1803,8 @@ def reduce_stare(row, params, arg_list):
             iy2 = int(round(y2))
             
             for irow in range(iy1, iy2+1):
-                if (dq[i,irow] & 24) and (x_arr[i] != 0) and (x_arr[i] != ns-1):
-                    image[i,irow] = (image[i-1,irow] + image[i+1,irow])/2
+                if (dq[irow,i] & 24) and (x_arr[i] != 0) and (x_arr[i] != ns-1):
+                    image[irow,i] = (image[irow,i-1] + image[irow,i+1])/2
             
             frac1 = 0.5 + iy1-y1 # frac of pixel i1y
             frac2 = 0.5 + y2-iy2 # frac of pixel iy2
@@ -1640,6 +1819,9 @@ def reduce_stare(row, params, arg_list):
                 tot_time = np.sum(tt*nn)
                 time_weight = np.sum(nn_img[ifull1:ifull2,x_arr[i]])
             else:
+                if verbose:
+                    msg = "{}: For x={} extraction range is {} to {}"
+                    print(msg.format(preamble, i, ifull1, ifull2))
                 tot = 0.
                 var = 0.
                 time_weight = 0.
@@ -1654,6 +1836,9 @@ def reduce_stare(row, params, arg_list):
                 ave_time = tot_time/time_weight
             else:
                 ave_time = np.max(time[iy1:iy2+1,x_arr[i]])
+                if verbose:
+                    msg = "{}: For x={} time_weight = {}, time set to {}"
+                    print(msg.format(preamble, i, time_weight, ave_time))
             e = 0
             for j in range(iy1, iy2+1):
                 e = e | dq[j,x_arr[i]]

@@ -18,6 +18,8 @@ __all__ = ['absdate', 'get_data_file']
 
 import os
 
+import numpy as np
+
 from astropy.time import Time
 from copy import deepcopy
 from datetime import datetime
@@ -248,7 +250,7 @@ def air2vac(air):
         wl_vac = wl_air * n
         vac.append(wl_vac)
     
-    return vac
+    return np.array(vac)
 
 
 def smooth_model(wave, flux, fwhm):
@@ -271,10 +273,10 @@ def smooth_model(wave, flux, fwhm):
     smoothed : array-like
         Smoothed flux array.
     """
-    wmin = wave - dlam/2.
-    wmax = wave + dlam/2.
+    wmin = wave - fwhm/2.
+    wmax = wave + fwhm/2.
     
-    good = np.where((wmin > np.min(wave)) and (wmax < np.max(wave)))
+    good = np.where((wmin > wave[0]) & (wmax < wave[-1]))
     smoothed = deepcopy(flux)
     smoothed[good] = trapezoidal(wave, flux, wmin[good], wmax[good])
     smoothed[good] = trapezoidal(wave, smoothed, wmin[good], wmax[good])
@@ -315,13 +317,15 @@ def integral(x, y, xmin, xmax):
     dy = np.roll(y, -1) - y
     
     dint = (np.roll(y, -1) + y)/(2.*dx)
-    imin = int(np.floor(rmin))
-    imax = int(np.floor(rmax))
+    imin = np.floor(rmin).astype(np.int32)
+    imax = np.floor(rmax).astype(np.int32)
     
     dxmin = xmin - x[imin]
     ymin = y[imin] + dxmin*(y[imin+1]-y[imin])/(dx[imin] + np.where(dx[imin]==0, 1, 0))
     dxmax = xmax - x[imax]
-    ymax = y[imax] + dxmax*(y[np.min(imax+1, len(y)-1)] - y[imax])/(dx[imax]+np.where(dx[imax]==0, 1, 0))
+    coeff0 = y[np.where(imax+1<len(y)-1, imax+1, len(y)-1)] - y[imax]
+    coeff1 = dx[imax] + np.where(dx[imax]==0, 1, 0)
+    ymax = y[imax] + dxmax*coeff0/coeff1
     
     int = np.zeros_like(xmin)
     for i in range(len(xmin)):
@@ -333,20 +337,78 @@ def integral(x, y, xmin, xmax):
     
     return int
 
-def tabinv(xarr, xv):
+def tabinv(xarr, x):
     """
-    Find the effective index in xarr of each element in xv. The effective index
-    is the value i such that xarr[i] <= xv <= xarr[i+1], to which is added an
-    interpolation
+    Find the effective index in xarr of each element in x. The effective index for each
+    element j in x is the value i such that xarr[i] <= x[j] <= xarr[i+1], to which is 
+    added an interpolation
     """
-    indl = np.searchsorted(xarr, xv, side='left')
-    ieff = deepcopy(indl).astype(np.float32)
-    indr = np.searchsorted(xarr, xv, side='right')
-    good = np.where((indr > 0) and (indl < len(xarr)))
-    if len(good[0]) > 0:
-        neff = indl[good]
-        x0 = xarr[neff]
-        diff = xv[good]
-        ieff[good] = neff + diff / (xarr[neff+1] - x0)
+    npoints, npt = len(xarr), len(xarr) - 1
+    if npoints <= 1:
+        raise ValueError("Search array must contain at least 2 elements")
     
+    if not (np.all(np.diff(xarr) >= 0) or (np.all(np.diff(xarr) <= 0))):
+        raise ValueError("Search array must be monotonic")
+    
+    # ieff contains values j1, ..., jn such that
+    #   ji = x where xarr[x-1] <= ji < xarr[x]
+    #   If no position is found, ji = len(xarr)
+    ieff = np.searchsorted(xarr, x, side='right').astype(np.float64)
+    g = np.where((ieff >= 0) & (ieff < (len(xarr) - 1)))
+    if len(g) > 0 and len(g[0] > 0):
+        neff = ieff[g].astype(np.int32)
+        x0 = xarr[neff].astype(np.float64)
+        diff = x[g] - x0
+        ieff[g] = neff + diff / (xarr[neff+1] - x0)
+    ieff = np.where(ieff>0., ieff, 0.)
     return ieff
+
+def linecen(wave, spec, cont):
+    """
+    Computes the centroid of an emission line over the range of 
+        xapprox +/- fwhm/2
+    after subtracting any continuum and half value at the remaining peak. After
+    clipping at zero, the weights of the remaining spectral wings approach zero,
+    so any marginally missed or included point matters little.
+    
+    Parameters
+    ----------
+    wave : np.ndarray
+        1-d array of x values
+    spec : np.ndarray
+        1-d array of y values
+    cont : float
+        Approximate continuum value
+    
+    Returns
+    -------
+    centroid : float
+        The x value of the centroid
+    badflag : bool
+        False for good data, true for bad data
+    """
+    badflag = False
+    profile = spec - cont
+    clip = (profile - np.max(profile)*0.5)
+    n_points = len(clip)
+    midpoint = (n_points-1)//2
+    bad = np.where(clip[:midpoint+1] < 0.)
+    if len(bad) > 0:
+        n_bad = len(bad[0])
+    if n_bad > 0:
+        max_bad = min(np.max(bad), midpoint-1)
+        clip[:max_bad+1] = 0.
+    bad = np.where(clip[midpoint:] < 0.)
+    if len(bad) > 0:
+        n_bad = len(bad[0])
+    if n_bad > 0:
+        min_bad = max(np.min(bad)+midpoint, midpoint+1)
+        clip[min_bad:] = 0.
+    good = np.where(clip > 0.)
+    if len(good) > 0:
+        n_good = len(good[0])
+    if n_good <= 1:
+        print("WARNING: LINECEN: Bad profile, centroid set to midpoint.")
+        return wave[midpoint], "bad"
+    centroid = np.sum(wave*clip)/np.sum(clip)
+    return centroid, "good"

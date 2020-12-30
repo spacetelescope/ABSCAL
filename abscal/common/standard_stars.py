@@ -365,7 +365,7 @@ starlist =  [
                 {
                     'name': 'IC5117',
                     'ra': 323.12904167,
-                    'dec': 21.54193611,
+                    'dec': 44.59652778,
                     'coord_type': 'icrs',
                     'coord_epoch': 'J2000',
                     'pm_ra': 0.,

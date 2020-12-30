@@ -98,9 +98,13 @@ def coadd(input_table, arg_list, overrides={}):
     if out_dir == '':
         out_dir = os.getcwd()
     for row in input_table:
-        ext_file = os.path.join(out_dir, row['extracted'])
-        if not os.path.isfile(ext_file):
+        ext_fname = row['extracted']
+        if isinstance(ext_fname, np.ma.core.MaskedConstant) and ext_fname is np.ma.masked:
             extract = True
+        else:
+            ext_file = os.path.join(out_dir, ext_fname)
+            if not os.path.isfile(ext_file):
+                extract = True
     if extract:
         if verbose:
             print("{}: Extracting missing spectra.".format(task))
@@ -141,12 +145,6 @@ def coadd(input_table, arg_list, overrides={}):
             spec_back = np.array((), dtype='float64')
             spec_gross = np.array((), dtype='float64')
             spec_time = np.array((), dtype='float64')
-
-#   ***** Planetary Nebula Thing *****
-# ; ck if PN wavecal data:
-#       pnposs=findfile('spec/*'+obs(0)+'*')
-#       good=where(strpos(pnposs,'pn.fits') gt 0,npn)
-#       if npn gt 0 then star='pn'      
 
             for row in filter_table:
                 roots.append(row['root'])
@@ -519,7 +517,7 @@ def coadd(input_table, arg_list, overrides={}):
                     argmax = np.argmax(wcor, axis=None)
                     imax = np.unravel_index(argmax, wcor.shape)[0]
                     ind = np.where(wcor[imax,:] > np.max(wave))
-                    wave = np.apped(wave, wcor[imax,ind])
+                    wave = np.append(wave, wcor[imax,ind])
                 
                 if arg_list.double:
                     wave_delta = wave[1:] - wave[:-1]

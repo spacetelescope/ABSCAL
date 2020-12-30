@@ -1234,10 +1234,9 @@ for i=0,ns-1 do begin				; col by col, whole img
 ; 16=hot px and do not fix endpoints. Hope adjacent hot px are not important.
 ;	ie interpolate over hot px in wl direction.
 ; 2018jul19-try also dq=8, unstable:
-		    if ((dq(i,irow) and 16) eq 16 or (dq(i,irow) and 8)	$
-		    	eq 8) and x(i) ne 0 and	x(i) ne (ns-1) then 	$
-			image(i,irow)=(image(i-1,irow)+image(i+1,irow))/2
-		    endfor
+		    if ((dq(i,irow) and 16) eq 16 or (dq(i,irow) and 8)	eq 8) and x(i) ne 0 and	x(i) ne (ns-1) then 	$
+			    image(i,irow)=(image(i-1,irow)+image(i+1,irow))/2
+		endfor
 		frac1 = 0.5 + iy1-y1  		;frac of pixel i1y
 		frac2 = 0.5 + y2-iy2  		;frac of pixel iy2
 		ifull1 = iy1+1  	      	;range of full pixels to extract
@@ -1245,23 +1244,24 @@ for i=0,ns-1 do begin				; col by col, whole img
 		if ifull2 ge ifull1 then begin
 			tot = total(image(x(i),ifull1:ifull2))
 			var = total(err(x(i),ifull1:ifull2)^2)
-			tot_time = total(time(x(i),ifull1:ifull2)* $
-					(image(x(i),ifull1:ifull2)>0))
+			tot_time = total(time(x(i),ifull1:ifull2)*(image(x(i),ifull1:ifull2)>0))
 			time_weight = total(image(x(i),ifull1:ifull2)>0)
-		    end else begin
-		    	tot = 0.0
+		end else begin
+		    tot = 0.0
 			var = 0.0
 			time_weight = 0.0
 			tot_time = 0.0
 		end
   		tot = tot + frac1*image(x(i),iy1)+frac2*image(x(i),iy2)
   		var = var + frac1*err(x(i),iy1)^2 +frac2*err(x(i),iy2)^2
-		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)+$
-				frac2*time(x(i),iy2)*(image(x(i),iy2)>0)
-		time_weight = time_weight + frac1*(image(x(i),iy1)>0)	+ $
-			frac2*(image(x(i),iy2)>0)
-		if time_weight gt 0 then ave_time = tot_time/time_weight $
-			else ave_time = max(time(x(i),iy1:iy2))
+		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)+frac2*time(x(i),iy2)*(image(x(i),iy2)>0)
+		time_weight = time_weight + frac1*(image(x(i),iy1)>0) + frac2*(image(x(i),iy2)>0)
+		if time_weight gt 0 then begin
+		    ave_time = tot_time/time_weight
+		end else begin 
+		    ave_time = max(time(x(i),iy1:iy2))
+		    print,"X=",i,", time_weight=0, time set to ",ave_time
+		end
 		e = 0
 		for j=iy1,iy2 do e = e or dq(x(i),j)		; data qual
 

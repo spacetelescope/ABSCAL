@@ -238,7 +238,7 @@ class AbscalDataTable(Table):
                 self["filter_root"][base_mask] = minimum_time_row["root"]
             else:
                 msg = "No corresponding filter exposure found."
-                self["note"][base_mask] += " {}".format(msg)
+                self["notes"][base_mask] += " {}".format(msg)
                 self["filter_root"][base_mask] = "NONE"
         return
        
@@ -411,8 +411,8 @@ class AbscalDataTable(Table):
             else:
                 row_mask = [r == row['root'] for r in grism_table['root']]
                 msg = "No corresponding filter exposure found."
-                grism_table["note"][row_mask] += " {}".format(msg)
-                grism_table["note"][base_mask] += " {}".format(msg)
+                grism_table["notes"][row_mask] += " {}".format(msg)
+                grism_table["notes"][base_mask] += " {}".format(msg)
                 grism_table["filter_root"][base_mask] = "NONE"
         
         grism_table.sort(['root'])

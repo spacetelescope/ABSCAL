@@ -268,6 +268,8 @@ def parse_args():
     """
     Parse command-line arguments.
     """
+    additional_args = {}
+    
     description_str = "Build metadata table from input files."
     default_output_file = 'dirtemp.log'
 
@@ -278,6 +280,7 @@ def parse_args():
     dup_help += "be an issue if an input table is specified."
     dup_args = ['-d', '--duplicates']
     dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 'default': 'both'}
+    additional_args['dup'] = (dup_args, dup_kwargs)
     
     template_help = "The file template to match, or the path to search "
     template_help += "and the file template to match within that directory. "
@@ -286,9 +289,7 @@ def parse_args():
     template_help += "each input path."
     template_args = ['template']
     template_kwargs = {'help': template_help}
-    
-    additional_args = [(dup_args, dup_kwargs),
-                       (template_args, template_kwargs)]
+    additional_args['template'] = (template_args, template_kwargs)
     
     res = parse(description_str, default_output_file, additional_args)
     

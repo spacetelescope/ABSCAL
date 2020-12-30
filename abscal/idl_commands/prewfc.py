@@ -21,7 +21,10 @@ from abscal.wfc3.reduce_grism_coadd import main as do_coadd
 
 def main():
 
-    do_coadd(overrides={'compat': True})
+    overrides = {}
+#     overrides['compat'] = True
+
+    do_coadd(overrides=overrides)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,48 @@
+# This file describes a conda environment that can be to install the JWST
+#   validation notebooks
+#
+# Run the following command to set up this environment:
+# $ conda env create -f environment.yml
+#
+# The environment name can be overridden with the following command:
+# $ conda env create -n <custom name> -f environment.yml
+#
+# Run the following command to activate the environment:
+# $ conda activate abscal
+#
+# To deactivate the environment run the following command:
+# $ conda deactivate
+#
+# To remove the environment entirely, run the following command:
+# $ conda remove -n abscal --all
+
+name: abscal
+
+channels:
+  - conda-forge
+  - astropy
+  - http://ssb.stsci.edu/astroconda
+  - defaults
+
+dependencies:
+  # Base dependencies
+  - pip
+  - python>=3.7
+  - Cython
+  - jupyter
+  - nb_conda
+
+  - pip:
+    # Major modules
+    - numpy
+    - astropy
+    - matplotlib
+    - scipy
+    - jupyter
+    - photutils
+    - ipykernel
+    - rebin
+
+variables:
+  WFCREF: "/Users/york/Projects/abscal/ABSCAL/idl_code/ref/"
+
