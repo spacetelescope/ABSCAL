@@ -8,15 +8,13 @@ STIS and WFC3 calibration software converted from Ralph Bohlin's IDL code.
 STIPS and WFC3 calibration software preserving the functionality of Ralph
 Bohlin's IDL code in python.
 
+*Ensuring that 30 years of calibration software are useful for the next 30 years.*
 
 License
 -------
 
-This project is Copyright (c) Brian York and licensed under
-the terms of the BSD 3-Clause license. This package is based upon
-the `Astropy package template <https://github.com/astropy/package-template>`_
-which is licensed under the BSD 3-clause licence. See the licenses folder for
-more information.
+This project is Copyright (c) Space Telescope Science Institute and licensed under
+the terms of the BSD 3-Clause license.
 
 
 Contributing
