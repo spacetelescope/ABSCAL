@@ -42,6 +42,8 @@ dependencies:
     - photutils
     - ipykernel
     - rebin
+    - tox
+    - sphinx
 
 variables:
   WFCREF: "/Users/york/Projects/abscal/ABSCAL/idl_code/ref/"

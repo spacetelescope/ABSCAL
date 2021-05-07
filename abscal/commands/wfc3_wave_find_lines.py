@@ -1,8 +1,7 @@
 #! /usr/bin/env python
 """
-This module acts as an IDL interface to the 'wlmeas' part of the WFC3 
-'reduce_wl_process' script. It calls that script with IDL compatibility set to 
-True.
+This module acts as an interface to the 'wlmeas' part of the WFC3 'reduce_wl_process' 
+script. 
 
 Author
 -------
@@ -12,7 +11,7 @@ Use
 ---
     This module is intended to be run from the command line.
     ::
-        python wlmeas.py <file_path>
+        python wfc3_wave_find_lines.py <file_path>
 """
 
 __all__ = []

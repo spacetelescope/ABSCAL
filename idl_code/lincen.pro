@@ -5,11 +5,11 @@ pro lincen,wav,spec,cont,wxact,badflag
 ;	After clipping at zero, the wgt of the remaining spec wings have wgts
 ;	that approach zero, so any marginally missed or incl. pt matters little.
 ;
-;  INPUTS:     
+;  INPUTS:
 ;       wav - wavelenth vector
 ;	spec - spectral flux or counts
 ;       cont - continuum level to subtract to isolate line profile.
-;  OUTPUTS:   
+;  OUTPUTS:
 ;	wxact - the computed exact centroid wavelength
 ;	badflag-0=good data, 1-->result set to mid-point of input array
 ;  HISTORY
@@ -22,17 +22,20 @@ clip=(profil-max(profil)*.5)
 ; if any negative points, accept only those >0 continuous from center.
 npts=n_elements(clip)
 midpt=(npts-1)/2
+print,"lincen has ",npts," points, midpoint ",midpt," continuum ",cont
 ; check left side & set all pos values to 0 before first neg:
 bad=where(clip(0:midpt) lt 0,nbad)
 if nbad gt 0 then begin
 	mx=max(bad)<(midpt-1)
 	clip(0:mx)=0
+	print,"lincen removing points 0:",mx
 	endif
 ; check right side & set all pos values to 0 after first neg:
 bad=where(clip(midpt:npts-1) lt 0,nbad)
 if nbad gt 0 then begin
 	mn=min(bad)+midpt>(midpt+1)
 	clip(mn:npts-1)=0
+	print,"lincen removing points ",mn,":end"
 	endif
 clip=clip>0
 good=where(clip gt 0,ngood)

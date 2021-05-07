@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-This module includes a list of standard stars used by STScI for flux 
+This module includes a list of standard stars used by STScI for flux
 calibration, along with their canonical names and, for each, a set of names
 that are known to be used by PIs when filling in the target name in APT (and
 thus may be present in the TARGNAME field). In addition, the list contains the
@@ -91,7 +91,7 @@ starlist =  [
                     'pm_ra': -402.093,
                     'pm_dec': -24.608,
                     'planetary_nebula': False,
-                    'names': ['GRW_70D5824', 'HIP66578', 'HIP-66578', 
+                    'names': ['GRW_70D5824', 'HIP66578', 'HIP-66578',
                               'EGGR-102', '70D5824']
                 },
                 {
@@ -303,7 +303,7 @@ starlist =  [
                     'pm_ra': -2.911,
                     'pm_dec': -10.952,
                     'planetary_nebula': False,
-                    'names': ['SNAP2', 'SNAP-2', 'SNAP 2', 
+                    'names': ['SNAP2', 'SNAP-2', 'SNAP 2',
                               '2MASS J16194609+5534178']
                 },
                 {
@@ -371,6 +371,7 @@ starlist =  [
                     'pm_ra': 0.,
                     'pm_dec': 0.,
                     'planetary_nebula': True,
+                    'radial_velocity': -25.8,
                     'names': ['IC5117', 'IC-5117', 'IC_5117', 'IC 5117']
                 },
                 {
@@ -382,7 +383,8 @@ starlist =  [
                     'pm_ra': 0.,
                     'pm_dec': 0.,
                     'planetary_nebula': True,
-                    'names': ['VY22', 'VY2-2', 'VY2-2 copy', 'PN VY 2-2', 
+                    'radial_velocity': -71.,
+                    'names': ['VY22', 'VY2-2', 'VY2-2 copy', 'PN VY 2-2',
                               'VY 2-2']
                 },
             ]

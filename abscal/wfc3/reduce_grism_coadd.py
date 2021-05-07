@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in 
+This module takes the name of an input metadata table, groups the exposures in
 that table by program and visit, and then:
     - coadds together all exposures that have the same program/visit/star
 
@@ -12,7 +12,7 @@ Authors
 Use
 ---
     This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files 
+    other module code as the first step (creating an annotated list of files
     for flux calibration).
     ::
         python coadd_grism.py <input_file>
@@ -51,12 +51,12 @@ def unique_obsets(table):
     """
     Take an ExposureTable, get its 'root' column, get the first six characters
     of that column, and return a set of all obsets (program/visit).
-    
+
     Parameters
     ----------
     table : abscal.common.exposure_data_table.AbscalDataTable
         The table to be checked.
-    
+
     Returns
     -------
     obsets : list of str
@@ -73,12 +73,12 @@ def coadd(input_table, arg_list, overrides={}):
     task = "coadd"
     verbose = arg_list.verbose
     interactive = arg_list.trace
-    
+
     if verbose:
         print("{}: Starting WFC3 coadd for GRISM data.".format(task))
         print("{}: Input table is:".format(task))
         print(input_table)
-    
+
     # 32 and 512 OK "per icqv02i3q RCB 2015may26"
     flags = 4 | 8 | 16 | 64 | 128 | 256
     filters = ['G102', 'G141']
@@ -90,7 +90,7 @@ def coadd(input_table, arg_list, overrides={}):
     issues = []
     if "coadd_grism" in known_issues:
         issues = known_issues["coadd_grism"]
-    
+
     unique_obs = unique_obsets(input_table)
 
     extract = False
@@ -111,7 +111,7 @@ def coadd(input_table, arg_list, overrides={}):
         input_table = reduce(input_table, overrides, arg_list)
         if verbose:
             print("{}: Finished extraction.".format(task))
-    
+
     for obs in unique_obs:
         obs_mask = [r == obs for r in input_table['obset']]
         obs_table = input_table[obs_mask]
@@ -120,7 +120,7 @@ def coadd(input_table, arg_list, overrides={}):
         target = masked_table[0]['target']
         if len(masked_table) == 0:
             continue
-        
+
         for filter in filters:
             filter_mask = [g == filter for g in masked_table['filter']]
             filter_table = masked_table[filter_mask]
@@ -128,13 +128,13 @@ def coadd(input_table, arg_list, overrides={}):
             if len(filter_table) == 0:
                 continue
             n_obs = len(filter_table)
-        
+
             if verbose:
                 print("{}: Co-adding {}".format(task, obs))
                 print("{}: {} table for {} is:".format(task, obs, filter))
                 print(filter_table)
             st = ''
-            
+
             spec_files = []
             roots = []
             spec_wave = np.array((), dtype='float64')
@@ -177,7 +177,7 @@ def coadd(input_table, arg_list, overrides={}):
                     defaults['regend_m1'] = -5100.
                     defaults['regend_p1'] = 19000.
                     defaults['regend_p2'] = 38000.
-                params = set_params(defaults, row, issues, preamble, overrides, 
+                params = set_params(defaults, row, issues, preamble, overrides,
                                     verbose)
 
                 spec_file = os.path.join(row['path'], row['extracted'])
@@ -186,7 +186,7 @@ def coadd(input_table, arg_list, overrides={}):
                     print(msg.format(preamble, row['extracted']))
                     continue
                 spec_files.append(spec_file)
-            
+
                 if row['scan_rate'] > 0:
                     pass
                     # Scanned data
@@ -210,7 +210,7 @@ def coadd(input_table, arg_list, overrides={}):
 #       f(0,nout) =  gross*(yend-ybeg+1)*timcon/(tim>1)
 #       e(0,nout) =  gross*0.
 #       y(0,nout) =  gross*0        ; not used?
-#       eps(0,nout)= gross*0    
+#       eps(0,nout)= gross*0
 #       b(0,nout) =  gross*0
 #       g(0,nout) = gross       ; NO wgt, curiously?
 #       time(0,nout)=tim
@@ -227,7 +227,7 @@ def coadd(input_table, arg_list, overrides={}):
                         b = spec_fits[1].data['background']
                         g = spec_fits[1].data['gross']
                         time = spec_fits[1].data['time']
-                
+
                     if spec_wave.ndim == 1 and len(spec_wave) == 0:
                         spec_wave = np.append(spec_wave, w)
                         spec_net = np.append(spec_net, f)
@@ -256,7 +256,7 @@ def coadd(input_table, arg_list, overrides={}):
                         spec_gross = np.append([spec_gross], [g], axis=0)
                         spec_time = np.append([spec_time], [time], axis=0)
             # end of for row in filter_table
-        
+
             if len(spec_wave) == 0:
                 msg = "{}: ERROR: No spectra found for {} {}"
                 print(msg.format(preamble, filter, target))
@@ -271,9 +271,9 @@ def coadd(input_table, arg_list, overrides={}):
                         elif (mask[ii,jj-1] > 0) and (mask[ii,jj+2] > 0):
                             f_good[ii,jj] = (f_good[ii,jj-1]+f_good[ii,jj+2])/2
                             f_good[ii,jj+1] = (f_good[ii,jj-1]+f_good[ii,jj+2])/2
-            regbeg = [params['regbeg_m1'], params['regbeg_p1'], 
+            regbeg = [params['regbeg_m1'], params['regbeg_p1'],
                       params['regbeg_p2']]
-            regend = [params['regend_m1'], params['regend_p1'], 
+            regend = [params['regend_m1'], params['regend_p1'],
                       params['regend_p2']]
             wbeg, wend = params['wbeg'], params['wend']
             regbeg[0] = max(min(spec_wave[:,0]), regbeg[0])
@@ -300,7 +300,7 @@ def coadd(input_table, arg_list, overrides={}):
                 if iord == -1:
                     wb = -wend
                     we = -wbeg
-                
+
                 # Find indices of spectra covering each order at 90% level
                 #   Actually 86% level?
                 d10 = (we-wb)*.14 # per IDL "2018may19-.10->.14 for ibwib6m8q"
@@ -328,11 +328,11 @@ def coadd(input_table, arg_list, overrides={}):
                     wl1 = spec_wave[igood[0],:]
                     # IDL is doing another filter, and currently we're not.
                     # The reasoning is:
-                    #   - IDL 
+                    #   - IDL
                     #       - Makes a bunch of 1014-point arrays, and then
-                    #         fills in wavelength data starting from the 0th 
+                    #         fills in wavelength data starting from the 0th
                     #         index
-                    #       - Pre-sets the arrays to -1e20, ensuring that if 
+                    #       - Pre-sets the arrays to -1e20, ensuring that if
                     #         there is no wavelength value to fill in the array,
                     #         that point will have a large negative value
                     #       - Filters out points with large negative values.
@@ -351,8 +351,8 @@ def coadd(input_table, arg_list, overrides={}):
                     delam = wl1[icen1+1] - wl1[icen1]   # dispersion
                     wb = max(wb, min(wl1))
                     we = min(we, max(wl1))
-                    
-                    # Cross-correlate remaining good spectra to net1 of 1st 
+
+                    # Cross-correlate remaining good spectra to net1 of 1st
                     #   good spectrum.
                     for i in range(1, ngood):
                         wli = spec_wave[igood[i],:]
@@ -374,20 +374,28 @@ def coadd(input_table, arg_list, overrides={}):
                             msg = "{}: Cross-correlate WL range {}-{} for "
                             msg += "order {}"
                             print(msg.format(preamble, wbcm, wecm, iord))
-                        
+
                         # Cross-correlate
                         path, fname = os.path.split(spec_files[igood[i]])
                         fpath, specpath = os.path.split(path)
                         spec_file = os.path.join(specpath, fname)
                         spec_mask = [r['extracted'] == spec_file for r in input_table]
-                        row = input_table[spec_mask]
+                        spec_mask = np.ma.masked_array(spec_mask).astype(np.bool_)
+                        row = input_table[spec_mask.filled(fill_value=False)]
                         overrides = {'width': params['width']}
-                        offset, arr = cross_correlate(net1[ib:ie+1],
-                                                      neti[ib:ie+1],
-                                                      row,
-                                                      arg_list,
-                                                      overrides=overrides)
-                        
+                        try:
+                            offset, arr = cross_correlate(net1[ib:ie+1],
+                                                          neti[ib:ie+1],
+                                                          row,
+                                                          arg_list,
+                                                          overrides=overrides)
+                        except Exception as e:
+                            msg = "{}: ERROR in Cross-correlation: {}"
+                            print(msg.format(preamble, e))
+                            # Maybe should just exclude? If so, how?
+                            offset = 0
+                            arr = []
+
                         # If more than 1000A missing from cross-correlation,
                         #   not enough coverage, so offset -> 0.
                         if (wend-wbeg) - abs((we-wb)/iord) > 1000:
@@ -397,13 +405,13 @@ def coadd(input_table, arg_list, overrides={}):
                             f0 = os.path.basename(spec_files[igood[0]])
                             f1 = os.path.basename(spec_files[igood[i]])
                             print(msg.format(preamble, f0, f1, offset, iord))
-                        
+
                         if abs(offset) > 2.7 and interactive:
                             fig = plt.figure()
                             ax = fig.add_subplot(111)
                             plot_title = '{} {} spectra {} and {} for order {} '
                             plot_title += 'with offset {}'
-                            plot_title = plot_title.format(obs, filter, 
+                            plot_title = plot_title.format(obs, filter,
                                                            igood[0]+1,
                                                            igood[i]+1,
                                                            iord, offset)
@@ -412,13 +420,13 @@ def coadd(input_table, arg_list, overrides={}):
                             spec_label = "Spectrum {}".format(igood[0]+1)
                             ax.plot(wl1, net1, label=spec_label)
                             spec_label = "Spectrum {} with wave from {}"
-                            spec_label = spec_label.format(igood[i]+1, 
+                            spec_label = spec_label.format(igood[i]+1,
                                                            igood[0]+1)
                             ax.plot(wl1, neti, label=spec_label)
                             w = spec_wave[igood[i],:][0]
                             f = f_good[igood[i],:][0]
                             spec_label = "Spectrum {} with wave from {}"
-                            spec_label = spec_label.format(igood[i]+1, 
+                            spec_label = spec_label.format(igood[i]+1,
                                                            igood[i]+1)
                             ax.plot((w + offset*delam), f, label=spec_label)
                             ax.legend()
@@ -430,19 +438,19 @@ def coadd(input_table, arg_list, overrides={}):
                             offset = 0
 
                         wcor[i,:] = spec_wave[igood[i],:] + offset*delam
-                        
+
                         # Based on "; corners in ibwt01(uqq)"
                         if abs(offset) > 12:
                             raise ValueError("Offset > 12.")
                         if arr is None: #error in cross-correlation fn.
                             raise ValueError("Error in cross-correlation.")
-                    
+
                     # Output Plots
                     if interactive:
-                    
+
                         rb, re = regbeg[ireg], regend[ireg]
 
-                        
+
                         # First Plot -- uncorrected wavelengths
                         wmin = max(np.min(spec_wave), rb)
                         wmax = min(np.max(spec_wave), re)
@@ -460,7 +468,7 @@ def coadd(input_table, arg_list, overrides={}):
                         ax.plot(w/1.e4, n, label='Spectrum 1')
                         for i in range(1, ngood):
                             w = spec_wave[igood[i],:]
-                            ind = np.where((w >= rb) & (w < re)) 
+                            ind = np.where((w >= rb) & (w < re))
                             w = spec_wave[igood[i],ind][0]
                             n = spec_net[igood[i],ind][0]
                             ax.plot(w/1.e4, n, label='Spectrum {}'.format(i+1))
@@ -468,7 +476,7 @@ def coadd(input_table, arg_list, overrides={}):
                         plt.show()
 
                         # Second Plot -- corrected wavelengths
-                        ind = np.where((wcor[0,:] >= rb) & (wcor[0,:] < re))                        
+                        ind = np.where((wcor[0,:] >= rb) & (wcor[0,:] < re))
                         fig = plt.figure()
                         ax = fig.add_subplot(111)
                         title = 'Corrected Wavelengths for {} ({}) order {}'
@@ -490,7 +498,7 @@ def coadd(input_table, arg_list, overrides={}):
 
                         # Third Plot -- remove bad data
                         fcor1 = spec_net + np.where(mask==0, 9e9, 0)
-                        ind = np.where((wcor[0,:] >= rb) & (wcor[0,:] < re))                        
+                        ind = np.where((wcor[0,:] >= rb) & (wcor[0,:] < re))
                         fig = plt.figure()
                         ax = fig.add_subplot(111)
                         title = 'Bad DQ for {} ({}) order {}'
@@ -507,7 +515,7 @@ def coadd(input_table, arg_list, overrides={}):
                             ax.plot(w/1.e4, f, label=spec_label)
                         ax.legend()
                         plt.show()
-                
+
                 # Coadd the ngood spectra separately for each region
                 var = spec_err * spec_err
                 imin = np.unravel_index(np.argmin(wcor, axis=None), wcor.shape)
@@ -518,14 +526,14 @@ def coadd(input_table, arg_list, overrides={}):
                     imax = np.unravel_index(argmax, wcor.shape)[0]
                     ind = np.where(wcor[imax,:] > np.max(wave))
                     wave = np.append(wave, wcor[imax,ind])
-                
+
                 if arg_list.double:
                     wave_delta = wave[1:] - wave[:-1]
                     modal_delta = mode(wave_delta, axis=None)[0]
                     dlam = modal_delta/2
                     wave = np.append(wave, wave[:-1]+dlam)
                     wave = np.sort(wave)
-                
+
                 nsd = len(wave)
                 fsum = np.zeros((nsd,), dtype='float64')
                 ftsum = np.zeros((nsd,), dtype='float64')
@@ -542,7 +550,7 @@ def coadd(input_table, arg_list, overrides={}):
                 y_interp = np.zeros((ngood,nsd), dtype='float64')
                 var_interp = np.zeros((ngood,nsd), dtype='float64')
                 time_interp = np.zeros((ngood,nsd), dtype='float64')
-                
+
                 for i in range(ngood):
                     wli = wcor[i,:]
                     ig = igood[i]
@@ -553,7 +561,7 @@ def coadd(input_table, arg_list, overrides={}):
                     mint = np.interp(wave, wli, mask[ig,:], left=0., right=0.)
                     yint = np.interp(wave, wli, spec_yfit[ig,:], left=0., right=0.)
                     tint = np.interp(wave, wli, spec_time[ig,:], left=0., right=0.)
-                    
+
                     mint = np.where(mint>=1.,1, 0)      # Restrict mask to good (1) or bad (0)
                     fsum = fsum + mint*fint             # sum of net counts/s
                     ftsum = ftsum + mint*tint*fint      # some of net counts/s*exptime
@@ -569,7 +577,7 @@ def coadd(input_table, arg_list, overrides={}):
                     y_interp[i,:] = yint
                     var_interp[i,:] = vint
                     time_interp[i,:] = tint
-                
+
                 # Use average when all data is bad
                 all_bad = np.where(npts==0)
                 n_all_bad = len(all_bad[0])
@@ -592,7 +600,7 @@ def coadd(input_table, arg_list, overrides={}):
                         f2sum[all_bad] = fbad*fbad
                         varsum[all_bad] = var_interp[:,all_bad]*tbad**2
                     npts[all_bad] = ngood
-                
+
                 # Compute means on wave grid
                 if ngood > 1:
                     bsum = np.sum(b_interp, axis=0)
@@ -610,7 +618,7 @@ def coadd(input_table, arg_list, overrides={}):
                     npts[all_bad] = 0
                 # Make merged array from as many as the 3 WL regions
                 good = np.where((wave >= regbeg[ireg]) & (wave < regend[ireg]))
-                
+
                 wmrg = np.append(wmrg, wave[good])
                 gmrg = np.append(gmrg, gross[good])
                 bmrg = np.append(bmrg, back[good])
@@ -621,7 +629,7 @@ def coadd(input_table, arg_list, overrides={}):
                 npmrg = np.append(npmrg, npts[good])
                 tmrg = np.append(tmrg, tsum[good])
             # end for iord in -1,1,2
-                
+
             sort = np.argsort(wmrg)
             wmrg = wmrg[sort]
             gmrg = gmrg[sort]
@@ -632,7 +640,7 @@ def coadd(input_table, arg_list, overrides={}):
             emrg = emrg[sort]
             npmrg = npmrg[sort]
             tmrg = tmrg[sort]
-                
+
             # Write Results
             prefix = arg_list.prefix
             if arg_list.prefix is None:
@@ -644,7 +652,7 @@ def coadd(input_table, arg_list, overrides={}):
             Path(spec_dir).mkdir(parents=True, exist_ok=True)
             out_file_name = '{}_{}_{}'.format(prefix, filter, obs)
             out_file = os.path.join(spec_dir, out_file_name)
-            
+
             if interactive:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -656,7 +664,7 @@ def coadd(input_table, arg_list, overrides={}):
                 ax.plot(wmrg/1.e4, gmrg, label='gross')
                 ax.legend()
                 plt.show()
-                
+
             now = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             t = Table()
             t['wave'] = wmrg
@@ -679,22 +687,22 @@ def coadd(input_table, arg_list, overrides={}):
             t.meta['comments'].append('Date={}'.format(filter_table['date'][0]))
             t.write(out_file+'.tbl', format='ascii.ipac', overwrite=True)
             t.write(out_file+'.fits', format='fits', overwrite=True)
-            
+
             coadd_file = os.path.join(arg_list.spec_dir, out_file_name+'.fits')
             roots = [r for r in filter_table['root']]
             for row in input_table:
                 if row['root'] in roots:
                     row['coadded'] = coadd_file
-        
+
             if verbose:
                 print("{}: Finished filter.".format(preamble))
         if verbose:
             print("{}: {}: Finished obs".format(task, obs))
     if verbose:
         print("{}: finished co-add".format(task))
-    
+
     return input_table
-        
+
 
 
 def additional_args():
@@ -702,9 +710,9 @@ def additional_args():
     Additional command-line arguments. Used when a single command may run
     another command, and need to add arguments from it.
     """
-    
+
     additional_args = {}
-    
+
     table_help = "The input metadata table to use."
     table_args = ['table']
     table_kwargs = {'help': table_help}
@@ -712,10 +720,10 @@ def additional_args():
 
     double_help = "Subsample output wavelength vector by a factor of 2."
     double_args = ["-d", "--double"]
-    double_kwargs = {'help': double_help, 'default': False, 
+    double_kwargs = {'help': double_help, 'default': False,
                      'action': 'store_true', 'dest': 'double'}
     additional_args['double'] = (double_args, double_kwargs)
-    
+
     prefix_help = "Prefix for co-added spectra"
     prefix_args = ['--prefix']
     prefix_kwargs = {'help': prefix_help, 'default': None,
@@ -727,7 +735,7 @@ def additional_args():
     trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
                     'help': trace_help}
     additional_args['trace'] = (trace_args, trace_kwargs)
-        
+
     return additional_args
 
 
@@ -737,7 +745,7 @@ def parse_args():
     """
     description_str = 'Process files from metadata table.'
     default_output_file = 'dirirstare.log'
-    
+
     args = additional_args()
     # Add in extraction args because coadd can call extraction and thus may
     #   need to supply arguments to it.
@@ -745,33 +753,33 @@ def parse_args():
     for key in extracted_args.keys():
         if key not in args:
             args[key] = extracted_args[key]
-    
+
     res = parse(description_str, default_output_file, args)
-    
-    if res.paths is not None: 
+
+    if res.paths is not None:
         if "," in res.paths:
             res.paths = res.paths.split(",")
         else:
             res.paths = [res.paths]
     else:
         res.paths = []
-    
+
     if res.table is None:
         res.table = "dirtemp.log"
-    
+
     if len(res.paths) == 0:
         res.paths.append(os.getcwd())
-    
+
     return res
 
 
 def main(overrides={}):
     parsed = parse_args()
-    
+
     for key in overrides:
         if hasattr(parsed, key):
             setattr(parsed, key, overrides[key])
-    
+
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates='both',
                                   search_str='',
@@ -779,7 +787,7 @@ def main(overrides={}):
                                   idl=parsed.compat)
 
     output_table = coadd(input_table, parsed, overrides)
-    
+
     table_fname = parsed.out_file
     output_table.write_to_file(table_fname, parsed.compat)
 

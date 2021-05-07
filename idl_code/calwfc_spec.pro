@@ -107,7 +107,7 @@
 ;	    Modified output GROSS and BACK to be extractions from the raw image.
 ;	06aug18 - DJL - modified to flat field sky image with sky flat and
 ;		extract the flat fielded sky background which is included
-;		in the output background arrays.  Gross is now just the 
+;		in the output background arrays.  Gross is now just the
 ;		extracted net flux plus the smoothed background
 ;	07Jun08 - DJL - moved flat fielding before spectral location.
 ;	12Feb - RCB mod of calnic_spec for WFC3 IR & multiply by PAM--
@@ -133,7 +133,7 @@
 ;	2020feb4 - switch from cntrd to gcntrd for Z-ord fit
 ;========================================================  CALWFC_SPEC_WAVE
 
-; ##### 2020feb4 - If ever have 2 spectra on same img that need this AXE code, 
+; ##### 2020feb4 - If ever have 2 spectra on same img that need this AXE code,
 ;	then need to add targname to WFCWLFIX.PRO ###########
 
 ;
@@ -141,8 +141,8 @@
 ;
 pro calwfc_spec_wave,h,xcin,ycin,x,wave,angle,wav1st,noprnt=noprnt
 ; USE FOR AXE SOLUTION ONLY. Z-ORD SOLUTION USES WFC_WAVECAL
-; 
-; INPUTS: 
+;
+; INPUTS:
 ;	h - header
 ;	xcin,ycin - as above for xco,yco
 ;	noprint - optional keyword to avoid writing to header and printing.
@@ -170,7 +170,7 @@ if ns lt 1014 then begin
 	endif
 
 	case filter of
-	 'G102': begin					
+	 'G102': begin
 ; WFC3 ISR 2016-15 - AXE
 ; +1st order:
 		b=0.20143085d  &  c=0.080213136d
@@ -241,10 +241,10 @@ if ns lt 1014 then begin
 ;		  sxaddpar,h,'a0+3rd',a0,'Constant Term of the +3rd order disp.'
 ;		  sxaddpar,h,'a1+3rd',a1,'Linear Term of the +3rd order disp.'
 ;		  endif
-		  
+
 	       angle=0.66			; 2018may10-see angle.pro
 	       end
-	 'G141': begin					
+	 'G141': begin
 ; WFC3 ISR 2009-17
 ; +1st order:
 		b=0.08044033d  &  c=-0.00927970d
@@ -313,7 +313,7 @@ if ns lt 1014 then begin
 ;		  sxaddpar,h,'a0+3rd',a0,'Constant Term of the +3rd order disp.'
 ;		  sxaddpar,h,'a1+3rd',a1,'Linear Term of the +3rd order disp.'
 ;		  endif
-		  
+
 	       angle=0.44			; 2018may10-see angle.pro
 	       end				; G141
 	endcase
@@ -362,12 +362,12 @@ if strpos(flatfile,'both') lt 0 then begin	; BOTH-g102&141 pkgd. together
 	endif
 print,'FF file=',flatfile
 sedoff=0			;Susana has hdr in exten=0, coef0 in exten=1 etc
-if strpos(flatfile,'sed') ge 0 then sedoff=1 
+if strpos(flatfile,'sed') ge 0 then sedoff=1
 ; WMIN and WMAX are actually in the zeroth header.
 ;	We *can* use Ralph's custom fits_read file here, which will get
 ;	coefficients regardless of extension through some black magic, or
 ;	we can just read in the primary header and get them there, then proceed.
-;	
+;
 ;	I'm doing the latter.
 fits_read,flatfile,ignore,hdr,exten=0
 wmin = float(sxpar(hdr,'wmin'))
@@ -404,7 +404,7 @@ for i=0,nl-1 do begin			; Fill row-by-row:
 	ff(good,i)=coef0(xpx,ypx)+coef1(xpx,ypx)*xgood+		$
 				coef2(xpx,ypx)*xgood^2+coef3(xpx,ypx)*xgood^3
 	endfor
-if ns lt 1014 then print,'subarray w/ ltv1,ltv2=',ltv1,ltv2 
+if ns lt 1014 then print,'subarray w/ ltv1,ltv2=',ltv1,ltv2
 ff(where(ff le 0.5))=1			; fix AXE glitches (96px le 0)
 image=image/ff
 sxaddpar,h,'flatfile',flatfile
@@ -458,7 +458,7 @@ if n_elements(star) eq 0 then star=''
 ; automatically via wfc_process, so that xco,yco are input here, rather than
 ; output.
 if imagefile ne '' then stop		;ck del below. WFC3 no-op
-	
+
 pos=strpos(file,'.fits')
 sptfil=file
 strput,sptfil,'spt',pos-3
@@ -520,12 +520,12 @@ if n_elements(crval1) gt 0 then begin
 		    		'info in the image '+file
 		retall
 		endif
-; crval1,crval2 are input RA, DECL of ref px from direct image 
+; crval1,crval2 are input RA, DECL of ref px from direct image
 ;							where xco,yco are found.
 	ad2xy,crval1,crval2,astr,x1,y1   ;center position of targ acq
 						 ;image in the current image
 ; xydither must be the built in offset for a grism, as I ckd the direct img
-;	ic6906byq astrom, which gives 506,506 for x1,y1, while the ff G141 
+;	ic6906byq astrom, which gives 506,506 for x1,y1, while the ff G141
 ;	ic6906bzq has x1=440.18, y1=506.54 !
 ; REFERENCE PIXEL 2018may1
 	refpx1=sxpar(h,'crpix1')-1	; minus 1 for IDL
@@ -544,7 +544,7 @@ if keyword_set(slope) then begin			;06jun28-rcb
 	if slope ne 1 then angle = slope	; specified slope=slope
 	endif
 ; ################################SCANNED################################
-; 
+;
 ;SCANNED SPECTRA have no direct image. Read SPT file, get scan rate & est.xc,yc
 ;
 if scnrat gt 0 then begin		; start trailed processing
@@ -595,7 +595,7 @@ if scnrat gt 0 then begin		; start trailed processing
 		endif
 ; x is range of spec
 	calwfc_spec_wave,h,xc,yc,x,wave,angle,wav1st	;master WLs wfc_wavecal?
-		
+
 ; Differences btwn 0-order X znd xc posit of ref * from scnoffset.pro:
 	delxbot=191.91+0.0096832*xpostarg	;G141 @ y=184
 	delxtop=183.71+0.0134596*xpostarg	;G141 @ y=926
@@ -688,7 +688,7 @@ extast,h,astr,status	;get astrometry information
 if status eq -1 then begin
 	print,'CALWFC_SPEC: Error - Invalid astrometry info in the image '+file
 	retall
-	endif	
+	endif
 ad2xy,tra,tdec,astr,ix,iy
 print,'Pred. targ img posit w/grism astr',ix,iy
 ix=ix+xerr  &  iy=iy+yerr
@@ -703,7 +703,7 @@ if filter eq 'G102' then begin
 ;	xc=ix-252  &  yc=iy-4  &  ENDIF		; Petro
 ;	xc=ix-252  &  yc=iy-6  &  ENDIF	; for ic6906c0q
 	xc=ix-252  &  yc=iy-2  &  ENDIF	;2015may8 for icqv01aoq
-xastr=xc  &  yastr=yc		; save astrom est 
+xastr=xc  &  yastr=yc		; save astrom est
 
 ; if keyword_set(dirimg) then begin NG=150-300A errors.
 ;	Best to use meas Dir-image & axe disp. when ZO is off image,
@@ -753,7 +753,7 @@ if xc lt 4 or xc gt 998 or keyword_set(dirimg) then begin
 	print,'Zero-ord centroid at',xc,yc,ns,nl,' search area'
 ;if strpos(file,'ibcf61xnq') ge 0 then stop
 nozord:							; Z-ord off image
-	if round(xc) le 4 or round(xc) ge 997 then 			$	
+	if round(xc) le 4 or round(xc) ge 997 then 			$
 		print,'Z-order off image at',xc,yc else		$
 ; Good Z-order;
 		print,'Z-order found by calwfc_spec at',xc,yc
@@ -1012,7 +1012,7 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 	if ngood ge 3 and axeflg then begin
 		print,'PROFILE yfound for AXE case=',yfound
 		good=where(yfound gt 0)			; elim axe est. of Z-ord
-	     end else yfound=abs(yfound)			; rm axe Z-ord flag.	
+	     end else yfound=abs(yfound)			; rm axe Z-ord flag.
 ;if root eq 'icwg01geq' then stop
 
 	coef = poly_fit(xfound(good),yfound(good),1,fit)
@@ -1044,7 +1044,7 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 		ypos = yapprox + ycent
 		coef = poly_fit(x,ypos,1,fit)
 	endelse					; end specified slope option.
-	
+
 print,'Coef of trace fit='+string(coef,'(2f10.4)')
 yfit = coef(0) + coef(1)*x
 sxaddpar,h,'extc0',coef(0),'Extraction Position: Constant Term'
@@ -1101,24 +1101,42 @@ sigless=loerr<uperr
 
 goodlo=where(abs(sbacklo-lofit) lt sigless,nlo)
 locoef=poly_fit(xbf(goodlo),sbacklo(goodlo),3,yerror=loerr)
+print,"Lower fit coefficients: ",locoef
 lofit=locoef(0)+locoef(1)*xbf+locoef(2)*xbf^2+locoef(3)*xbf^3
 
-; 2018may-fancy bkg. Might do better @ 0.5 DN level for some -1,+2 ord, if I 
+; 2018may-fancy bkg. Might do better @ 0.5 DN level for some -1,+2 ord, if I
 ;      took the lowest fit in sections of crossings of the 2 fits, eg some P330E
 goodup=where(abs(sbackup-upfit) lt sigless,nup)
 upcoef=poly_fit(xbf(goodup),sbackup(goodup),3,yerror=uperr)
+print,"Upper fit coefficients: ",upcoef
 upfit=upcoef(0)+upcoef(1)*xbf+upcoef(2)*xbf^2+upcoef(3)*xbf^3
 loslp=locoef(1)+2*locoef(2)*xbf+3*locoef(3)*xbf^2
 upslp=upcoef(1)+2*upcoef(2)*xbf+3*upcoef(3)*xbf^2
 sback=lofit
-if avg(upfit) lt avg(lofit) then sback=upfit
+print,"Initial fit set to lower fit"
+if avg(upfit) lt avg(lofit) then begin
+    sback=upfit
+    print,"Initial fit set to upper fit"
+end
 ; NG if avg(abs(upslp)) lt avg(abs(loslp)) then sback=upfit
 bettr=where(abs(upfit)-abs(sback) gt 3*sigless and upfit lt lofit,nbet)
-if nbet gt 0 then sback(bettr)=upfit(bettr)
+if nbet gt 0 then begin
+    sback(bettr)=upfit(bettr)
+    print,nbet," points set to upper fit."
+end
 bettr=where(abs(lofit)-abs(sback) gt 3*sigless and lofit lt upfit,nbet)
-if nbet gt 0 then sback(bettr)=lofit(bettr)
-if nlo lt nsb/5 then sback=upfit
-if nup lt nsb/5 then sback=lofit
+if nbet gt 0 then begin
+    sback(bettr)=lofit(bettr)
+    print,nbet," points set to lower fit"
+end
+if nlo lt nsb/5 then begin
+    sback=upfit
+    print,"Final fit set to upper fit"
+end
+if nup lt nsb/5 then begin
+    sback=lofit
+    print,"Final fit set to lower fit"
+end
 
 if keyword_set(trace) then begin
 	window,0
@@ -1157,7 +1175,7 @@ if avg(sback) gt 3 then begin			;2020feb4-neg. Bkg is OK
 ;
 ; subtract background
 ;
-; ff line creates non-zero fluxes where image may have been zeroed. 
+; ff line creates non-zero fluxes where image may have been zeroed.
 ;		sback can be <0
 for i=0,nsb-1 do image(xb(i),*) = image(xb(i),*)-sback(i)	; full img subtr
 
@@ -1241,6 +1259,7 @@ for i=0,ns-1 do begin				; col by col, whole img
 		frac2 = 0.5 + y2-iy2  		;frac of pixel iy2
 		ifull1 = iy1+1  	      	;range of full pixels to extract
 		ifull2 = iy2-1
+		print,"i=",i,"extraction=",ifull1,", ",frac1," -> ",ifull2,", ",frac2
 		if ifull2 ge ifull1 then begin
 			tot = total(image(x(i),ifull1:ifull2))
 			var = total(err(x(i),ifull1:ifull2)^2)
@@ -1258,9 +1277,9 @@ for i=0,ns-1 do begin				; col by col, whole img
 		time_weight = time_weight + frac1*(image(x(i),iy1)>0) + frac2*(image(x(i),iy2)>0)
 		if time_weight gt 0 then begin
 		    ave_time = tot_time/time_weight
-		end else begin 
+		end else begin
 		    ave_time = max(time(x(i),iy1:iy2))
-		    print,"X=",i,", time_weight=0, time set to ",ave_time
+		    print,"X=",i,", extraction range=(",ifull1,",",ifull2,") time_weight=0, time set to ",ave_time
 		end
 		e = 0
 		for j=iy1,iy2 do e = e or dq(x(i),j)		; data qual
@@ -1317,7 +1336,7 @@ blower=blower*dcorr
 bupper=bupper*dcorr
 sky_blower=sky_blower*dcorr
 sky_bupper=sky_bupper*dcorr
-gross = flux + sback + sky_back		;sky_back is for subtracted wfc_flatscal 
+gross = flux + sback + sky_back		;sky_back is for subtracted wfc_flatscal
 
 if strpos(file,'icqw01') ge 0 then begin ;GD71 G102 contam by another star.
 	bad=where(wave gt 11450 and wave lt 15400)

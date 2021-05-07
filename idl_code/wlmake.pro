@@ -1,3 +1,4 @@
+pro wlmake,dir,specfile=specfile
 ; analyze the dispersions in wlmeas.output and solve for global WL scales
 ; Fits are a function of ZO position, so ignore those w/ZO off image.
 ; HISTORY
@@ -7,6 +8,16 @@
 ;	--> Install new fits for b,m in wfc_wavecal, re-run prewfc, & iterate
 ;		this program to get proper sigmas for the lines.
 ;-
+if not keyword_set(specfile) then specfile = 'wlmeas.output'
+
+if n_elements(dir) eq 0 then begin
+    dir = ''
+endif else begin
+    if strmid(dir,0,1,/reverse) ne '/' then dir = dir + '/'
+endelse
+
+wlmeas_file = dir + specfile
+
 st=''
 red=[0,255,  0,  0,255] 		; see flxlim.pro for 6 saturated colors
 gre=[0,  0,255,  0,255]
@@ -24,9 +35,12 @@ wlvac=[	 [9070.0,  9070.0,  9071.4,  9070.5],			$
 	[12820.8, 12820.8, 12821.6, 12821.0],			$
 	[16413.2, 16414.0, 16412.1, 16412.7]]
 
-readcol,'wlmeas.output',file,star,grat,zxpos,zypos,order,x0,x1,x2,x3,x4,	$
-			x5,form='(a,a,a,f,f,i,f,f,f,f,f,f)'
-; estimate z-order posit when off image:??? 
+print,'Reading file ',wlmeas_file
+readcol,wlmeas_file,file,star,grat,zxpos,zypos,order,x0,x1,x2,x3,x4,x5,form='(a,a,a,f,f,i,f,f,f,f,f,f)'
+print,'gratings=',grat
+print,'zxpos=',zxpos
+print,'order=',order
+; estimate z-order posit when off image:???
 bad=where(zxpos eq 0.,nbad)
 ;for ibd=0,nbad-1,2 do begin ??????????		; always order 1,2 pairs
 
@@ -41,7 +55,12 @@ for igr=0,1 do begin
     for iord=-1,2 do begin
     	if iord eq 0 then goto,skip0
 ; ignore cases with w/ ZO off image, ie zxpos=0
+        print,'Testing Grating=',grsm(igr),' order=',iord
 		good=where(grat eq grsm(igr) and zxpos gt 0 and order eq iord,ngood)
+        if ngood le 0 then begin
+            print,"No good values for combination"
+            goto,skip0
+        endif
 		dofil=file(good)
 		dostr=star(good)
 		doord=order(good)
@@ -49,17 +68,26 @@ for igr=0,1 do begin
 		dozy=zypos(good)
 		dox1=x0(good)					; for dispersion
 		dox2=x2(good)
+		print,'ngood=',ngood,' nline=',nline
 		doxi=fltarr(ngood,nline)			; for rms calc
 		doxi(0,0)=x0(good)
 		doxi(0,1)=x1(good)
 		doxi(0,2)=x2(good)
 		indwl=igr+(abs(iord)-1)*2
+		print,'reflin is',wlvac(indwl,0)
 		reflin=fltarr(ngood)+wlvac(indwl,0)		; 9070 for g102
-		velall=fltarr(ngood)-71.			; radial veloc of vy2-2
+;		velall=fltarr(ngood)-71.			; radial veloc of vy2-2
+        velall=fltarr(ngood)-5.
 		gdhb12=where(strpos(dostr,'G111') gt 0,nhb12)
 		print,grsm(igr),nhb12,' HB12 obs w/ Vr=-5km/s'
 		if nhb12 gt 0 then velall(gdhb12)=-5.
+		print,"wlvac",wlvac(indwl,2)
+		print,"wlvac",wlvac(indwl,0)
+		print,"doord",doord
+		print,"first",(wlvac(indwl,2)-wlvac(indwl,0))*doord
+		print,"second",(1+velall/3e5)/(dox2-dox1)
 		disp=(wlvac(indwl,2)-wlvac(indwl,0))*doord*(1+velall/3e5)/(dox2-dox1)
+		print,"disp",disp
 		if igr eq 1 then begin  		    ; G141
 	    	dox1=x2(good)
 		    dox3=x3(good)			; G141 2nd order cutoff=13000
@@ -77,6 +105,8 @@ for igr=0,1 do begin
    	    	disp=(wlvac(indwl,4)-wlvac(indwl,2))*doord*(1+velall/3e5)/	$
 	    								(dox2-dox1)
 	    endif
+	    print,"velall",velall
+	    print,"vp1",(1+velall/3e5)
 		reflin=reflin*(1+velall/3e5)			; obs WL of ref. line
 ; Omit color plot. Not esp useful & would need to update the disp values.
 ;    for igd=0,ngood-1 do begin
@@ -97,7 +127,7 @@ for igr=0,1 do begin
 ;	where delpx=x-x0, b=b1+b2*x+b3*y  and similarly m=m1+...
 ;	and x0 is the z-order ref px location
 		xpx=indgen(1014)
-    
+
 		if igr eq 1 and iord eq 2 then begin	; no 16413A line in 2nd order
 			disp=disp3
 			dox2=dox3
@@ -106,13 +136,17 @@ for igr=0,1 do begin
 		good=where(dox1 gt 0 and dox2 gt 0,ngood)
 ; b3rd - third element of b array. First 2 are X,Y of z-order.
 ; b = lam - m*delx, lam is ref WL for 1st line. (Do not try to get ZO @ lam=0)
-		b3rd=reflin(good)*iord-disp(good)*(dox1(good)-dozx(good))	
+        print,"reflin",reflin(good)
+        print,"disp",disp(good)
+		b3rd=reflin(good)*iord-disp(good)*(dox1(good)-dozx(good))
+		print,"b3rd",b3rd
 		b=dblarr(ngood,3)
 		b(0,0)=dozx(good)
 		b(0,1)=dozy(good)
 		m=b					; m has same zx,zy positions
 		b(0,2)=b3rd
 		b=transpose(b)
+		print,"B!!!",b
 		bfit=sfit(b,1,/irr,max_deg=1,kx=bx)			; Y coef is 1st:
 		bval=bx(0)+bx(2)*506+bx(1)*506				; b at y=506
 ;	print,'b at 506,506=',bval
@@ -160,8 +194,8 @@ for igr=0,1 do begin
 	    				av,' #Obs=',ngood,form='(a,3f8.1,a,i3)'
 		    read,st
 	    endfor					; end ilin ref line loop
-	    
-	    
+
+
 ; ###change
 ;	goto,skip0
 ; check by comparing fitted and measured line positions:
