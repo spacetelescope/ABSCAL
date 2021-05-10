@@ -44,7 +44,9 @@ dependencies:
     - rebin
     - tox
     - sphinx
+    - sphinx_rtd_theme
+    - stsci_rtd_theme
 
-variables:
-  WFCREF: "/Users/york/Projects/abscal/ABSCAL/idl_code/ref/"
+#variables:
+#  WFC3_REF: "NEEDS TO BE A RELATIVE PATH"
 
