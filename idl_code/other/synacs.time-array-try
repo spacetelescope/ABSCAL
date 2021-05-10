@@ -1,0 +1,137 @@
+This version attempted to allow time to be an array but did not seem
+sensible, as the result countrate would then be the corresponding output
+array. However, countrate is already an array if multiple shifts are called for.
+
+function synacs,time,filt,cam,wav,flux,effwav,wfltr,integr,qe,plt=plt,shft=shft
+;+
+;
+; PURPOSE:
+;	Compute synthetic photometry for ACS filters
+;
+;	computed count rate = synacs(filt,cam,wav,flux)
+;
+; INPUT
+;	time - time as fractional year-- can be an array as of 2011may26
+;	filt - acs filter name. Scaler.
+;	cam - hrc, wfc, or sbc (no filter curves yet for sbc)
+;	wav - wavelength array of spectral flux distribution in ANG.
+;	flux - spectral flux distribution
+; OPTIONAL INPUT
+;	plt - keyword to make plots
+;	shft - keyword specifying shift of filter BP in Ang.
+;	qe - new QE vect defined on the current 3000(1700)-11000 WL scale 
+; OUTPUT
+;	the result of the function in counts/sec
+;	effwav - effective wavelength optional output (optional)
+;	wfltr - the wavelength vector for the integrand (optional)
+;	integr - the integrand for countrate (optional)
+; HISTORY
+;	05Feb23 - rcb  (cf. synphot.pro)
+;	07feb15 - add effective wavelength optional output
+;	07mar7  - allow vector shifts
+;	07mar8  - add wfltr,integr to output options for use in filtshft.pro
+;	11may19 - update for new thruputs w/ my 2007 QE included.
+;	11may19 -add time to input
+;-
+st=''
+;fil='~/acssens/dat/'+strupcase(cam+'_acs_'+filt)+'.dat'	;early thruputs
+fil77='~/acssens/dat/'+strlowcase(cam+'*'+filt+'_77')+'.dat'	; WFC
+fil='~/acssens/dat/'+strlowcase(cam+'*'+filt+'_81')+'.dat'
+ind=where(time lt 2006.5,n77)
+ind=where(time ge 2006.5,n81)
+if n81 eq 0 then fil=fil77
+if n77 gt 0 and n81 gt 0 then fil=[fil77,fil] 
+if cam eq 'hrc' then fil='~/acssens/dat/'+strlowcase(cam+'*'+filt)+'.dat'
+; Test in 2 steps: first using all -77C thruputs, then rm sidesw in stdphot
+;	& implement -81C thuputs here: Record results in doc.thruput
+
+for itemp=0,n_elements(fil)-1 do begin
+	readcol,fil(itemp),wfltr,tfltr,format='d,d'
+	if not keyword_set(shft) then shft=0
+	nshft=n_elements(shft)
+	countrate=fltarr(nshft)  &  effwav=countrate
+
+; check to see if a qe curve is specified
+	if n_elements(qe) gt 0 then begin
+
+  STOP 		; code below only for old pre-2007 thruputs
+
+		camlow=strlowcase(cam)
+		qefil='~/acssens/dat/acs_wfc_ccd1_017_syn.fits'
+		if camlow eq 'hrc' then qefil='~/acssens/dat/acs_hrc_ccd_011_syn.fits'
+		z=mrdfits(qefil,1,h)
+		wlqe=z.wavelength
+		qeorig=z.throughput
+		good=where(wlqe ge 3000-1300*(camlow eq 'hrc') and wlqe le 11000)
+		wlqe=wlqe(good)  &  qeorig=qeorig(good)
+		qeorig(n_elements(wlqe)-1)=1e-6			; fix 11000A zero
+		qechng=qe/qeorig
+		linterp,wlqe,qechng,wfltr,qerat
+		tfltr=tfltr*qerat
+		endif
+	
+; use WL of filter for integral & if wav does not cover wfltr, set missing=0
+	linterp,wav,flux,wfltr,fstar,missing=0
+
+;	A(OTA)=45,239 cm2 from ACS Instr Handbook 6.2.1
+;	hc=6.626e-27*3e18
+
+; 07Feb19 as i do NOT have 1A grid, do special test on 1A grid:-->same answers!
+;;w1=findgen(fix(max(wfltr)-wfltr[0]))+fix(wfltr(0))
+;;linterp,wfltr,tfltr,w1,t1
+;;linterp,wav,flux,w1,f1
+;;countrate=45239.*integral(w1,w1*f1*t1,w1(0),max(w1))/(6.626e-27*2.998e18)
+;;effwav=integral(w1,w1^2*f1*t1,w1(0),max(w1))/integral(w1,w1*f1*t1,w1(0),max(w1))
+;;print,'special test countrate & effwl=',countrate,effwav
+
+	worig=wfltr
+	for ishft=0,nshft-1 do begin
+  	  wfltr=worig+shft[ishft]
+; use WL of filter for integral & if wav does not cover wfltr, set missing=0
+	  linterp,wav,flux,wfltr,fstar,missing=0
+	  integr=wfltr*fstar*tfltr
+	  countrate[ishft]=45239.*integral(wfltr,wfltr*fstar*tfltr,wfltr(0),	$
+  			max(wfltr))/(6.626e-27*2.998e18)
+	  effwav[ishft]=integral(wfltr,wfltr^2*fstar*tfltr,wfltr(0),max(wfltr))/$
+		integral(wfltr,wfltr*fstar*tfltr,wfltr(0),max(wfltr))
+	  endfor
+	if nshft eq 1 then begin  &  effwav=effwav[0]  &  countrate=countrate[0]  &  end 
+	if keyword_set(plt) then begin
+	  pset
+	  !xtitle='WL (Ang)'
+	  !ytitle='FLUX & '+cam+' '+filt+' Throughput'
+	  good=where(tfltr ge .001)
+	  plot,wfltr(good),fstar(good)>0
+	  indx=where(tfltr eq max(tfltr))  &  indx=indx(0)
+	  oplot,wfltr,tfltr*max(fstar[good])/tfltr(indx),lines=1
+	  plotdate,'synacs'
+	  if !d.name eq 'X' then read,st
+	  endif
+
+; check to see if spectrum covers max of filter:
+	indx=where(tfltr eq max(tfltr))  &  indx=indx[0]
+	if wfltr[indx] le min(wav) or wfltr[indx] ge max(wav) then begin
+		print,'*synacs-WARNING***',filt,' Out of range. ***SYNACS e-/s set to -'
+		effwav=0
+		return,-countrate		; 07mar23 - lower lim to count rate
+		endif
+
+; check that the spectrum covers enough of the filter:
+	frst=ws(wfltr,wav(0))
+	last=ws(wfltr,max(wav))
+	if tfltr(frst) gt 0.055*max(tfltr) then begin		; for shifted F850LP
+	  print,'***synacs-WARNING***First wavelength of spec. too big:',  $
+							filt,wfltr(frst)
+	  effwav=0
+	  return,-countrate
+	  endif
+	if tfltr(last) gt 0.01*max(tfltr) then begin
+	  print,'***synacs-WARNING*** last wavelength of spec. too small:',$
+							filt,max(wav)
+	  stop
+	  return,-countrate
+	  endif
+	endfor			; end diff Thruput files for WFC
+	
+return,countrate
+end
