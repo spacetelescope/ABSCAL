@@ -1,5 +1,5 @@
-STIS and WFC3 calibration software converted from Ralph Bohlin's IDL code.
---------------------------------------------------------------------------
+Absolute Flux calibration software converted from Dr. Ralph Bohlin's IDL code.
+------------------------------------------------------------------------------
 
 .. image:: http://img.shields.io/badge/powered%20by-AstroPy-orange.svg?style=flat
     :target: http://www.astropy.org
