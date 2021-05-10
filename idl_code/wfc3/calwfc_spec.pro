@@ -359,7 +359,9 @@ if strpos(flatfile,'both') lt 0 then begin	; BOTH-g102&141 pkgd. together
 		flatfile=find_with_def('g102ffcube.fits','WFC3_REF') else $
 		flatfile=find_with_def('g141ffcube.fits','WFC3_REF')
 	fits_read,flatfile,coef3,hdr,exten=3		;only case w/ cubic fits
-	endif
+endif else begin
+    flatfile=find_with_def(flatfile,'WFC3_REF')
+endelse
 print,'FF file=',flatfile
 sedoff=0			;Susana has hdr in exten=0, coef0 in exten=1 etc
 if strpos(flatfile,'sed') ge 0 then sedoff=1

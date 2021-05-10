@@ -1,4 +1,4 @@
-pro wlmake,dir,specfile=specfile
+pro wlmake,dir,specfile=specfile,specdir=specdir
 ; analyze the dispersions in wlmeas.output and solve for global WL scales
 ; Fits are a function of ZO position, so ignore those w/ZO off image.
 ; HISTORY
@@ -9,6 +9,7 @@ pro wlmake,dir,specfile=specfile
 ;		this program to get proper sigmas for the lines.
 ;-
 if not keyword_set(specfile) then specfile = 'wlmeas.output'
+if not keyword_set(specdir) then specdir = 'spec'
 
 if n_elements(dir) eq 0 then begin
     dir = ''
@@ -17,6 +18,7 @@ endif else begin
 endelse
 
 wlmeas_file = dir + specfile
+spec_dir = dir + specdir
 
 st=''
 red=[0,255,  0,  0,255] 		; see flxlim.pro for 6 saturated colors
@@ -232,7 +234,7 @@ for igr=0,1 do begin
 			bval=bx(0)+bx(2)*dozx(indx)+bx(1)*dozy(indx)
 			mval=kx(0)+kx(2)*dozx(indx)+kx(1)*dozy(indx)
 			wnew=bval+mval*(xpx-dozx(indx))
-			z=mrdfits('spec/spec_'+dofil(indx)+'pn.fits',1,hd,/silent)
+			z=mrdfits(spec_dir+'/spec_'+dofil(indx)+'pn.fits',1,hd,/silent)
 			wl=z.wave
 			net=z.net
 			!mtitle=dostr(indx)+' '+grsm(igr)+' '+dofil(indx)+' order='+   $

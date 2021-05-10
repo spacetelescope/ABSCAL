@@ -114,7 +114,7 @@ help,i,obs(i)
 ;dir img aXe disp ref, not ZO. Change code to name 'axe' if redoing.
 ;		/dirimg							$
 ;		grism='g141'
- 		flatfile='ref/sedFFcube-both.fits',  		$;2018aprDEFAULT
+ 		flatfile='sedFFcube-both.fits',  		$;2018aprDEFAULT
 ;		flatfile='ref/ryanFFcube-both.fits', $
  		subdir=specdir						;default
 	help,i,obs(i)

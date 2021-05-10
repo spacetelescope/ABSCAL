@@ -30,7 +30,8 @@ wlair=[9068.6,9532.5,10830.,12818.1,16109.3,16407.2]
 wlvac=wlair  &  airtovac,wlvac
 
 ; Rest vac WLs= 9071.1 9535.1 10833.  12821.6 16113.7 16411.7
-ic5117_rudy=find_with_def('IC5117_rudy.txt','PNREF')
+ic5117_rudy=find_with_def('IC5117_rudy.txt','WFC3_PNREF')
+print,'ic5117_rudy: ',ic5117_rudy
 readcol,ic5117_rudy,wrudinput,frud	; IC5117-Rudy vac, no Vr corr
 
 ; NO airtovac wrud already vac---

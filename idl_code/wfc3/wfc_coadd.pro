@@ -120,7 +120,8 @@ st=''
 		if good(0) eq -1 then goto,next_ifilt
 ; ck if PN wavecal data:
 		obs=obs(good)  &  filter = filter(good)
-		pnposs=findfile('spec/*'+obs(0)+'*')
+		pnposs=findfile(subdir+'/*'+obs(0)+'*')
+		print,"pnposs",pnposs
 		good=where(strpos(pnposs,'pn.fits') gt 0,npn)
 		if npn gt 0 then star='pn'		
 
