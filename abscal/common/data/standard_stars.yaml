@@ -1,0 +1,403 @@
+# This is the list of standard stars that are understood by the abscal scripts
+# New stars can be added to the file quite easily. They need to be in the form:
+#
+#   - name: [main name you want the star to be known as]
+#     names:
+#     - [alternate names that might be used in FITS header TARGNAME field]
+#     - [one name per line]
+#     ra: [RA, in decimal degrees]
+#     pm_ra: [proper motion in RA, mas/yr]
+#     dec: [DEC, in decimal degrees]
+#     pm_dec: [proper motion in DEC, mas/yr]
+#     coord_epoch: [epoch in which RA and DEC are defined]
+#     coord_type: [coordinate type, e.g. icrs or fkm]
+#     planetary_nebula: [true if the target is a planetary nebula, false otherwise]
+#     radial_velocity: [radial velocity in km/s]
+#
+# Note that the order of fields doesn't actually matter (as you can see from the variety 
+# of orders below), and the order of stars only matters in the case of duplicates. If 
+# there are multiple stars with the same name, and you search for a star by name, then 
+# the *first* matching star will be returned. Similarly, if you search for a star by
+# sky co-ordinates, and there are two stars with the *exact* same distance to the 
+# co-ordinates you specified in your search, then the first will be returned. This should
+# never actually be an issue in practice.
+- name: GAIA587_3008
+  names:
+  - GAIA587_3008
+  ra: 223.75403
+  pm_ra: 0.0
+  dec: -60.215841
+  pm_dec: 0.0
+  coord_epoch: J2000
+  coord_type: icrs
+  planetary_nebula: false
+  radial_velocity: 0.0
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -59.1826
+  name: 6822HV
+  names:
+  - 6822HV
+  - 6822-HV
+  planetary_nebula: false
+  pm_dec: 3.51
+  pm_ra: -4.783
+  ra: 269.6278
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 22.0313
+  name: GD153
+  names:
+  - GD153
+  - GD-153
+  planetary_nebula: false
+  pm_dec: -202.953
+  pm_ra: -38.41
+  ra: 194.2597
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 15.887
+  name: GD71
+  names:
+  - GD71
+  - GD-71
+  planetary_nebula: false
+  pm_dec: -172.944
+  pm_ra: 76.841
+  ra: 88.1151
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 52.8311
+  name: G191B2B
+  names:
+  - 191B2B
+  - BD+52-913
+  - 191-B2B
+  - EGGR-247
+  planetary_nebula: false
+  pm_dec: -93.525
+  pm_ra: 12.592
+  ra: 76.3776
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 70.2854
+  name: GRW_70D5824
+  names:
+  - GRW_70D5824
+  - HIP66578
+  - HIP-66578
+  - EGGR-102
+  - 70D5824
+  planetary_nebula: false
+  pm_dec: -24.608
+  pm_ra: -402.093
+  ra: 204.7103
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 30.1462
+  name: P330E
+  names:
+  - P330E
+  - GSC-02581-02323
+  - 02581-02323
+  planetary_nebula: false
+  pm_dec: -38.768
+  pm_ra: -8.991
+  ra: 247.8909
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 66.7811
+  name: KF06T2
+  names:
+  - KF06T2
+  - J17583798+6646522
+  - J17583798
+  - 2MASS J17583798+6646522
+  - 2MASS-J17583798+6646522
+  planetary_nebula: false
+  pm_dec: -4.419
+  pm_ra: 0.62
+  ra: 269.6583
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -8.3946
+  name: VB8
+  names:
+  - VB8
+  - VB 8
+  - VB-8
+  - GJ644C
+  planetary_nebula: false
+  pm_dec: -870.611
+  pm_ra: -813.418
+  ra: 253.8969
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 60.7266
+  name: '1802271'
+  names:
+  - '1802271'
+  - '180227'
+  - 2MASS J18022716+6043356
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 270.6132
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 34.3148
+  name: WD1657_343
+  names:
+  - WD1657_343
+  - WD1657
+  - WD1657+343
+  planetary_nebula: false
+  pm_dec: -31.227
+  pm_ra: 8.766
+  ra: 254.713
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 44.715
+  name: HD116405
+  names:
+  - HD116405
+  - '116405'
+  planetary_nebula: false
+  pm_dec: -10.29
+  pm_ra: 8.008
+  ra: 200.688
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -27.3066
+  name: HD205905
+  names:
+  - HD205905
+  - '205905'
+  planetary_nebula: false
+  pm_dec: -83.962
+  pm_ra: 384.102
+  ra: 324.7923
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 29.2975
+  name: HD37725
+  names:
+  - HD37725
+  - '37725'
+  planetary_nebula: false
+  pm_dec: -26.928
+  pm_ra: 15.052
+  ra: 85.4765
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -24.4638
+  name: HD38949
+  names:
+  - HD38949
+  - '38949'
+  planetary_nebula: false
+  pm_dec: -35.423
+  pm_ra: -30.436
+  ra: 87.0836
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -50.5842
+  name: HD60753
+  names:
+  - HD60753
+  - '60753'
+  planetary_nebula: false
+  pm_dec: 5.31
+  pm_ra: -3.124
+  ra: 113.3638
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 37.5703
+  name: HD93521
+  names:
+  - HD93521
+  - '93521'
+  planetary_nebula: false
+  pm_dec: 1.717
+  pm_ra: 0.22
+  ra: 162.098
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 18.3528
+  name: 2M003618
+  names:
+  - 2M003618
+  - J00361
+  - LSPM J0036+1821
+  planetary_nebula: false
+  pm_dec: 124.019
+  pm_ra: 901.558
+  ra: 9.0671
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -14.0803
+  name: 2M055914
+  names:
+  - 2M055914
+  - J05591
+  - 2MASS J05591914-1404488
+  planetary_nebula: false
+  pm_dec: -337.592
+  pm_ra: 570.199
+  ra: 89.83
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 67.0613
+  name: '1757132'
+  names:
+  - '1757132'
+  - '17571'
+  - 2MASS J17571324+6703409
+  planetary_nebula: false
+  pm_dec: -14.027
+  pm_ra: 0.408
+  ra: 269.3051
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -31.3511
+  name: HD37962
+  names:
+  - HD37962
+  - '37962'
+  - LTT-2351
+  - LTT2351
+  planetary_nebula: false
+  pm_dec: -365.227
+  pm_ra: -59.648
+  ra: 85.2165
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 60.4308
+  name: BD60D1753
+  names:
+  - BD60D1753
+  - BD+60-1753
+  - BD +60 1753
+  planetary_nebula: false
+  pm_dec: 1.809
+  pm_ra: 3.981
+  ra: 261.2178
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 50.9086
+  name: '180347'
+  names:
+  - '180347'
+  - HD 180347
+  - HD180347
+  planetary_nebula: false
+  pm_dec: -25.239
+  pm_ra: 15.87
+  ra: 288.4116
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 64.177
+  name: HD180609
+  names:
+  - HD180609
+  - '180609'
+  planetary_nebula: false
+  pm_dec: -7.79
+  pm_ra: -3.059
+  ra: 288.1967
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 55.5716
+  name: SNAP2
+  names:
+  - SNAP2
+  - SNAP-2
+  - SNAP 2
+  - 2MASS J16194609+5534178
+  planetary_nebula: false
+  pm_dec: -10.952
+  pm_ra: -2.911
+  ra: 244.9421
+- coord_epoch: J2000
+  coord_type: gal
+  dec: -27.8635
+  name: C26202
+  names:
+  - C26202
+  - C 26202
+  - C-26202
+  - GOODS-S
+  - 2MASS J03323287-2751483
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 53.1368
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -51.781001
+  name: GAIA593_9680
+  names:
+  - GAIA593_9680
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 243.54954
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -58.453704
+  name: GAIA587_8560
+  names:
+  - GAIA587_8560
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 230.18496
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -54.522627
+  name: GAIA588_7712
+  names:
+  - GAIA588_7712
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 234.55682
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: -29.210493
+  name: GAIA405_6912
+  names:
+  - GAIA405_6912
+  planetary_nebula: false
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 267.32024
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 44.59652778
+  name: IC5117
+  names:
+  - IC5117
+  - IC-5117
+  - IC_5117
+  - IC 5117
+  planetary_nebula: true
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 323.12904167
+  radial_velocity: -25.8
+- coord_epoch: J2000
+  coord_type: icrs
+  dec: 9.89896083
+  name: VY22
+  names:
+  - VY22
+  - VY2-2
+  - VY2-2 copy
+  - PN VY 2-2
+  - VY 2-2
+  planetary_nebula: true
+  pm_dec: 0.0
+  pm_ra: 0.0
+  ra: 291.09266258
+  radial_velocity: -71.0
