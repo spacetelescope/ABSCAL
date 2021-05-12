@@ -1,8 +1,3 @@
-.. abscal documentation master file, created by
-   sphinx-quickstart on Fri May  7 18:53:43 2021.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
-
 ABSCAL Documentation
 ====================
 
@@ -24,6 +19,7 @@ described in `WFC3 ISR 2015-10 <https://www.stsci.edu/files/live/sites/www/files
   abscal_idl_code
   abscal_testing
   examples
+  autoapi/index
 
 Indices and tables
 ==================

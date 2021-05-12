@@ -177,8 +177,7 @@ def main(overrides={}):
     input_table = AbscalDataTable(table=res.table,
                                   duplicates=res.duplicates,
                                   search_str='',
-                                  search_dirs=res.paths,
-                                  idl=res.compat)
+                                  search_dirs=res.paths)
 
     output_table = cross_correlate(input_table, overrides, res)
     

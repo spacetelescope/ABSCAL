@@ -277,7 +277,7 @@ def parse_args():
     dup_help += "duplicates if they have the same ipppssoot). Valid values are "
     dup_help += "'both' (keep both), 'preserve' (keep first), 'replace' (keep "
     dup_help += "second), and 'neither' (delete both). Duplicates should only "
-    dup_help += "be an issue if an input table is specified."
+    dup_help += "be an issue if an input table is specified. Default: 'both'"
     dup_args = ['-d', '--duplicates']
     dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 'default': 'both'}
     additional_args['dup'] = (dup_args, dup_kwargs)

@@ -25,5 +25,9 @@ setup(
                         "photutils",
                        ],
     version = version_str,
+    scripts=['abscal/commands/wfc3_extract', 'abscal/commands/wfc3_setup',
+             'abscal/commands/wfc3_wave_find', 'abscal/commands/wfc3_wave_solve',
+             'abscal/idl_commands/prewfc', 'abscal/idl_commands/wfcdir',
+             'abscal/idl_commands/wlmake', 'abscal/idl_commands/wlmeas'],
     include_package_data=True
     )

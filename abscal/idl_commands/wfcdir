@@ -22,7 +22,7 @@ from abscal.wfc3.preprocess_table_create import main as do_create
 def main():
 
     overrides = {}
-#     overrides['compat'] = True
+    overrides['compat'] = True
 
     do_create(overrides=overrides)
 

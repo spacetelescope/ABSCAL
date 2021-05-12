@@ -6,30 +6,56 @@ intended to be imported by modules that are run from the command line.
 
 Authors
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    This module is intended to be imported for argument parsing.
-    ::
-        from abscal.common.args import parse
-        
-        description = "Description for the module"
-        default_out_file = "default_output_file_name.ext"
-        arg_list = []
-        arg = [{positional arguments to add_argument}, {keyword arguments same}]
-        arg_list.append(arg)
-        ...
-        res = parse(description, default_out_file, arg_list)
+
+This module is intended to be imported for argument parsing::
+
+    from abscal.common.args import parse
+
+    description = "Description of the sub-module defined in this file"
+    default_out_file = "default_output_file_name.ext"
+    arg_list = []
+    
+    # For each additional (non-common) argument that needs to be available for the
+    # sub-module, create a list where the first item is a list of the positional arguments
+    # to argparse.ArgumentParser.add_argument(), and the second item is a dictionary of
+    # the keyword arguments.
+    arg = [<positional arguments to add_argument>, <keyword arguments same>]
+    arg_list.append(arg)
+    ...
+    res = parse(description, default_out_file, arg_list)
 """
 
-import argparse
+import argparse, os
 
+def parse(description_str, default_out_file, arg_list, split_output=True):
+    """
+    Create an ArgumentParser, add in the common arguments that everything in ABSCAL uses 
+    (along with any custom arguments passed in), parse the provided arguments, and return 
+    the results object.
+    
+    Parameters
+    ----------
+    description_str : str
+        Description of the sub-module to be printed in --help
+    default_out_file : str
+        Name of the default output file produced by the sub-module
+    arg_list : list
+        List of custom arguments, consisting of tuples of (<fixed arguments list>,
+        <keyword argument dict>)
+    split_output : bool, default True
+        If multiple output files are created based on some characteristic, set this to 
+        True
+    
+    Returns
+    -------
+    res : populated namespace
+        Result of parsing all of the command-line arguments.
+    """
 
-__all__ = ['parse']
-
-
-def parse(description_str, default_out_file, arg_list):
     path_help = "A comma-separated list of input paths."
     
     in_help = "Optional additional input table file. If provided, the program "
@@ -37,18 +63,23 @@ def parse(description_str, default_out_file, arg_list):
     in_help += "exposures to the metadata table. See the duplicates flag for "
     in_help += "options on processing duplicate entries."
     
-    out_help = "Output metadata file. The default value is "
-    out_help += "{} ".format(default_out_file)
-    out_help += "where item is 'all' for all files, 'grism' for grism files "
-    out_help += "(and associated filter images), 'filter' is filter files, and "
-    out_help += "'scan' is all scan-mode files."
+    if split_output:
+        out_file, out_ext = os.path.splitext(default_out_file)
+        out_name = "{}_<item>{}".format(out_file, out_ext)
+        out_help = "Output metadata file. The default value is "
+        out_help += "{} where item is 'all' for all files, 'grism' for ".format(out_name)
+        out_help += "grism files (and associated filter images), 'filter' is filter "
+        out_help += "files, and 'scan' is all scan-mode files."
+    else:
+        out_name = default_out_file
+        out_help = "Output metadata file. The default value is {}.".format(out_name)
     
     spec_help = "Subdirectory where extracted and co-added spectra are stored. "
     spec_help += "The default value is 'spec'."
     
     compat_help = "Activate strict compatibility mode. In this mode, the "
-    compat_help += "script will produce output that is as close as possible to "
-    compat_help += "indistinguishable from the IDL code"
+    compat_help += "script will produce additional output that is as close as possible "
+    compat_help += "to indistinguishable from the IDL code. (default False)"
     
     force_help = "Force steps to run even if output already exists."
     

@@ -891,6 +891,7 @@ def reduce_stare(row, params, arg_list):
     """
     Reduces stare-mode grism data
     """
+    print(row)
     verbose = arg_list.verbose
     interactive = arg_list.trace
     bkg_flat_order = arg_list.bkg_flat_order
@@ -2159,7 +2160,7 @@ def additional_args():
                   'help': bkg_help}
     additional_args['bkg_flat_order'] = (bkg_args, bkg_kwargs)
 
-    trace_help = "Include result plots while running."
+    trace_help = "Include result plots while running (default False)."
     trace_args = ["-t", "--trace"]
     trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
                     'help': trace_help}
@@ -2206,8 +2207,7 @@ def main(overrides={}):
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates=parsed.duplicates,
                                   search_str='',
-                                  search_dirs=parsed.paths,
-                                  idl=parsed.compat)
+                                  search_dirs=parsed.paths)
 
     output_table = reduce(input_table, overrides, parsed)
 

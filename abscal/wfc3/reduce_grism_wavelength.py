@@ -803,12 +803,6 @@ def parse_args():
     default_output_file = 'wlmeastmp.log'
 
     args = additional_args()
-    # Add in extraction args because coadd can call extraction and thus may
-    #   need to supply arguments to it.
-    extracted_args = extract_args()
-    for key in extracted_args.keys():
-        if key not in args:
-            args[key] = extracted_args[key]
 
     res = parse(description_str, default_output_file, args)
 
@@ -839,8 +833,7 @@ def main(overrides={}, do_measure=True, do_make=True):
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates='both',
                                   search_str='',
-                                  search_dirs=parsed.paths,
-                                  idl=parsed.compat)
+                                  search_dirs=parsed.paths)
 
     measure_fname = parsed.out_file
     if do_measure:

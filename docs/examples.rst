@@ -18,7 +18,7 @@ from the following
 The first step is to construct a list of the exposures along with associated metadata. In
 order to do this, enter the command::
 
-    python ~/ABSCAL/abscal/commands/wfc3_setup.py -v "i*flt.fits"
+    python ~/ABSCAL/abscal/commands/wfc3_setup -v "i*flt.fits"
 
 The "-v" flag asks for verbose output, and the '"i*flt.fits"' template tells the script to
 build its table from all of the WFC3 flt files in the directory. The template is put in
@@ -34,7 +34,7 @@ column replaced by the actual path to the files).
 The next and final step is extracting the grism data and co-adding the grism exposures 
 taken with the same grism. To do this, enter the command::
 
-    python ~/ABSCAL/abscal/commands/wfc3_extract.py -fvdt dirtemp_grism.log
+    python ~/ABSCAL/abscal/commands/wfc3_extract -fvdt dirtemp_grism.log
 
 When run, the script produces a number of extracted spectra (found in the "spec" 
 directory), and an updated table named "dirirstare.log". The "-f" option tells the script
@@ -62,7 +62,7 @@ The first two steps are identical to the above example.
 After you have run those steps, the next step is to locate the centres of the emission 
 lines used for wavelength fitting. To do this, enter the command::
 
-    python ~/ABSCAL/abscal/commands/wfc3_wave_find_lines.py -fvt dirirstare.log
+    python ~/ABSCAL/abscal/commands/wfc3_wave_find_lines -fvt dirirstare.log
 
 When run, the script produces a table named "wlmeastmp.log". The "-f" option tells the
 script to generate output files even if they already exist, the "-v" option tells the
@@ -74,7 +74,7 @@ the few cases where a spurious fit is found), the output table should look like
 The next and final step is generating a wavelength solution fit over the whole detector.
 To do this, enter the command::
 
-    python ~/ABSCAL/abscal/commands/wfc3_wave_solve.py -fvt dirirstare.log
+    python ~/ABSCAL/abscal/commands/wfc3_wave_solve -fvt dirirstare.log
 
 When run, the script produces a table named "wlmeastmp_final.log". The options are the 
 same as for the previous step. The resulting output table should look like

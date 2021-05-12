@@ -252,8 +252,7 @@ def main(overrides={}):
     input_table = AbscalDataTable(table=parsed_args.table,
                                   duplicates=parsed_args.duplicates,
                                   search_str='',
-                                  search_dirs=parsed_args.paths,
-                                  idl=parsed_args.compat)
+                                  search_dirs=parsed_args.paths)
 
     output_table = locate_image(input_table, parsed_args.verbose)
     

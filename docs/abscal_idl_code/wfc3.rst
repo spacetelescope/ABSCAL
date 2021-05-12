@@ -3,10 +3,12 @@ ABSCAL WFC3 IDL Code
 
 This section describes running the IDL WFC3 flux calibration code.
 
+
 Setup Requirements
 ------------------
 
 In order to run the IDL code, the following setup steps must be taken:
+
 
 Environment Variables
 ~~~~~~~~~~~~~~~~~~~~~
@@ -16,6 +18,7 @@ Environment Variables
   repository.
 * **WFC3_REF** This should point to :code:`ABSCAL/idl_code/data/wfc3/ref`
 
+
 Directories
 ~~~~~~~~~~~
 
@@ -23,8 +26,10 @@ Create a directory containing the WFC3 FITS files that you want to extract and c
 Inside this directory, create a directory where the extracted spectra will be placed. The
 default name for this directory is "spec".
 
+
 Run Steps
 ---------
+
 
 Create Initial Data File (:code:`wfcdir`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -53,6 +58,7 @@ some name that starts with "dir" and has the extension ".log", but that no longe
 "temp". The canonical name is :code:`dirirstare.log` for non-scanned exposures, and
 :code:`dirirscan.log` for scan-mode exposures. If you already have a file created as the 
 output of :code:`wfcdir.pro`, append the lines that you're keeping to the existing file.
+
 
 Extract and Co-add Spectra (:code:`prewfc`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -91,6 +97,7 @@ spectra, named :code:`target-ipppss_coaddngrism.ps` (or
 :code:`targetpn-ipppss_coaddngrism.ps`), with the :code:`n` after "coadd" being the grism 
 order, and the remaining name aspects as above.
 
+
 Fit Planetary Nebula Emission Lines (:code:`wlmeas`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -117,6 +124,7 @@ X positions of the planetary nebula emission lines for all of the input files. A
 checking the file for any potential issues, it should be renamed to (or its data should be
 added to) a file named :code:`wlmeas.output`
 
+
 Create 2D detector Wavelength Map (:code:`wlmake`)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -135,6 +143,20 @@ data (defaults to current directory), and :code:`specfile` is the output file fr
 :code:`wlmeas.pro` script (defaults to :code:`wlmeas.output`). The script solves for a 
 2D wavelength solution over the full detector, and prints out fit and fit error 
 information to standard output. It produces no output files.
+
+
+References
+----------
+
+`Bohlin, R. C.; Deustua, S. E. 2019, AJ, 157, 229. "CALSPEC: WFC3 IR GRISM SPECTROSCOPY" <https://iopscience.iop.org/article/10.3847/1538-3881/ab1b50/meta>`_
+
+`Bohlin, R. C., Deustua, S. E., MacKenty, J. 2014, WFC3 ISR 2014-15 "Enabling Observations of Bright Stars with WFC3 IR Grisms" <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/wfc3/documentation/instrument-science-reports-isrs/_documents/2014/WFC3-2014-15.pdf>`_
+
+`Bohlin, R. C., Deustua, S. E., Pirzkal, N. 2015, WFC3 ISR 2015-10 "IR Grism Wavelength Solutions using the Zero Order Image as the Reference Point" <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/wfc3/documentation/instrument-science-reports-isrs/_documents/2015/WFC3-2015-10.pdf>`_
+
+
+Notes
+-----
 
 .. [#a] All of the scripts use a set of WFC3 grism exposures as their analysis target, so
    those files are assumed as inputs are will not be called out in any specific step.

@@ -718,7 +718,7 @@ def additional_args():
     table_kwargs = {'help': table_help}
     additional_args['table'] = (table_args, table_kwargs)
 
-    double_help = "Subsample output wavelength vector by a factor of 2."
+    double_help = "Subsample output wavelength vector by a factor of 2 (default False)."
     double_args = ["-d", "--double"]
     double_kwargs = {'help': double_help, 'default': False,
                      'action': 'store_true', 'dest': 'double'}
@@ -730,7 +730,7 @@ def additional_args():
                      'dest': 'prefix'}
     additional_args['prefix'] = (prefix_args, prefix_kwargs)
 
-    trace_help = "Include result plots while running."
+    trace_help = "Include result plots while running (default False)."
     trace_args = ["-t", "--trace"]
     trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
                     'help': trace_help}
@@ -783,8 +783,7 @@ def main(overrides={}):
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates='both',
                                   search_str='',
-                                  search_dirs=parsed.paths,
-                                  idl=parsed.compat)
+                                  search_dirs=parsed.paths)
 
     output_table = coadd(input_table, parsed, overrides)
 
