@@ -1,28 +1,57 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in
-that table by program and visit, and then:
-    - coadds together all exposures that have the same program/visit/star
+Extract and co-add a group of WFC3 grism spectra.
+
+This submodule
+
+- Takes an input exposure table (from `preprocess_table_create`)
+- Groups the exposures by grating
+- Finds and extracts the standard star spectrum from each exposure
+- Groups the extracted spectra by program and visit
+- Co-adds together each group
+
+While it can produce substantial output, both in logging and plots, it can also run 
+without user intervention. User intervention is only asked for in choosing the best 
+centroid fit for the zeroth order image.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files
-    for flux calibration).
-    ::
-        python coadd_grism.py <input_file>
+This module can be run from the command line (although one of the `abscal.commands` or 
+`abscal.idl_commands` scripts would be preferred for that), but is mostly intended to be 
+imported, either by binary scripts or for use from within python::
 
-Dependencies
-------------
-    - ``astropy``
+    from abscal.wfc3.reduce_grism_coadd import coadd
+    
+    output_table = coadd(input_table, command_line_arg_namespace, override_dict)
+
+The override dict allows for many of the default input parameters to be overriden (as 
+defaults -- individual per-exposure overrides defined in the data files will still take 
+priority). Parameters that can be overriden in coadd are:
+
+width: default 22
+    The width (in pixels) of the cross-correlation search region
+wbeg: default 7500 (G102), 10000 (G141)
+    The lowest valid wavelength
+wend: default 11800 (G102), 17500 (G141)
+    The highest valid wavelength
+regbeg_m1: default -13500 (G102), -19000 (G141)
+    The start of the -1st spectral order region
+regend_m1: default -3800 (G102), -5100 (G141)
+    The end of the -1st spectral order region
+regbeg_p1: default -3800 (G102), -5100 (G141)
+    The start of the 1st spectral order region
+regend_p1: default 13500 (G102), 19000 (G141)
+    The end of the 1st spectral order region
+regbeg_p2: default 13500 (G102), 19000 (G141)
+    The start of the 2nd spectral order region
+regend_p2: default 27000 (G102), 38000 (G141)
+    The end of the 2nd spectral order region
 """
-
-__all__ = ['coadd']
 
 import datetime
 import glob
@@ -47,28 +76,38 @@ from abscal.wfc3.reduce_grism_extract import additional_args as extract_args
 from abscal.wfc3.util_grism_cross_correlate import cross_correlate
 
 
-def unique_obsets(table):
-    """
-    Take an ExposureTable, get its 'root' column, get the first six characters
-    of that column, and return a set of all obsets (program/visit).
-
-    Parameters
-    ----------
-    table : abscal.common.exposure_data_table.AbscalDataTable
-        The table to be checked.
-
-    Returns
-    -------
-    obsets : list of str
-        unique obsets.
-    """
-    unique_roots = set(table['obset'])
-    return list(unique_roots)
-
-
 def coadd(input_table, arg_list, overrides={}):
     """
     Co-adds grism data
+    
+    Takes the input table, and 
+    
+    - filters out the grism exposures, then for each
+    
+        - looks for an extracted spectrum
+        - if none is found, call reduce_grism_extract to make one
+    
+    - groups the grism exposures by program/visit/grism, then for each group
+    
+        - co-adds the spectra in that group
+        - creates a FITS file (and an ASCII table) for each co-added spectrum
+    
+    - writes out a new version of the input table with updated values (if any)
+    
+    Parameters
+    ----------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        The initial table of exposures
+    arg_list : namespace
+        The command-line argument values that might affect behaviour
+    overrides : dict
+        A dictionary of overrides to the default command-line arguments and to the default 
+        co-add parameters.
+    
+    Returns
+    -------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        The updated table of exposures
     """
     task = "coadd"
     verbose = arg_list.verbose
@@ -91,7 +130,7 @@ def coadd(input_table, arg_list, overrides={}):
     if "coadd_grism" in known_issues:
         issues = known_issues["coadd_grism"]
 
-    unique_obs = unique_obsets(input_table)
+    unique_obs = list(set(input_table['obset']))
 
     extract = False
     out_dir, out_table = os.path.split(arg_list.out_file)
@@ -108,7 +147,7 @@ def coadd(input_table, arg_list, overrides={}):
     if extract:
         if verbose:
             print("{}: Extracting missing spectra.".format(task))
-        input_table = reduce(input_table, overrides, arg_list)
+        input_table = reduce(input_table, arg_list, overrides)
         if verbose:
             print("{}: Finished extraction.".format(task))
 
@@ -707,8 +746,15 @@ def coadd(input_table, arg_list, overrides={}):
 
 def additional_args():
     """
-    Additional command-line arguments. Used when a single command may run
-    another command, and need to add arguments from it.
+    Additional command-line arguments. 
+    
+    Provides additional command-line arguments that are unique to the co-add process.
+    
+    Returns
+    -------
+    additional_args : dict
+        Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
+        parser to create a new command-line option
     """
 
     additional_args = {}
@@ -742,6 +788,14 @@ def additional_args():
 def parse_args():
     """
     Parse command-line arguments.
+    
+    Gets the custom arguments from co-add and extract, and passes them to the joint 
+    command-line option function.
+    
+    Returns
+    -------
+    res : namespace
+        parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
     default_output_file = 'dirirstare.log'
@@ -774,6 +828,17 @@ def parse_args():
 
 
 def main(overrides={}):
+    """
+    Run the coadd function.
+    
+    Runs the co-add function if called from the command line, with command-line arguments 
+    added in.
+    
+    Parameters
+    ----------
+    overrides : dict
+        Dictionary of parameters to override when running.
+    """
     parsed = parse_args()
 
     for key in overrides:

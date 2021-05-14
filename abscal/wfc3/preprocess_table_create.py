@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 """
 This module takes a file path and file type specification that matches to one
-or more WFC3 imaging files. In general, these files should be observations of
+or more WFC3 exposures. In general, these files should be observations of
 WFC3 standard stars. The module will open these files, retrieve information from
 their headers, and produce an output table of these files. 
 
@@ -16,23 +16,35 @@ path.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files 
-    for flux calibration).
-    ::
-        python wfcdir.py <file_path>
+This module is intended to be either run from the command line or used by
+other module code as the first step (creating an annotated list of files 
+for flux calibration)::
 
-Dependencies
-------------
-    - ``astropy``
+    python preprocess_table_create.py
+
+Alternately there are a set of python scripts placed in your path by setup.py that will
+import and call this module. The general command is::
+
+    wfc3_setup
+
+whilst the IDL version is::
+
+    wfcdir
+
+If you use this module from within python, it is recommended to import the 
+`populate_table()` function (if you need any custom table values, you can either pass in 
+an AbscalDataTable directly or pass in keyword parameters that will, in turn, be passed 
+along to the table creation)::
+
+    from abscal.wfc3 import populate_table
+    
+    output_table = populate_table(some_arguments=some_values)
 """
-
-__all__ = ['create_table']
 
 import datetime
 import glob
@@ -47,11 +59,13 @@ from copy import deepcopy
 
 from abscal.common.args import parse
 from abscal.common.exposure_data_table import AbscalDataTable
-from abscal.common.standard_stars import starlist, find_standard_star_by_name
+from abscal.common.standard_stars import find_star_by_name, find_closest_star
 from abscal.common.utils import absdate
 
 def get_target_name(header):
     """
+    Find the canonical target name.
+    
     Return a standardized target name despite any inconsistencies in target
     naming by different PIs. For now, use the existing wfcdir.pro checks to
     make a standard target name. In the future, potentially use RA and DEC to
@@ -61,10 +75,12 @@ def get_target_name(header):
     ----------
     header : astropy.io.fits header
         The header containing target information. In this header, the keys
-            targname (target name)
-            ra_targ (target RA)
-            dec_targ (target DEC)
-            sclamp (active lamp)
+        
+        - targname (target name)
+        - ra_targ (target RA)
+        - dec_targ (target DEC)
+        -  sclamp (active lamp)
+        
         are (or may be) used by the function.
     
     Returns
@@ -77,48 +93,44 @@ def get_target_name(header):
     dec = header['DEC_TARG']
     lamp = header.get('SCLAMP', None)
 
-    name = None
-    for star in starlist:
-        if targname == star['name']:
-            name = star['name']
-        for star_name in star['names']:
-            if star_name in targname:
-                name = star['name']
-        if abs(ra - star['ra']) < 0.01 and abs(dec - star['dec']) < 0.01:
-            name = star['name']
-        if name is not None:
-            break
-    
-    if name is None:
-        if "NONE" in targname:
-            if lamp is not None:
-                name = lamp
-            else:
-                name = "LAMP"
-        else:
-            name = targname
-    
-    return name
+    star = find_star_by_name(targname)
+    if star is not None:
+        return star['name']
+    star = find_closest_star(ra, dec, max_distance=0.01)
+    if star is not None:
+        return star['name']
+    if "NONE" in targname:
+        if sclamp is not None:
+            return sclamp
+        return "LAMP"
+    return targname
 
 
-def populate_table(data_table, **kwargs):
+def populate_table(data_table=None, overrides={}, **kwargs):
     """
+    Search a directory and produce a table of exposures.
+    
     Uses glob to search all directories in the table's `search_dirs` array for
     files matching the table's `search_str` template, and adds rows to the table
     containing metadata based on the files that were found.
     
     Parameters
     ----------
-    data_table : abscal.common.exposure_data_table.AbscalDataTable
+    data_table : abscal.common.exposure_data_table.AbscalDataTable, default None
         The table (which may contain existing data) to which the new data should
         be added.
     kwargs : dict
         A dictionary of optional keywords. Currently checked keywords are:
-            verbose : bool
-                Flag to indicate whether or not the program should print out 
-                informative text whilst running.
-            compat : bool
-                Whether to operate in strict IDL compatibility mode
+        
+        verbose : bool
+            Flag to indicate whether or not the program should print out 
+            informative text whilst running.
+        compat : bool
+            Whether to operate in strict IDL compatibility mode
+        
+    If data_table is None, a new table will be created in the function. In that case, the 
+    kwargs dict will be passed to that table, so any table-creation keywords will be sent 
+    through.
     
     Returns
     -------
@@ -126,6 +138,9 @@ def populate_table(data_table, **kwargs):
         A table containing an entry for each input file and necessary metadata
         obtained from the FITS header of that file.
     """
+    if data_table is None:
+        data_table = AbscalDataTable(**kwargs)
+    
     paths = data_table.search_dirs
     file_template = data_table.search_str
     idl_strict = kwargs.get('compat', False)
@@ -180,6 +195,8 @@ def populate_table(data_table, **kwargs):
                     file_metadata['crval2'] = fits_file[1].header["CRVAL2"]
                     file_metadata['aperture'] = phdr['aperture']
                     file_metadata['proposal'] = phdr["proposid"]
+                    ra = phdr['RA_TARG']
+                    dec = phdr['DEC_TARG']
                     
                     spt_file_name = base_name.replace(file_ext, 'spt')
                     spt_file = os.path.join(file_path, spt_file_name)
@@ -208,7 +225,10 @@ def populate_table(data_table, **kwargs):
                 
                 loc = "ASSEMBLING WRITE DATA"
                 new_target = (file_metadata['target'], 'Updated by wfcdir.py')
-                standard_star = find_standard_star_by_name(new_target[0])
+                standard_star = find_star_by_name(new_target[0])
+                if standard_star is None:
+                    # Try by distance
+                    standard_star = find_closest_star(ra, dec, max_distance=1.)
                 if standard_star is not None:
                     file_metadata['planetary_nebula'] = standard_star['planetary_nebula']
                     epoch_ra = standard_star['ra']
@@ -264,15 +284,25 @@ def populate_table(data_table, **kwargs):
     data_table.sort(['root'])
     return data_table
 
-def parse_args():
+def additional_args():
     """
-    Parse command-line arguments.
-    """
-    additional_args = {}
+    Adds process-specific command-line arguments.
     
-    description_str = "Build metadata table from input files."
-    default_output_file = 'dirtemp.log'
+    This function generates arguments (in a form understandable by 
+    abscal.common.args.parse) to handle items unique to table creation.
 
+    - How duplicate entries should be handled (important because this is process is the 
+      one that adds new entries to a table)
+    - The search template
+    
+    Returns
+    -------
+    args : dict
+        Dictionary of tuples of arguments for building a module command-line argument 
+        list.
+    """
+    args = {}
+    
     dup_help = "How to handle duplicate entries (entries defined as "
     dup_help += "duplicates if they have the same ipppssoot). Valid values are "
     dup_help += "'both' (keep both), 'preserve' (keep first), 'replace' (keep "
@@ -280,7 +310,7 @@ def parse_args():
     dup_help += "be an issue if an input table is specified. Default: 'both'"
     dup_args = ['-d', '--duplicates']
     dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 'default': 'both'}
-    additional_args['dup'] = (dup_args, dup_kwargs)
+    args['duplicates'] = (dup_args, dup_kwargs)
     
     template_help = "The file template to match, or the path to search "
     template_help += "and the file template to match within that directory. "
@@ -289,8 +319,24 @@ def parse_args():
     template_help += "each input path."
     template_args = ['template']
     template_kwargs = {'help': template_help}
-    additional_args['template'] = (template_args, template_kwargs)
+    args['template'] = (template_args, template_kwargs)
     
+    return args
+
+def parse_args():
+    """
+    Parse command-line arguments.
+        
+    Returns
+    -------
+    res : namespace
+        A namespace populated by the command-line arguments.
+    """    
+    description_str = "Build metadata table from input files."
+    default_output_file = 'dirtemp.log'
+
+    additional_args = additional_args()
+
     res = parse(description_str, default_output_file, additional_args)
     
     if res.paths is not None: 
@@ -316,6 +362,21 @@ def parse_args():
 
 
 def main(overrides={}):
+    """
+    Run the process.
+    
+    This function is called if the script is run directly (i.e. __name__ == "__main__"), 
+    and is also imported by the binary command scripts as a way to run this process as a 
+    standalone application.
+    
+    Parameters
+    ----------
+    overrides : dict
+        Contains keys named after keyword parameters (whether command-line arguments or 
+        parameters used by table creation) that will override whatever value is set there.
+        Note that specific exposure-specific values from data files will still override
+        values specified here.
+    """
 
     res = parse_args()
     
@@ -329,7 +390,8 @@ def main(overrides={}):
                             idl_mode=res.compat,
                             duplicates=res.duplicates)
     
-    table = populate_table(table, verbose=res.verbose, compat=res.compat)
+    table = populate_table(data_table=table, verbose=res.verbose, compat=res.compat,
+                           overrides=overrides)
     
     base_file, file_ext = os.path.splitext(res.out_file)
     

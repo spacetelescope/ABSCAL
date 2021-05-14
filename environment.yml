@@ -46,7 +46,7 @@ dependencies:
     - sphinx
     - sphinx_rtd_theme
     - stsci_rtd_theme
-    - sphinx_automodapi
+    - sphinx_autoapi
     - pyyaml
 
 #variables:

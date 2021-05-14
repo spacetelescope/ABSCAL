@@ -1,29 +1,34 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in 
-that table by program and visit, and then:
-    - calibrates each exposue
-    - coadds together all exposures that have the same program/visit/star
+This file takes two input spectra and determines the best cross-correlation between them.
+It uses a correlation algorithm developed by Ralph Bohlin.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files 
-    for flux calibration).
-    ::
-        python coadd_grism.py <input_file>
+This file is intended to be called from `reduce_grism_coadd.py`, although it can be 
+used by direct import::
 
-Dependencies
-------------
-    - ``astropy``
+    from abscal.wfc3.util_grism_cross_correlate import cross_correlate
+    
+    offset, correlation_matrix = cross_correlate(spec1, spec2, table_row, args, overrides)
+
+The following parameters can be set via the overrides dict:
+
+ishift: int, default 0
+    Approximate initial shift. The correlation search will start here.
+width: int, default 15
+    Size (in pixels) of the correlation search region
+i1: int, default 0
+    First pixel of the spectrum to use in correlation search
+i2: int, default -1
+    Last pixel of the spectrum to use in correlation search. Negative values are counting 
+    from the end of the array, as per python convention.
 """
-
-__all__ = ['coadd']
 
 import datetime
 import glob
@@ -45,7 +50,27 @@ from abscal.common.exposure_data_table import AbscalDataTable
 
 def cross_correlate(s1, s2, row, arg_list, overrides={}):
     """
-    Reduces and co-adds grism data
+    Cross-correlates two spectra.
+    
+    Parameters
+    ----------
+    s1 : numpy.ndarray
+        First spectrum
+    s2 : numpy.ndarray
+        Second spectrum
+    row : astropy.table.Table
+        Single-element table with metadata on s1
+    arg_list : namespace
+        Command-line argument namespace
+    overrides : dict
+        Potential overrides to cross-correlation parameters
+        
+    Returns
+    -------
+    offset : float
+        Best found pixel offset
+    corr : np.ndarray
+        Correlation matrix
     """
     verbose = arg_list.verbose
     interactive = arg_list.trace
@@ -132,58 +157,3 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
         print("{}: numpy offset calculated as {}.".format(preamble, np_offset))
     
     return offset, corr
-
-
-def parse_args():
-    """
-    Parse command-line arguments.
-    """
-    description_str = 'Process files from metadata table.'
-    default_output_file = 'ir_image_stare_location.log'
-    
-    table_help = "The input metadata table to use."
-   
-    table_args = ['table']
-    table_kwargs = {'help': table_help}
-    
-    additional_args = [(table_args, table_kwargs)]
-    
-    res = parse(description_str, default_output_file, additional_args)
-    
-    if res.paths is not None: 
-        if "," in res.paths:
-            res.paths = res.paths.split(",")
-        else:
-            res.paths = [res.paths]
-    else:
-        res.paths = []
-    
-    if res.table is None:
-        res.table = "dirtemp.log"
-    
-    if len(res.paths) == 0:
-        res.paths.append(os.getcwd())
-    
-    return res
-
-
-def main(overrides={}):
-    res = parse_args()
-    
-    for key in overrides:
-        if hasattr(res, key):
-            setattr(res, key, overrides[key])
-    
-    input_table = AbscalDataTable(table=res.table,
-                                  duplicates=res.duplicates,
-                                  search_str='',
-                                  search_dirs=res.paths)
-
-    output_table = cross_correlate(input_table, overrides, res)
-    
-    table_fname = res.out_file
-    output_table.write_to_file(table_fname, res.compat)
-
-
-if __name__ == "__main__":
-    main()

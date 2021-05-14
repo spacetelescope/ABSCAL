@@ -1,29 +1,36 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in 
-that table by program and visit, and then:
-    - calibrates each exposue
-    - coadds together all exposures that have the same program/visit/star
+This file takes an input metadata table and loops through the rows. For every imaging 
+exposure, it uses the target location and observation wcs to determine the expected 
+location of the target on the detector, and then runs a centroid algorithm to find the 
+actual location.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files 
-    for flux calibration).
-    ::
-        python coadd_grism.py <input_file>
+This file is intended ot be called from `reduce_grism_extract.py`, although it can be 
+used by direct import::
 
-Dependencies
-------------
-    - ``astropy``
+    from abscal.wfc3.util_filter_locate_image import locate_image
+    
+    output_table = locate_image(input_table, verbose, show_trace)
+
+The function takes a table of exposure data, loops through the rows, and finds a source 
+location in each image that is within 30 pixels of the location pointed to by the target 
+location and image WCS values.
 """
 
-__all__ = ['coadd']
+# *****TODO*****
+#   The following parameters could be moved into defaults (with overrides)
+#       - xstar
+#       - ystar
+#       - image outer edge regions (lines 120-124) Sizes seem arbitrary?
+#       - initial search region size (lines 161-165). 35 pixels again arbitrary?
+#       - sub-image size around max flux point (lines 182-185) img[-10:22,-10:22] odd.
 
 import datetime
 import glob
@@ -46,9 +53,30 @@ from abscal.common.utils import get_data_file, set_param
 from abscal.common.exposure_data_table import AbscalDataTable
 
 
-def locate_image(input_table, verbose=False, interactive=False):
+def locate_image(input_table, verbose=False, show_trace=False):
     """
-    Reduces and co-adds grism data
+    Locate the target image in a table of exposures
+    
+    This function uses the image WCS and target co-ordinates to determine the theoretical 
+    target location on the detector, and then uses a centroiding search function to find 
+    the actual location.
+    
+    Parameters
+    ----------
+    input_table : astropy.table.Table
+        Input exposure table. Must have columns named
+        
+        - root
+        - target
+        - filter
+        - use 
+        - crval1
+        - crval2
+    
+    verbose : bool (default False)
+        Print diagnostic output
+    show_trace : bool (default False)
+        Display plot of calculated target location.
     """
     task = "locate_image"
     if verbose:
@@ -104,7 +132,7 @@ def locate_image(input_table, verbose=False, interactive=False):
                 if verbose:
                     msg = "{}: {} has image astrometry position ({},{})"
                     print(msg.format(task, root, xastr, yastr))
-                if interactive:
+                if show_trace:
                     fig = plt.figure()
                     ax = fig.add_subplot(111)
                     targ_str = "{} - {} ({})".format(root, target, filter)
@@ -207,58 +235,3 @@ def locate_image(input_table, verbose=False, interactive=False):
             print(msg.format(task, root, row['notes']))
     
     return input_table
-
-
-def parse_args():
-    """
-    Parse command-line arguments.
-    """
-    description_str = 'Process files from metadata table.'
-    default_output_file = 'ir_image_stare_location.log'
-    
-    table_help = "The input metadata table to use."
-   
-    table_args = ['table']
-    table_kwargs = {'help': table_help}
-    
-    additional_args = [(table_args, table_kwargs)]
-    
-    res = parse(description_str, default_output_file, additional_args)
-    
-    if res.paths is not None: 
-        if "," in res.paths:
-            res.paths = res.paths.split(",")
-        else:
-            res.paths = [res.paths]
-    else:
-        res.paths = []
-    
-    if res.table is None:
-        res.table = "dirtemp.log"
-    
-    if len(res.paths) == 0:
-        res.paths.append(os.getcwd())
-    
-    return res
-
-
-def main(overrides={}):
-    res = parse_args()
-    
-    for key in overrides:
-        if hasattr(res, key):
-            setattr(res, key, overrides[key])
-    
-    input_table = AbscalDataTable(table=parsed_args.table,
-                                  duplicates=parsed_args.duplicates,
-                                  search_str='',
-                                  search_dirs=parsed_args.paths)
-
-    output_table = locate_image(input_table, parsed_args.verbose)
-    
-    table_fname = res.out_file
-    output_table.write_to_file(table_fname, res.compat)
-
-
-if __name__ == "__main__":
-    main()

@@ -1,0 +1,107 @@
+#! /usr/bin/env python
+"""
+This file acts as an interface all of the WFC3 scripts, running them in order:
+
+- preprocess_table_create
+- reduce_grism_coadd
+- reduce_grism_wavelength
+
+Author
+-------
+- Brian York
+
+Use
+---
+This file is intended to be run from the command line::
+
+    wfc3_all [options] <template>
+"""
+
+from abscal.wfc3.preprocess_table_create import preprocess_table_create
+from abscal.wfc3.preprocess_table_create import additional_args as preprocess_args
+from abscal.wfc3.reduce_grism_coadd import coadd
+from abscal.wfc3.reduce_grism_coadd import additional_args as coadd_args
+from abscal.wfc3.reduce_grism_wavelength import wlmeas, wlmake
+from abscal.wfc3.reduce_grism_wavelength import additional_args as wl_args
+
+from abscal.common.args import parse
+
+def parse_args():
+    """
+    Parse command-line arguments.
+    
+    Gets arguments from all of the input scripts, combines together all of the unique
+    arguments, and sends them to the argument parser.
+        
+    Returns
+    -------
+    res : namespace
+        A namespace populated by the command-line arguments.
+    """    
+    description_str = "Run all WFC3 Scripts."
+    default_output_file = 'wl_solution.log'
+    excluded_keys = [
+                        "table" # script controls intermediate file names
+                    ]
+
+    additional_args {}
+    for func in preprocess_args, coadd_args, extract_args, wl_args:
+        args = func()
+        for key in args.keys()
+            if key not in additional_args and key not in excluded_keys:
+                additional_args[key] = args[key]
+
+    res = parse(description_str, default_output_file, additional_args)
+    
+    if res.paths is not None: 
+        if "," in res.paths:
+            res.paths = res.paths.split(",")
+        else:
+            res.paths = [res.paths]
+    else:
+        res.paths = []
+    
+    if res.template is None:
+        res.template = "i*flt.fits"
+    
+    if os.path.sep in res.template and len(res.paths) == 0:
+        (template_path, template_value) = os.path.split(res.template)
+        res.paths.append(template_path)
+        res.template = template_value
+    
+    if len(res.paths) == 0:
+        res.paths.append(os.getcwd())
+    
+    return res
+
+
+def main():
+    """
+    Runs when the script is invoked.
+    
+    Runs table creation, extraction, co-adding, wavelength fitting, and wavelength 
+    solution finding in order, feeding the output of one into the input of the next.
+    """
+
+    res = parse_args()
+    
+    # Make the list of grism exposures
+    exposure_table = preprocess_table_create(**vars(res))
+    exposure_table = exposure_table.filtered_copy(["stare", "grism"])
+    exposure_table.write_to_file("dirirstare_grism.log", res.compat)
+
+    # Extract and co-add the spectra    
+    coadd_table = coadd(exposure_table, res, **vars(res))
+    coadd_table.write_to_file("dirirstare_coadd.log", res.compat)
+    
+    # Fit wavelengths of planetary nebulae
+    wave_fit_table = wlmeas(coadd_table, res, **vars(res))
+    wave_fit_table.write("wlmeas.log", format='ascii.ipac')
+    
+    # Derive wavelength solution
+    wave_solution_table = wlmake(wave_fit_table, coadd_table, res, **vars(res))
+    wave_solution_table.write("wlmeas_solution.log", format='ascii.ipac')
+
+
+if __name__ == "__main__":
+    main()

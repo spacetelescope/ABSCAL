@@ -1,7 +1,11 @@
 from setuptools import setup
 from setuptools import find_packages
 
+import glob
 import os
+
+main_scripts = glob.glob("abscal/commands/*")
+idl_scripts = glob.glob("abscal/idl_commands/*")
 
 file_dir = os.path.abspath(__file__)
 version_str = '0.0.dev7'
@@ -25,9 +29,6 @@ setup(
                         "photutils",
                        ],
     version = version_str,
-    scripts=['abscal/commands/wfc3_extract', 'abscal/commands/wfc3_setup',
-             'abscal/commands/wfc3_wave_find', 'abscal/commands/wfc3_wave_solve',
-             'abscal/idl_commands/prewfc', 'abscal/idl_commands/wfcdir',
-             'abscal/idl_commands/wlmake', 'abscal/idl_commands/wlmeas'],
+    scripts=main_scripts+idl_scripts,
     include_package_data=True
     )

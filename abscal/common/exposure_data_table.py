@@ -43,8 +43,6 @@ from copy import deepcopy
 from datetime import datetime as dt
 from pathlib import Path
 
-from abscal.common.standard_stars import starlist, find_standard_star_by_name
-
 
 def scan_rate_formatter(scan_rate):
     """

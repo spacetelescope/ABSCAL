@@ -1,28 +1,48 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in
-that table by program and visit, and then:
-    - coadds together all exposures that have the same program/visit/star
+This module takes a table of exposures, finds all exposures tagged as planetary nebula 
+exposures, and:
+
+- For each grism
+    - For each spectral order
+        - For each file
+            - Determines which emission lines fall in that order of that file
+            - Attempts to automatically fit the line location
+            - Allows the user to override the result of the automatic fit
+            - Records the resulting fit location and status (good/bad/custom/etc.)
+
+The module then saves a table of the results.
+
+In addition, the module can take the result table above and use it to derive an overall 
+wavelength fit for each grism/order value of the inputs, and produce yet another output 
+table given the results of that fit.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files
-    for flux calibration).
-    ::
-        python coadd_grism.py <input_file>
+This module can be run from the command line (although one of the `abscal.commands` or 
+`abscal.idl_commands` scripts would be preferred for that), but is mostly intended to be 
+imported, either by binary scripts or for use from within python::
 
-Dependencies
-------------
-    - ``astropy``
+    from abscal.wfc3.reduce_grism_wavelength import wlmeas, wlmake
+    
+    interim_table = wlmeas(input_table, command_line_arg_namespace, override_dict)
+    final_table = wlmake(input_table, interim_table, command_line_arg_namespace, override_dict)
+
+The override dict allows for many of the default input parameters to be overriden (as 
+defaults -- individual per-exposure overrides defined in the data files will still take 
+priority). There are currently no default parameters that can be overriden in this module.
 """
 
-__all__ = ['wlprocess']
+# *****TODO*****
+#   The following things could potentially be overridable parameters:
+#       - wlmeas
+#           - search region size around emission line
+#           - order wavelength search ranges (wrang)
 
 import datetime
 import glob
@@ -44,19 +64,14 @@ from scipy.linalg import lstsq
 from scipy.stats import mode
 
 from abscal.common.args import parse
-from abscal.common.standard_stars import find_standard_star_by_name
-from abscal.common.utils import air2vac
-from abscal.common.utils import get_data_file
-from abscal.common.utils import linecen
-from abscal.common.utils import smooth_model
-from abscal.common.utils import tabinv
+from abscal.common.standard_stars import find_star_by_name
+from abscal.common.utils import air2vac, get_data_file, linecen, smooth_model, tabinv
 from abscal.common.exposure_data_table import AbscalDataTable
-from abscal.wfc3.reduce_grism_extract import reduce
-from abscal.wfc3.reduce_grism_extract import additional_args as extract_args
-from abscal.wfc3.util_grism_cross_correlate import cross_correlate
 
 def wlimaz(root, y_arr, wave_arr, directory, verbose):
     """
+    Find a line from the IMA zero-read.
+    
     If the very bright 10380A line falls in the first order, you can end up
     trying to centre a saturated line. In this case, use the _ima.fits file,
     which holds all of the individual reads, and measure the line centre from
@@ -152,15 +167,46 @@ def wlimaz(root, y_arr, wave_arr, directory, verbose):
         return star_x, star_y
 
 
-def wlmeas(initial_table, arg_list, overrides={}):
+def wlmeas(input_table, arg_list, overrides={}):
     """
-    Measures planetary nebula emission lines for wavelength fitting
+    Measure planetary nebula emission line locations.
+    
+    There are six planetary nebula emission lines that fall neatly into the WFC3 grism 
+    spectral orders, and this function uses the approximate wavelength solution to find 
+    the rough location of these lines, and then uses flux-weighting to determine the line 
+    centre. The user is able to override a given fit if the script is run in interactive 
+    mode.
+    
+    Parameters
+    ----------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        Table of exposures with emission lines to fit.
+    arg_list : namespace
+        Namespace of command-line arguments.
+    overrides : dict
+        Dictionary of overrides to the default reduction parameters
+    
+    Returns
+    -------
+    output_table : astropy.table.Table
+        Table of emission line locations
     """
     task = "wlmeas"
     verbose = arg_list.verbose
     interactive = arg_list.trace
-
-    fwhm = [80., 40, 120., 60]
+    
+    fwhm = {
+                'G102': {
+                            -1: 80.,
+                            1: 80.,
+                            2: 40.
+                        }
+                'G141': {
+                            -1: 120.,
+                            1: 120.,
+                            2: 60
+                        }
+            }
 
     # lab reference line wavelengths
     wl_air = np.array([9068.6, 9532.5, 10830., 12818.1, 16109.3, 16407.2])
@@ -176,7 +222,7 @@ def wlmeas(initial_table, arg_list, overrides={}):
     # Columns are 'wavelength' and 'flux'
     pn_ref_table = Table.read(pn_ref, format="ascii.basic")
 
-    input_table = deepcopy(initial_table)
+    input_table = deepcopy(input_table)
     input_table = input_table[input_table["planetary_nebula"] == "True"]
 
     xpx = np.arange(1014, dtype=np.float64)
@@ -241,25 +287,17 @@ def wlmeas(initial_table, arg_list, overrides={}):
         else:
             raise ValueError("Unknown Grating/Filter {}".format(grat))
 
-        # -71.2 radial velocity for IC-5117?
-        pnvel = -71.2
+        pnvel = 0. # radial velocity            
+        target_star = find_star_by_name(row['target'])
+        if target_star is not None:
+            pnvel = target_star['radial_velocity']
 
-        if "G111" in star:
-            pnvel = -5.
-
-        # PN velocity - radial velocity of -26.1
-        vel = pnvel + 26.1
-
-        wrud = pn_ref_table['wavelength'] * (1. + vel/3.e5)
-        wlref = wl_vac * (1. + pnvel/3.e5)
+        wrud = pn_ref_table['wavelength'] * (1. + pnvel/consts.c.to('km/s').value)
+        wlref = wl_vac * (1. + pnvel/consts.c.to('km/s').value)
 
         for iord in [-1, 1, 2]:
 
-            fwhm_index = abs(iord) - 1
-            if grat == 'G141':
-                fwhm_index += 2
-
-            dlam = fwhm[fwhm_index]
+            dlam = fwhm[grat][iord]
 
             # 3rd order 10830 at 32490 dominates 2nd order beyond ~16245
             # (32490/2)
@@ -495,19 +533,41 @@ def wlmeas(initial_table, arg_list, overrides={}):
     return output_table
 
 
-def wlmake(initial_table, wl_table, arg_list, overrides={}):
+def wlmake(input_table, wl_table, arg_list, overrides={}):
     """
-    Measures planetary nebula emission lines for wavelength fitting
+    Derives a grism wavelength fit.
+    
+    Once planetary nebula emission lines have been located and fit, it is possible to use
+    them as input in creating a full wavelength fit for the grism detector. ABSCAL fits 
+    the wavelength set with a linear slope and intercept, where both the slope and the 
+    intercept have constant terms, linear terms in X, and linear terms in y.
+    
+    Once the fit has been calculated, the script prints out fit errors based on the input 
+    exposures, and creates an output table with all of the fit terms. A separate fit is 
+    derived for each order of each grism.
+
+    Parameters
+    ----------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        Table of exposures to be fit.
+    wl_table : astropy.table.Table
+        Output of wlmeas.
+    arg_list : namespace
+        Namespace of command-line arguments.
+    overrides : dict
+        Dictionary of overrides to the default reduction parameters
+    
+    Returns
+    -------
+    output_table : astropy.table.Table
+        Table of wavelength fit values
     """
     task = "wlmake"
     verbose = arg_list.verbose
     interactive = arg_list.trace
     
     if verbose:
-        print("Starting {}".format(task))
-        print("Input data:")
-        print(wl_table)
-
+        print("Starting {}\nInput data:\n{}".format(task, wl_table))
 
     line_array = [9071, 9535, 10832, 12821, 16411] #16113, 16411]
     visible_lines = {
@@ -577,7 +637,7 @@ def wlmake(initial_table, wl_table, arg_list, overrides={}):
             radial_velocity = np.zeros((ngood,), dtype=np.float64)
             rvc_p1 = np.zeros((ngood,), dtype=np.float64)
             for i,row in enumerate(current_table):
-                star = find_standard_star_by_name(row['star'])
+                star = find_star_by_name(row['star'])
                 radial_velocity[i] = star['radial_velocity']
                 rvc_p1[i] = 1 + star['radial_velocity']/consts.c.to('km/s').value
             
@@ -619,19 +679,13 @@ def wlmake(initial_table, wl_table, arg_list, overrides={}):
             xpx = np.arange(1014, dtype=np.float64)
             fit_good = np.where(((dox1 > 0.) & (dox2 > 0.)))
             n_fit_good = len(fit_good[0])
-            
-            print("fit_good",fit_good)
-            print("low_line",low_line)
-            print("dox1",dox1)
-            print("high_line",high_line)
-            print("dox2",dox2)
 
             #b3rd is 3rd element of b array. First 2 are X,Y of z-order.
             b3rd = ref_line[fit_good]*iord
             b3rd -= disp[fit_good]*(dox1[fit_good] - dozx[fit_good])
             b = np.zeros((n_fit_good,3), dtype=np.float64)
             b[:,0] = dozx[fit_good]
-            b[:,1] = dozy[fit_good]
+            b[:,1] = dozy[fit_good]            
             m = deepcopy(b)
             b[:,2] = b3rd[:]
             if verbose:
@@ -712,10 +766,10 @@ def wlmake(initial_table, wl_table, arg_list, overrides={}):
             if interactive:
                 for igd in range(ngood):
                     row = current_table[igd]
-                    full_row = initial_table[initial_table['root']==row['root']]
+                    full_row = input_table[input_table['root']==row['root']]
                     full_file = os.path.join(full_row["path"].data[0], 
                                              full_row["extracted"].data[0])
-                    star = find_standard_star_by_name(row['star'])
+                    star = find_star_by_name(row['star'])
                     rvc = star['radial_velocity']/consts.c.to('km/s').value
                     with fits.open(full_file) as inf:
                         wl = inf[1].data['wavelength']
@@ -775,8 +829,16 @@ def wlmake(initial_table, wl_table, arg_list, overrides={}):
 
 def additional_args():
     """
-    Additional command-line arguments. Used when a single command may run
-    another command, and need to add arguments from it.
+    Additional command-line arguments. 
+    
+    Provides additional command-line arguments that are unique to the wavelength fitting 
+    process.
+    
+    Returns
+    -------
+    additional_args : dict
+        Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
+        parser to create a new command-line option
     """
 
     additional_args = {}
@@ -798,6 +860,14 @@ def additional_args():
 def parse_args():
     """
     Parse command-line arguments.
+    
+    Gets the custom arguments from wavelength fitting, and passes them to the common 
+    command-line option function.
+    
+    Returns
+    -------
+    res : namespace
+        parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
     default_output_file = 'wlmeastmp.log'
@@ -824,6 +894,21 @@ def parse_args():
 
 
 def main(overrides={}, do_measure=True, do_make=True):
+    """
+    Run the wavelength fitting function(s).
+    
+    Runs the wavelength fitting function(s) if called from the command line, with 
+    command-line arguments added in. Can run wlmeas, wlmake, or both.
+    
+    Parameters
+    ----------
+    overrides : dict
+        Dictionary of parameters to override when running.
+    do_measure : bool, default True
+        Run wlmeas function
+    do_make : bool, default, True
+        Run wlmake function
+    """
     parsed = parse_args()
 
     for key in overrides:

@@ -1,20 +1,18 @@
 #! /usr/bin/env python
 """
-This module includes utility functions that might be used by any instrument.
+This module includes general utility functions.
 
 Authors
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    Individual functions from this module are intended to be imported where
-    needed.
-    ::
-        from abscal.common.utils import absdate
-"""
+Individual functions from this module are intended to be imported where
+needed::
 
-__all__ = ['absdate', 'get_data_file']
+    from abscal.common.utils import absdate
+"""
 
 import os
 
@@ -24,10 +22,25 @@ from astropy.time import Time
 from copy import deepcopy
 from datetime import datetime
 
-from .standard_stars import starlist
-
 
 def absdate(pstrtime):
+    """
+    Get the date in decimal years. 
+    
+    This is used to figure out a target position, given that we have the target 
+    co-ordinates, the co-ordinate epoch, the annual proper motion, and the observation 
+    time.
+    
+    Parameters
+    ----------
+    pstrtime : str or Time or datetime
+        The observation start time
+    
+    Returns
+    -------
+    dt : float
+        The observation year + fractional (decimal) year
+    """
     # '2013.057:04:24:48'
     # pstrtime is in the format yyyy.ddd:hh:mm:ss where 'ddd' is the decimal
     #   date (i.e. January 1 is 001, January 31 is 031, February 1 is 032,
@@ -47,8 +60,11 @@ def absdate(pstrtime):
 
 def get_data_file(module, fname):
     """
+    Find an internal data file.
+    
     Returns the path to a file named `fname` in the data directory of the
-    (sub)module named `module`.
+    (sub)module named `module`. Keeps there from being a lot of repetitive code in order 
+    to find data file paths.
 
     Parameters
     ----------
@@ -79,6 +95,8 @@ def get_data_file(module, fname):
 
 def set_param(param, default, row, issues, pre, overrides={}, verbose=False):
     """
+    Set a parameter value
+    
     Given a parameter name, that parameter's default value, a data table
     row, and a JSON dictionary which may have an entry for the current row that
     will override the parameter, return the parameter value that should be used.
@@ -126,6 +144,8 @@ def set_param(param, default, row, issues, pre, overrides={}, verbose=False):
 
 def set_params(defaults, row, issues, pre, overrides={}, verbose=False):
     """
+    Set multiple parameter values
+    
     Given a dictionary of default values, a metadata row, a dictionary of
     known issues and overrides, a dictionary of user-supplied overrides,
     and a verbose flag, produce a dictionary of parameters (all with the
@@ -165,6 +185,8 @@ def set_params(defaults, row, issues, pre, overrides={}, verbose=False):
 
 def set_image(images, row, issues, pre, overrides={}, verbose=False):
     """
+    Update an image based on known issues.
+    
     Given an image, image metadata, and a set of known issues, determine if any
     of the known issues apply to the image in question and, if they do, make
     the appropriate edits to the image.
@@ -255,8 +277,9 @@ def air2vac(air):
 
 def smooth_model(wave, flux, fwhm):
     """
-    Smooth a model spectrum with a non-uniform sampling interval. Based on Ralph
-    Bohlin's "smomod.pro", which itself references "tin.pro"
+    Smooth a model spectrum with a non-uniform sampling interval. 
+    
+    Based on Ralph Bohlin's "smomod.pro", which itself references "tin.pro"
 
     Parameters
     ----------
@@ -285,6 +308,8 @@ def smooth_model(wave, flux, fwhm):
 
 def trapezoidal(wave, flux, wmin, wmax):
     """
+    Make a trapezoidal integral
+    
     Trapezoidal 'integral' (really an average) from Ralph Bohlin's 'tin.pro'
     and 'integral.pro'. Uses wmin and wmax to set limits
 
@@ -300,6 +325,7 @@ def trapezoidal(wave, flux, wmin, wmax):
         Wavelength array shifted redwards by FWHM/2
 
     Returns
+    -------
     trapint : array-like
         Flux array after trapezoidal integral
     """
@@ -307,6 +333,25 @@ def trapezoidal(wave, flux, wmin, wmax):
     return trapint
 
 def integral(x, y, xmin, xmax):
+    """
+    Return the approximate integral of y over x for the range (xmin, xmax)
+    
+    Parameters
+    ----------
+    x : array-like
+        X value array
+    y : array-like
+        Y value array. Must be the same length as x
+    xmin : float
+        minimum x value for integral
+    xmax : float
+        maximum x value for integral
+        
+    Returns
+    -------
+    int : float
+        integral value
+    """
     rmin = tabinv(x, xmin)
     rmax = tabinv(x, xmax)
     n = len(x)
@@ -337,11 +382,26 @@ def integral(x, y, xmin, xmax):
 
     return int
 
+
 def tabinv(xarr, x):
     """
-    Find the effective index in xarr of each element in x. The effective index for each
-    element j in x is the value i such that xarr[i] <= x[j] <= xarr[i+1], to which is
-    added an interpolation
+    Find the effective index in xarr of each element in x.
+    
+    The effective index for each element j in x is the value i such that 
+    :math:`xarr[i] <= x[j] <= xarr[i+1]`, to which is added an interpolation fraction 
+    based on the size of the intervals in xarr.
+    
+    Parameters
+    ----------
+    x_arr : array-like
+        The array of values to search
+    x : float or array-like
+        Value (or list of values) to look for in x_arr
+    
+    Returns
+    -------
+    ieff : float
+        Effective index
     """
     npoints, npt = len(xarr), len(xarr) - 1
     if npoints <= 1:
@@ -366,10 +426,16 @@ def tabinv(xarr, x):
     ieff = np.where(ieff>0., ieff, 0.)
     return ieff
 
+
 def linecen(wave, spec, cont):
     """
+    Find the centre of an emission line.
+    
     Computes the centroid of an emission line over the range of
-        xapprox +/- fwhm/2
+    
+    :math:
+        xapprox \pm fwhm/2
+
     after subtracting any continuum and half value at the remaining peak. After
     clipping at zero, the weights of the remaining spectral wings approach zero,
     so any marginally missed or included point matters little.

@@ -1,29 +1,99 @@
 #! /usr/bin/env python
 """
-This module takes the name of an input metadata table, groups the exposures in
-that table by program and visit, and then:
-    - calibrates each exposue
-    - coadds together all exposures that have the same program/visit/star
+This submodule takes an input metadata table, sorts out the grism exposures, and then for 
+each exposure
+
+- Locates the zeroth order position of the target star
+- Derives an approximate wavelength solution based on the location of the zeroth order
+- Finds the grism spectral order locations based on the approximate wavelength solution
+- For each spectral order that falls on the detector
+
+    - Collapses the order along the X direction to generate a profile in Y
+    - Uses that profile to locate the approximate Y centre of the profile
+    - Uses the approximate centre of the wavelength range to find the X centre of the
+      profile
+
+- Uses the order centres and the zeroth order location to generate a linear detector trace
+- Extracts along the trace to generate a spectrum
+- Extracts two regions parallel to the trace to generate a background spectrum
+- Saves the resulting spectrum as a FITS bintable file
+
+In addition to the above, the central function also performs background subtraction and 
+flatfielding of the input file.
 
 Authors
 -------
-    - Brian York (all python code)
-    - Ralph Bohlin (original IDL code)
+- Brian York (all python code)
+- Ralph Bohlin (original IDL code)
 
 Use
 ---
-    This module is intended to be either run from the command line or used by
-    other module code as the first step (creating an annotated list of files
-    for flux calibration).
-    ::
-        python coadd_grism.py <input_file>
 
-Dependencies
-------------
-    - ``astropy``
+This submodule is not intended to be run directly. Instead, it is intended to be called 
+on an as-needed basis by the reduce_grism_coadd submodule. If you need to import it 
+directly, you can use the form::
+
+    from abscal.wfc3.reduce_grism_extract import reduce
+    
+    output_table = reduce(input_table, command_line_arg_namespace, override_dict)
+
+The override dict allows for many of the default input parameters to be overriden (as 
+defaults -- individual per-exposure overrides defined in the data files will still take 
+priority). Parameters that can be overriden in coadd are:
+
+xc: default -1
+    X centre of zeroth order image. If set to a negative value, the submodule will find 
+    and fit the centre itself, either from a corresponding filter exposure (preferred) or 
+    from the grism exposure directly.
+yc: default -1
+    Y centre of zeroth order image. Acts as xc.
+xerr: default -1
+    Measured error in xc. Set when xc is set. Included for information.
+yerr: default -1
+    Measured error in yc. Acts as xerr.
+ywidth: default 11
+    Width of the extraction box at each x pixel.
+y_offset: default 0
+    Offset of the initial spectral trace in the y direction. Added directly to the 
+    approximate initial trace fit, before the actual trace is fit.
+gwidth: default 6
+    Width of smoothing kernel for background smoothing
+bwidth: default 13
+    Width of background extraction box at each x pixel
+bmedian: default 7
+    Width of background median-smoothing region
+bmean1: default 7
+    Width of first background boxcar-smoothing box
+bmean2: default 7
+    Width of second background boxcar-smoothing box
+bdist: default 25 + bwidth/2
+    Distance from spectral trace centre to background trace centres.
+slope: default 1
+    Slope of spectral trace in radians. If this is set, then the trace will not be fit 
+    by the submodule
+yshift: default 0
+    Offset to the initial spectral trace slope. Added directly to the approximate initial 
+    trace fit, before the actual trace is fit.
+ix_shift: default 252 (G102), 188 (G141)
+    Delta in the x direction from the target centroid in the imaging exposure to the 
+    zeroth order centroid in the grism exposure.
+iy_shift: default 4 (G102), 1 (G141)
+    As per ix_shift, but in the y direction
+wl_offset: default 0
+    Offset of the wavelength fit. Added directly to the fit.
+wlrang_m1_low: default 8000 (G102), 10800 (G141)
+    Start of the -1st order wavelength range. Multiplied by -1 on use.
+wlrang_m1_high: default 10000 (G102), 16000 (G141)
+    End of the -1st order wavelength range.  Multiplied by -1 on use.
+wlrang_p1_low: default 8800 (G102), 10800 (G141)
+    Start of the 1st order wavelength range.
+wlrang_p1_high: default 11000 (G102), 16000 (G141)
+    End of the 1st order wavelength range.
+wlrang_p2_low: default 8000 (G102), 10000 (G141)
+    Start of the -1st order wavelength range. Multiplied by 2 on use.
+wlrang_p2_high: default 10800 (G102), 13000 (G141)
+    End of the -1st order wavelength range.  Multiplied by 2 on use.
 """
-
-__all__ = ['coadd']
 
 import datetime
 import glob
@@ -58,8 +128,11 @@ from abscal.wfc3.util_filter_locate_image import locate_image
 
 def make_monotonic(wave, indx):
     """
-    Make the supplied wavelength array (and the index of the wavelength values
-    that were just altered) monotonically increasing.
+    Make an array monotonically increasing.
+    
+    Take a supplied (wavelength) array, along with a list of index values that were just 
+    replaced from another array, and ensure that the full array is monotonically 
+    increasing.
 
     Parameters
     ----------
@@ -82,7 +155,11 @@ def make_monotonic(wave, indx):
 
 def set_hdr(hdr, params):
     """
-    Set header parameters based on metadata input into or found from extraction.
+    Update FITS header with extraction info.
+    
+    After the extraction, a number of informational parameters should be added to the FITS
+    header of extracted exposures. Because it's always the same parameters that need to be 
+    added, this is broken out as a function.
 
     Parameters
     ----------
@@ -133,7 +210,9 @@ def set_hdr(hdr, params):
 
 def reduce_flatfield(input_table, params):
     """
-    Scale the flatfield image based on the coefficients in the flatfield cube.
+    Scale synthetic flatfield image.
+    
+    Scale the flatfield image based on the coefficients in a provided flatfield cube.
 
     Parameters
     ----------
@@ -141,16 +220,17 @@ def reduce_flatfield(input_table, params):
         Single-row input
     params : dict
         Parameter dictionary. Contains
-            image : np.ndarray
-                Science image
-            hdr : astropy.io.fits.header
-                FITS header for the science image
-            flat : np.ndarray
-                image file of the WFC3 flatfield
-            wave : np.ndarray
-                wavelength mapping for the science image
-            verbose : bool
-                Whether to print diagnostic output
+        
+        image: np.ndarray
+            Science image
+        hdr: astropy.io.fits.header
+            FITS header for the science image
+        flat: np.ndarray
+            image file of the WFC3 flatfield
+        wave: np.ndarray
+            wavelength mapping for the science image
+        verbose: bool
+            Whether to print diagnostic output
 
     Returns
     -------
@@ -251,7 +331,10 @@ def reduce_flatfield(input_table, params):
 
 def calculate_order(params, xc, yc):
     """
-    Calculate a spectral order coefficient given the corresponding coefficients.
+    Calculate spectral order centre.
+    
+    Calculate a spectral order centre given the corresponding coefficients and the centre 
+    of the zeroth-order image.
 
     Parameters
     ----------
@@ -276,8 +359,10 @@ def calculate_order(params, xc, yc):
 
 def reduce_wave_axe(row, params):
     """
+    Apply the aXe default wavelength approximation.
+    
     Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
-    this should only be used for the AXE solution. The Zero-order (Z-ORD)
+    this should only be used for the AXE solution. The (preferred) Zero-order (Z-ORD)
     solution should use a different function.
 
     Parameters
@@ -286,10 +371,13 @@ def reduce_wave_axe(row, params):
         Table containing the input data
     params : dict
         Dictionary of parameters, including:
-            xc, yc : float
-                predicted central location
-            verbose : bool
-                whether to print diagnostic output
+        
+        xc: float
+            predicted central location in x
+        yc: float
+            predicted central location in y
+        verbose: bool
+            whether to print diagnostic output
 
     Returns
     -------
@@ -500,9 +588,11 @@ def reduce_wave_axe(row, params):
 
 def reduce_wave_zord(row, params):
     """
+    Apply default wavelength values based on zeroth order position.
+    
     Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
-    this should only be used for the Zeroth Order (ZORD) solution. The AXE
-    solution should use a different function.
+    this should only be used for the Zeroth Order (ZORD) solution. This is the preferred
+    solution when possible. The aXe solution should use a different function.
 
     Parameters
     ----------
@@ -510,10 +600,13 @@ def reduce_wave_zord(row, params):
         Row of astropy Table containing the input data
     params : dict
         Dictionary of parameters, including:
-            xc, yc : float
-                predicted central location
-            verbose : bool
-                whether to print diagnostic output
+
+        xc: float
+            predicted central location in x
+        yc: float
+            predicted central location in y
+        verbose: bool
+            whether to print diagnostic output
 
     Returns
     -------
@@ -693,10 +786,29 @@ def reduce_wave_zord(row, params):
     return x_arr, wave, angle, wav1st
 
 
-def reduce_scan(input_table, params, arg_list):
+def reduce_scan(row, params, arg_list):
     """
-    Reduces scan-mode grism data
+    Reduce scan-mode grism data
+    
+    .. warning::
+        This function is not yet implemented. It will raise an exception.
+    
+    Parameters
+    ----------
+    row : abscal.common.exposure_data_table.AbscalDataTable
+        Single-row table of the exposure to be extracted.
+    params : dict
+        Dictionary of parameters to use for the reduction
+    arg_list : namespace
+        Namespace of command-line arguments.
+    
+    Returns
+    -------
+    row : abscal.common.exposure_data_table.AbscalDataTable
+        Updated single-row table of the exposure
     """
+    raise NotImplementedError("Scan mode is not yet available.")
+    
     verbose = arg_list.verbose
     interactive = arg_list.trace
     bkg_flat_order = arg_list.bkg_flat_order
@@ -889,9 +1001,26 @@ def reduce_scan(input_table, params, arg_list):
 
 def reduce_stare(row, params, arg_list):
     """
-    Reduces stare-mode grism data
+    Reduces stare-mode grism data.
+    
+    Takes a single grism exposure that was not taken in scan mode, extracts a spectrum, 
+    and saves the extracted spectrum as a FITS file. Also updates the row based on new 
+    information determined during extraction.
+
+    Parameters
+    ----------
+    row : abscal.common.exposure_data_table.AbscalDataTable
+        Single-row table of the exposure to be extracted.
+    params : dict
+        Dictionary of parameters to use for the reduction
+    arg_list : namespace
+        Namespace of command-line arguments.
+    
+    Returns
+    -------
+    row : abscal.common.exposure_data_table.AbscalDataTable
+        Updated single-row table of the exposure
     """
-    print(row)
     verbose = arg_list.verbose
     interactive = arg_list.trace
     bkg_flat_order = arg_list.bkg_flat_order
@@ -1226,6 +1355,12 @@ def reduce_stare(row, params, arg_list):
                 print("\tX,Y astrom error=({},{})".format(xastr-xc, yastr-yc))
             axeflg = False
 
+            # Update the table with the fit values.
+            row['xc'] = xc
+            row['yc'] = yc
+            row['xerr'] = xerr
+            row['yerr'] = yerr
+
         fit_slope = True
         if 'slope' in params['set']:
             fit_slope = False
@@ -1306,7 +1441,7 @@ def reduce_stare(row, params, arg_list):
         # Extract
         y_offset = params['y_offset']
         y_shift = params['yshift']
-        yapprox = yc + y_offset + (x_arr-xc)*np.sin(angle) + y_shift
+        yapprox = yc + y_offset + (x_arr-xc)*(np.sin(angle) + y_shift)
 
         image_edit_file = get_data_file("abscal.wfc3", "image_edits.json")
         with open(image_edit_file, 'r') as inf:
@@ -1971,9 +2106,26 @@ def reduce_stare(row, params, arg_list):
     return row
 
 
-def reduce(input_table, overrides, arg_list):
+def reduce(input_table, arg_list, overrides={}):
     """
-    Reduces grism data
+    Reduces grism data.
+    
+    Takes a table of grism data, and dispatches individual exposures to either the 
+    scan-mode or stare-mode reduction function as appropriate.
+    
+    Parameters
+    ----------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        Table of exposures to be extracted.
+    arg_list : namespace
+        Namespace of command-line arguments.
+    overrides : dict
+        Dictionary of overrides to the default reduction parameters
+    
+    Returns
+    -------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        Updated table of exposures
     """
     verbose = arg_list.verbose
     interactive = arg_list.trace
@@ -2083,8 +2235,7 @@ def reduce(input_table, overrides, arg_list):
                 defaults['wlrang_p1_high'] = 16000.
                 defaults['wlrang_p2_low'] = 10800.
                 defaults['wlrang_p2_high'] = 13000.
-            params = set_params(defaults, row, issues, preamble, overrides,
-                                verbose)
+            params = set_params(defaults, row, issues, preamble, overrides, verbose)
             if 'bwidth' in params['set']:
                 if 'bdist' not in params['set']:
                     params['bdist'] = 25 + params['bwidth']/2
@@ -2105,11 +2256,11 @@ def reduce(input_table, overrides, arg_list):
                 # Process the filter image only if its XC and YC haven't been
                 #   set to an actual value yet.
                 if float(ref_row['xc'][0]) < 0 or float(ref_row['yc'][0]) < 0:
-                    processed = locate_image(ref_row, verbose, interactive)
-                    ref_row['xc'] = float(processed['xc'][0])
-                    ref_row['yc'] = float(processed['yc'][0])
-                    ref_row['xerr'] = float(processed['xerr'][0])
-                    ref_row['yerr'] = float(processed['yerr'][0])
+                    res = locate_image(ref_row, verbose, interactive)
+                    input_table['xc'][input_table['root']==ref] = float(res['xc'][0])
+                    input_table['yc'][input_table['root']==ref] = float(res['yc'][0])
+                    input_table['xerr'][input_table['root']==ref] = float(res['xerr'][0])
+                    input_table['yerr'][input_table['root']==ref] = float(res['yerr'][0])
                 for item in ['xc', 'yc', 'xerr', 'yerr']:
                     params[item] = float(ref_row[item])
                     if item not in params['set']:
@@ -2126,6 +2277,10 @@ def reduce(input_table, overrides, arg_list):
                 reduced = reduce_stare(row, params, arg_list)
 
             row['extracted'] = reduced['extracted']
+            row['xc'] = reduced['xc']
+            row['yc'] = reduced['yc']
+            row['xerr'] = reduced['xerr']
+            row['yerr'] = reduced['yerr']
 
         elif verbose:
             msg = "{}: Skipping {} because it's been set to don't use "
@@ -2141,8 +2296,15 @@ def reduce(input_table, overrides, arg_list):
 
 def additional_args():
     """
-    Additional command-line arguments. Used when a single command may run
-    another command, and need to add arguments from it.
+    Additional command-line arguments. 
+    
+    Provides additional command-line arguments that are unique to the extraction process.
+    
+    Returns
+    -------
+    additional_args : dict
+        Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
+        parser to create a new command-line option
     """
 
     additional_args = {}
@@ -2172,6 +2334,14 @@ def additional_args():
 def parse_args():
     """
     Parse command-line arguments.
+    
+    Gets the custom arguments for extractions, and passes them to the common command-line 
+    option function.
+    
+    Returns
+    -------
+    res : namespace
+        parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
     default_output_file = 'ir_grism_stare_reduced.log'
@@ -2198,6 +2368,17 @@ def parse_args():
 
 
 def main(overrides={}):
+    """
+    Run the extract function.
+    
+    Runs the extract function if called from the command line, with command-line arguments 
+    added in.
+    
+    Parameters
+    ----------
+    overrides : dict
+        Dictionary of parameters to override when running.
+    """
     parsed = parse_args()
 
     for key in overrides:
@@ -2209,7 +2390,7 @@ def main(overrides={}):
                                   search_str='',
                                   search_dirs=parsed.paths)
 
-    output_table = reduce(input_table, overrides, parsed)
+    output_table = reduce(input_table, parsed, overrides)
 
     table_fname = res.out_file
     output_table.write_to_file(table_fname, res.compat)

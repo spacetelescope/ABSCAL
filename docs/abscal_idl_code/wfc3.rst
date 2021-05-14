@@ -3,6 +3,9 @@ ABSCAL WFC3 IDL Code
 
 This section describes running the IDL WFC3 flux calibration code.
 
+.. contents:: Contents
+    :local:
+    :depth: 2
 
 Setup Requirements
 ------------------
@@ -154,6 +157,14 @@ References
 
 `Bohlin, R. C., Deustua, S. E., Pirzkal, N. 2015, WFC3 ISR 2015-10 "IR Grism Wavelength Solutions using the Zero Order Image as the Reference Point" <https://www.stsci.edu/files/live/sites/www/files/home/hst/instrumentation/wfc3/documentation/instrument-science-reports-isrs/_documents/2015/WFC3-2015-10.pdf>`_
 
+
+Reference Files
+---------------
+
+Below are Ralph Bohlin's master tables:
+
+* :download:`dirirstare.log <files/dirirstare_2021-01-07.log>`
+* :download:`wlmeas.log <files/wlmeas_2013-05-31.log>`
 
 Notes
 -----
