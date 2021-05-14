@@ -46,6 +46,8 @@ along to the table creation)::
     output_table = populate_table(some_arguments=some_values)
 """
 
+__all__ = ['populate_table']
+
 import datetime
 import glob
 import os
@@ -224,7 +226,7 @@ def populate_table(data_table=None, overrides={}, **kwargs):
                         file_metadata['notes'] += " {}".format(msg)
                 
                 loc = "ASSEMBLING WRITE DATA"
-                new_target = (file_metadata['target'], 'Updated by wfcdir.py')
+                new_target = (file_metadata['target'], 'Updated by ABSCAL')
                 standard_star = find_star_by_name(new_target[0])
                 if standard_star is None:
                     # Try by distance
@@ -239,8 +241,8 @@ def populate_table(data_table=None, overrides={}, **kwargs):
                     delta_dec = pm_dec * delta_from_epoch/1000.
                     corrected_ra = epoch_ra + delta_ra/3600.
                     corrected_dec = epoch_dec + delta_dec/3600.
-                    new_ra = (corrected_ra, 'Updated for PM by wfcdir.py')
-                    new_dec = (corrected_dec, 'Updated for PM by wfcdir.py')
+                    new_ra = (corrected_ra, 'Updated for PM by ABSCAL')
+                    new_dec = (corrected_dec, 'Updated for PM by ABSCAL')
                     if verbose:
                         msg = "{}: {}: Target Star: {}"
                         print(msg.format(task, root, file_metadata['target']))
@@ -256,7 +258,7 @@ def populate_table(data_table=None, overrides={}, **kwargs):
                     new_dec = (phdr["DEC_TARG"], msg)
                 file_metadata['ra_targ'] = new_ra[0]
                 file_metadata['dec_targ'] = new_dec[0]
-                new_pstrtime = (pstrtime, "Added by wfcdir.py")
+                new_pstrtime = (pstrtime, "Added by ABSCAL")
                 loc = "WRITING NEW FILE"
                 with fits.open(file_name, mode="update") as fits_file:
                     fits_file[0].header["TARGNAME"] = new_target
@@ -278,11 +280,12 @@ def populate_table(data_table=None, overrides={}, **kwargs):
     data_table.set_filter_images()
 
     if data_table.n_exposures == 0:
-        error_str = "wfcdir error: no files found for filespec {}"
+        error_str = "Error: no files found for filespec {}"
         raise ValueError(error_str.format(file_template))
     
     data_table.sort(['root'])
     return data_table
+
 
 def additional_args():
     """
@@ -322,6 +325,7 @@ def additional_args():
     args['template'] = (template_args, template_kwargs)
     
     return args
+
 
 def parse_args():
     """

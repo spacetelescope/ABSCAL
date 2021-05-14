@@ -163,8 +163,8 @@ Reference Files
 
 Below are Ralph Bohlin's master tables:
 
-* :download:`dirirstare.log <files/dirirstare_2021-01-07.log>`
-* :download:`wlmeas.log <files/wlmeas_2013-05-31.log>`
+* :download:`dirirstare.log <../files/dirirstare_2021-01-01.log>`
+* :download:`wlmeas.log <../files/wlmeas_2013-05-31.log>`
 
 Notes
 -----
