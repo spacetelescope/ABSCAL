@@ -200,7 +200,7 @@ def wlmeas(input_table, arg_list, overrides={}):
                             -1: 80.,
                             1: 80.,
                             2: 40.
-                        }
+                        },
                 'G141': {
                             -1: 120.,
                             1: 120.,

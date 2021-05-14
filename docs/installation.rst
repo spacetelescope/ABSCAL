@@ -23,6 +23,14 @@ Installing ABSCAL
         conda env update --file environment.yml
 
 
-3. You can now install ABSCAL using the cloned source code as follows::
+3. You can now install ABSCAL from the repository, either by using its setup script 
+   directly::
 
-    python setup.py install
+        python setup.py install
+   
+   or by installing via pip::
+   
+        pip install [-e] .
+    
+   where the :code:`-e` flag makes the installation editable, and is useful if you intend 
+   to modify your local version.

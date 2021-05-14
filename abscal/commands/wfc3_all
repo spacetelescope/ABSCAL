@@ -17,7 +17,7 @@ This file is intended to be run from the command line::
     wfc3_all [options] <template>
 """
 
-from abscal.wfc3.preprocess_table_create import preprocess_table_create
+from abscal.wfc3.preprocess_table_create import populate_table
 from abscal.wfc3.preprocess_table_create import additional_args as preprocess_args
 from abscal.wfc3.reduce_grism_coadd import coadd
 from abscal.wfc3.reduce_grism_coadd import additional_args as coadd_args
@@ -44,10 +44,10 @@ def parse_args():
                         "table" # script controls intermediate file names
                     ]
 
-    additional_args {}
-    for func in preprocess_args, coadd_args, extract_args, wl_args:
+    additional_args = {}
+    for func in preprocess_args, coadd_args, coadd_args, wl_args:
         args = func()
-        for key in args.keys()
+        for key in args.keys():
             if key not in additional_args and key not in excluded_keys:
                 additional_args[key] = args[key]
 
@@ -86,7 +86,7 @@ def main():
     res = parse_args()
     
     # Make the list of grism exposures
-    exposure_table = preprocess_table_create(**vars(res))
+    exposure_table = populate_table(**vars(res))
     exposure_table = exposure_table.filtered_copy(["stare", "grism"])
     exposure_table.write_to_file("dirirstare_grism.log", res.compat)
 

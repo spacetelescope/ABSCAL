@@ -1,7 +1,9 @@
 Using ABSCAL Commands
 =====================
 
-This section describes running ABSCAL through the provided commands.
+This section describes running ABSCAL through the provided commands. These commands are 
+added to your path when you install abscal, so they should be available from the command 
+line.
 
 .. contents:: Contents
     :local:
@@ -50,7 +52,7 @@ otherwise identical idl-named version is :code:`wfcdir`. Its help text and optio
                             indistinguishable from the IDL code. (default False)
       -f, --force           Force steps to run even if output already exists.
       -v, --verbose         Print diagnostic information while running.
-      -d DUPLICATES, --duplicates DUPLICATES
+      --duplicates DUPLICATES
                             How to handle duplicate entries (entries defined as duplicates if
                             they have the same ipppssoot). Valid values are 'both' (keep
                             both), 'preserve' (keep first), 'replace' (keep second), and
@@ -297,5 +299,60 @@ The wfc3_wave_solve script then takes the resulting best-fit parameters, tests t
 against the various input files to display error estimates, and writes the fit parameters 
 to an output table with a single entry for each order of each grism for which a fit could 
 be derived.
+
+wfc3_all
+~~~~~~~~
+
+The wfc3_all script takes the same input as :code:`wfc3_setup`, and then runs 
+:code:`wfc3_setup`, :code:`wfc3_extract`, :code:`wfc3_wave_find_lines`, and 
+:code:`wfc3_wave_solve` sequentially, using the output of each command as the input to the 
+next. Its help text is as follows::
+
+    usage: wfc3_all [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f] [-v]
+                    [--duplicates DUPLICATES] [-d] [--prefix PREFIX] [-t]
+                    template
+    
+    Run all WFC3 Scripts.
+    
+    positional arguments:
+      template              The file template to match, or the path to search and the file
+                            template to match within that directory. If the '-p' option is
+                            used to specify one or more input paths, then file file template
+                            will be joined to each input path.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATHS, --paths PATHS
+                            A comma-separated list of input paths.
+      -i IN_FILE, --input IN_FILE
+                            Optional additional input table file. If provided, the program
+                            will begin by reading the input table and adding all of its
+                            exposures to the metadata table. See the duplicates flag for
+                            options on processing duplicate entries.
+      -o OUT_FILE, --output OUT_FILE
+                            Output metadata file. The default value is wl_solution_<item>.log
+                            where item is 'all' for all files, 'grism' for grism files (and
+                            associated filter images), 'filter' is filter files, and 'scan' is
+                            all scan-mode files.
+      -s SPEC_DIR, --spec_dir SPEC_DIR
+                            Subdirectory where extracted and co-added spectra are stored. The
+                            default value is 'spec'.
+      -c, --strict_compat   Activate strict compatibility mode. In this mode, the script will
+                            produce additional output that is as close as possible to
+                            indistinguishable from the IDL code. (default False)
+      -f, --force           Force steps to run even if output already exists.
+      -v, --verbose         Print diagnostic information while running.
+      --duplicates DUPLICATES
+                            How to handle duplicate entries (entries defined as duplicates if
+                            they have the same ipppssoot). Valid values are 'both' (keep
+                            both), 'preserve' (keep first), 'replace' (keep second), and
+                            'neither' (delete both). Duplicates should only be an issue if an
+                            input table is specified. Default: 'both'
+      -d, --double          Subsample output wavelength vector by a factor of 2 (default
+                            False).
+      --prefix PREFIX       Prefix for co-added spectra
+      -t, --trace           Include result plots while running (default False).
+
+The wfc3_all script simply runs all of the above WFC3 scripts in sequence.
 
 .. _ipppssoot: https://archive.stsci.edu/hlsp/ipppssoot.html

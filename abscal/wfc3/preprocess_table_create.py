@@ -308,7 +308,7 @@ def additional_args():
     dup_help += "'both' (keep both), 'preserve' (keep first), 'replace' (keep "
     dup_help += "second), and 'neither' (delete both). Duplicates should only "
     dup_help += "be an issue if an input table is specified. Default: 'both'"
-    dup_args = ['-d', '--duplicates']
+    dup_args = ['--duplicates']
     dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 'default': 'both'}
     args['duplicates'] = (dup_args, dup_kwargs)
     
