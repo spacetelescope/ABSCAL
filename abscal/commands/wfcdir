@@ -1,27 +1,24 @@
 #! /usr/bin/env python
 """
-This module acts as an IDL interface (using the IDL 'wfcdir' name) to the WFC3
-'create_table' script. It calls that script with IDL compatibility set to True.
+This file acts as an IDL interface (using the IDL `wfcdir` name) to the wfc3_setup 
+command.
 
 Author
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    This module is intended to be run from the command line.
-    ::
-        python wfcdir.py <file_path>
+This file is intended to be run from the command line::
+
+    wfcdir [options] table
 """
 
-__all__ = []
-
-from abscal.wfc3.preprocess_table_create import main as do_create
+from wfc3_setup import main as do_create
 
 
-def main():
+def main(overrides={}):
 
-    overrides = {}
     overrides['compat'] = True
 
     do_create(overrides=overrides)

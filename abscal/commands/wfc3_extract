@@ -1,27 +1,22 @@
 #! /usr/bin/env python
 """
-This module acts as an interface to the WFC3 'reduce_grism' script.
+This module acts as an interface to the WFC3 'reduce_grism_coadd' script.
 
 Author
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    This module is intended to be run from the command line.
-    ::
-        python wfc3_extract.py <input_table> [options]
-"""
+This module is intended to be run from the command line::
 
-__all__ = []
+    wfc3_extract [options] input_table
+"""
 
 from abscal.wfc3.reduce_grism_coadd import main as do_coadd
 
 
-def main():
-
-    overrides = {}
-#     overrides['compat'] = True
+def main(overrides={}):
 
     do_coadd(overrides=overrides)
 

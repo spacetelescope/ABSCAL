@@ -1,30 +1,26 @@
 #! /usr/bin/env python
 """
-This module acts as an IDL interface (using the IDL 'prewfc' name) to the WFC3
-'reduce_grism' script. It calls that script with IDL compatibility set to True.
+This file acts as an IDL interface (using the IDL `prewfc` name) to the wfc3_extract 
+command.
 
 Author
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    This module is intended to be run from the command line.
-    ::
-        python wfcdir.py <file_path>
+This file is intended to be run from the command line::
+
+    prewfc [options] table
 """
 
-__all__ = []
+from wfc3_extract import main as extract_function
 
-from abscal.wfc3.reduce_grism_coadd import main as do_coadd
+def main(overrides={}):
 
-
-def main():
-
-    overrides = {}
     overrides['compat'] = True
 
-    do_coadd(overrides=overrides)
+    extract_function(overrides=overrides)
 
 
 if __name__ == "__main__":

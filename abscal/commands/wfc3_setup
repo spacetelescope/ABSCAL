@@ -1,27 +1,22 @@
 #! /usr/bin/env python
 """
-This module acts as an interface to the WFC3 'create_table' script.
+This module acts as an interface to the WFC3 'preprocess_table_create' script.
 
 Author
 -------
-    - Brian York
+- Brian York
 
 Use
 ---
-    This module is intended to be run from the command line.
-    ::
-        python wfc_setup.py <file_path> [options]
-"""
+This module is intended to be run from the command line::
 
-__all__ = []
+    wfc3_setup [options] 'input search pattern'
+"""
 
 from abscal.wfc3.preprocess_table_create import main as do_create
 
 
-def main():
-
-    overrides = {}
-#     overrides['compat'] = True
+def main(overrides={}):
 
     do_create(overrides=overrides)
 
