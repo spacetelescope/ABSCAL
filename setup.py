@@ -4,14 +4,9 @@ from setuptools import find_packages
 import glob
 import os
 
-main_scripts = glob.glob("abscal/commands/*")
-idl_scripts = glob.glob("abscal/idl_commands/*")
 
 file_dir = os.path.abspath(__file__)
-version_str = '0.0.dev7'
-# jist_dir = os.path.join(os.path.dirname(file_dir), "jist", "__init__.py")
-# with open(jist_dir) as inf:
-#     version_str = inf.readline().strip()
+version_str = '1.0.dev'
 
 setup(
     name = 'abscal',
@@ -29,6 +24,6 @@ setup(
                         "photutils",
                        ],
     version = version_str,
-    scripts=main_scripts+idl_scripts,
+    scripts=glob.glob("abscal/commands/*"),
     include_package_data=True
     )
