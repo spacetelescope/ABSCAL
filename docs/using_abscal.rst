@@ -16,5 +16,6 @@ use more directly descriptive names.
   :maxdepth: 2
 
   using_abscal/commands
+  using_abscal/parameter_files
   using_abscal/wfc3
 

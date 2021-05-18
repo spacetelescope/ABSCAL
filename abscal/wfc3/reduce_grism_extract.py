@@ -99,6 +99,7 @@ import datetime
 import glob
 import json
 import os
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -121,7 +122,7 @@ from scipy import ndimage
 from scipy.interpolate import interp2d
 
 from abscal.common.args import parse
-from abscal.common.utils import get_data_file, set_params, set_image
+from abscal.common.utils import get_data_file, get_defaults, set_params, set_image
 from abscal.common.exposure_data_table import AbscalDataTable
 from abscal.wfc3.util_filter_locate_image import locate_image
 
@@ -1375,10 +1376,10 @@ def reduce_stare(row, params, arg_list):
         # Get flatfield data cube
         if verbose:
             print("{}: Beginning flatfield.".format(preamble))
-        cal_data = get_data_file("abscal.wfc3", "calibration_files.json")
+        cal_data = get_data_file("abscal.wfc3", "calibration_files.yaml")
         with open(cal_data, 'r') as inf:
-            cal_files = json.load(inf)
-        flat_file_name = cal_files["flatfield"]["wfc3"][row["filter"]]
+            cal_files = yaml.safe_load(inf)
+        flat_file_name = cal_files["flatfield"][row["filter"]]
         flat_file = get_data_file("abscal.wfc3", flat_file_name)
         if verbose:
             msg = "{}: wfc_flatscl: Using flatfield {}"
@@ -2046,10 +2047,12 @@ def reduce_stare(row, params, arg_list):
             ax = fig.add_subplot(111)
             targ_str = "{} - {} ({})".format(root, target, filter)
             ax.set_title('{}: Extracted Spectrum'.format(targ_str))
-            ax.plot(wave, flux, label='flux')
+            ax.plot(wave, flux, label='net')
             ax.plot(wave, gross, label='gross')
             ax.plot(wave, s_back, label='background')
             ax.plot(wave, sky_back, label='sky background')
+            plt.xlabel("Wavelength (Angstroms)")
+            plt.ylabel("Net (electrons/s)")
             ax.legend()
             plt.show()
 
@@ -2134,14 +2137,14 @@ def reduce(input_table, arg_list, overrides={}):
     if verbose:
         print("{}: Starting WFC3 data reduction for GRISM data.".format(task))
 
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    with open(known_issues_file, 'r') as inf:
-        known_issues = json.load(inf)
-    input_table.adjust(known_issues['metadata'])
     issues = []
-    if "reduction" in known_issues:
-        if "reduce_grism" in known_issues["reduction"]:
-            issues = known_issues["reduction"]["reduce_grism"]
+    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
+    if known_issues_file is not None:
+        with open(known_issues_file, 'r') as inf:
+            known_issues = json.load(inf)
+        if "reduction" in known_issues:
+            if "reduce_grism" in known_issues["reduction"]:
+                issues = known_issues["reduction"]["reduce_grism"]
 
     for row in input_table:
         root = row['root']
@@ -2190,51 +2193,11 @@ def reduce(input_table, arg_list, overrides={}):
 
         # Only reduce grism data in the reduce function.
         if row['use'] and row['filter'][0] == 'G':
-            defaults = {
-                        'xc': -1.,
-                        'xerr': -1.,
-                        'yc': -1.,
-                        'yerr': -1.,
-                        'ywidth': 11,
-                        'y_offset': 0,
-                        'gwidth': 6.,
-                        'bwidth': 13,
-                        'bmedian': 7,
-                        'bmean1': 7,
-                        'bmean2': 7,
-                        'slope': 1,
-                        'yshift': 0,
-                        'ix_shift': 0,
-                        'iy_shift': 0,
-                        'wl_offset': 0.,
-                        'wlrang_m1_low': -1.,
-                        'wlrang_m1_high': -1.,
-                        'wlrang_p1_low': -1.,
-                        'wlrang_p1_high': -1.,
-                        'wlrang_p2_low': -1.,
-                        'wlrang_p2_high': -1.
-                       }
+            filter = row['filter']
+            defaults = get_defaults("abscal.wfc3.reduce_grism_extract", filter.lower())
             defaults['bdist'] = 25 + defaults['bwidth']/2
             defaults['ubdist'] = defaults['bdist']
             defaults['lbdist'] = defaults['bdist']
-            if row['filter'] == 'G102':
-                defaults['ix_shift'] = 252
-                defaults['iy_shift'] = 4
-                defaults['wlrang_m1_low'] = 8000.
-                defaults['wlrang_m1_high'] = 10000.
-                defaults['wlrang_p1_low'] = 8800.
-                defaults['wlrang_p1_high'] = 11000.
-                defaults['wlrang_p2_low'] = 8000.
-                defaults['wlrang_p2_high'] = 10000.
-            elif row['filter'] == 'G141':
-                defaults['ix_shift'] = 188
-                defaults['iy_shift'] = 1
-                defaults['wlrang_m1_low'] = 10800.
-                defaults['wlrang_m1_high'] = 16000.
-                defaults['wlrang_p1_low'] = 10800.
-                defaults['wlrang_p1_high'] = 16000.
-                defaults['wlrang_p2_low'] = 10800.
-                defaults['wlrang_p2_high'] = 13000.
             params = set_params(defaults, row, issues, preamble, overrides, verbose)
             if 'bwidth' in params['set']:
                 if 'bdist' not in params['set']:
@@ -2346,9 +2309,9 @@ def parse_args():
     description_str = 'Process files from metadata table.'
     default_output_file = 'ir_grism_stare_reduced.log'
 
-    additional_args = additional_args()
+    args = additional_args()
 
-    res = parse(description_str, default_output_file, additional_args)
+    res = parse(description_str, default_output_file, args)
 
     if res.paths is not None:
         if "," in res.paths:

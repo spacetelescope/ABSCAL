@@ -1,0 +1,61 @@
+# These are the default parameters for the reduce() function in reduce_grism_extract. 
+#
+# The file is are formatted in ABSCAL's own idiosyncratic (yet quietly brilliant) defaults 
+# dictionary format. That format consists of:
+#
+#   - an "all:" tag. Put any actual values here
+#   - zero or more keyword tags. These are for parameters that vary based on the input 
+#     (e.g. a different set of defaults for each grism, spectral order, etc.)
+#   - each keyword tag itself contains a defaults dictionary, which means that it *also* 
+#     has an "all" tag containing any actual values, and zero-or-more keyword tags that 
+#     lead to yet-more-specific dictionaries (e.g. if you need to specify grism *and* 
+#     order).
+#
+# The defaults dictionary itself will comment each value keyword with what it is, and 
+# what data type it is expected to have.
+
+all:
+    xc: -1.0                    # float. pre-supplied zeroth image x co-ordinate
+    xerr: -1.0                  # float. error in xc
+    yc: -1.0                    # float. pre-supplied zeroth image y co-ordinate
+    yerr: -1.0                  # float. error in yc
+    ywidth: 11                  # int. width of extraction box.
+    y_offset: 0                 # int. offset in y co-ordinate of extraction trace
+    gwidth: 6                   # int. width of smoothing kernel for background smoothing
+    bwidth: 13                  # int. width of background extraction box
+    bmedian: 7                  # int. width of background median-smoothing kernel
+    bmean1: 7                   # int. width of first background boxcar-smoothing kernel
+    bmean2: 7                   # int. width of second background boxcar-smoothing kernel
+    slope: 1.0                  # float. If set to 1, trace slope will be fit. Otherwise, 
+                                #        trace slope will be treated as the value 
+                                #        provided, in radians.
+    yshift: 0                   # int. offset to the initial spectral trace intercept
+    wl_offset: 0                # float. offset to be applied to the wavelength fit 
+                                #        estimate.
+    bdist: -1                   # int. Distance from spectral trace to background region.
+                                #        Defaults to 25 + bwidth//2, which can't be set in
+                                #        a  data file.
+    ubdist: -1                  # int. bdist, but only for the upper background region.
+    lbdist: -1                  # int. bdist, but only for the lower background region.
+g102:
+    all:
+        ix_shift: 252           # int. x offset from target on an imaging exposure to 
+                                #      target's zeroth order position.
+        iy_shift: 4             # int. As ix_shift, but in the y direction
+        wlrang_m1_low: 8000.0   # float. lowest valid wavelength for -1st order.
+        wlrang_m1_high: 10000.0 # float. highest valid wavelength for -1st order.
+        wlrang_p1_low: 8000.0   # float. lowest valid wavelength for 1st order.
+        wlrang_p1_high: 10000.0 # float. highest valid wavelength for 1st order.
+        wlrang_p2_low: 8000.0   # float. lowest valid wavelength for 2nd order.
+        wlrang_p2_high: 10000.0 # float. highest valid wavelength for 2nd order.
+g141:
+    all:
+        ix_shift: 188           # int. x offset from target on an imaging exposure to 
+                                #      target's zeroth order position.
+        iy_shift: 1             # int. As ix_shift, but in the y direction
+        wlrang_m1_low: 10800.0  # float. lowest valid wavelength for -1st order.
+        wlrang_m1_high: 16000.0 # float. highest valid wavelength for -1st order.
+        wlrang_p1_low: 10800.0  # float. lowest valid wavelength for 1st order.
+        wlrang_p1_high: 16000.0 # float. highest valid wavelength for 1st order.
+        wlrang_p2_low: 10800.0  # float. lowest valid wavelength for 2nd order.
+        wlrang_p2_high: 13000.0 # float. highest valid wavelength for 2nd order.

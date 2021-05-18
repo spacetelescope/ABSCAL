@@ -69,7 +69,7 @@ from pathlib import Path
 from scipy.stats import mode
 
 from abscal.common.args import parse
-from abscal.common.utils import get_data_file, set_params
+from abscal.common.utils import get_data_file, get_defaults, set_params
 from abscal.common.exposure_data_table import AbscalDataTable
 from abscal.wfc3.reduce_grism_extract import reduce
 from abscal.wfc3.reduce_grism_extract import additional_args as extract_args
@@ -122,13 +122,13 @@ def coadd(input_table, arg_list, overrides={}):
     flags = 4 | 8 | 16 | 64 | 128 | 256
     filters = ['G102', 'G141']
 
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    with open(known_issues_file, 'r') as inf:
-        known_issues = json.load(inf)
-    input_table.adjust(known_issues['metadata'])
     issues = []
-    if "coadd_grism" in known_issues:
-        issues = known_issues["coadd_grism"]
+    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
+    if known_issues_file is not None:
+        with open(known_issues_file, 'r') as inf:
+            known_issues = json.load(inf)
+        if "coadd_grism" in known_issues:
+            issues = known_issues["coadd_grism"]
 
     unique_obs = list(set(input_table['obset']))
 
@@ -187,37 +187,8 @@ def coadd(input_table, arg_list, overrides={}):
 
             for row in filter_table:
                 roots.append(row['root'])
-                defaults = {
-                    'wbeg': 0.,         # start of valid wavelengths
-                    'wend': 0.,         # end of valid wavelengths
-                    'regbeg_m1': 0.,    # -1st order wavelength start
-                    'regbeg_p1': 0.,    # 1st order wavelength start
-                    'regbeg_p2': 0.,    # 2nd order wavelength start
-                    'regend_m1': 0.,    # -1st order wavelength end
-                    'regend_p1': 0.,    # 1st order wavelength end
-                    'regend_p2': 0.,    # 2nd order wavelength end
-                    'width': 22.        # cross-correlation width
-                    }
-                if filter == 'G102':
-                    defaults['wbeg'] = 7500.
-                    defaults['wend'] = 11800.
-                    defaults['regbeg_m1'] = -13500.
-                    defaults['regbeg_p1'] = -3800.
-                    defaults['regbeg_p2'] = 13500.
-                    defaults['regend_m1'] = -3800.
-                    defaults['regend_p1'] = 13500.
-                    defaults['regend_p2'] = 27000.
-                elif filter == 'G141':
-                    defaults['wbeg'] = 10000.
-                    defaults['wend'] = 17500.
-                    defaults['regbeg_m1'] = -19000.
-                    defaults['regbeg_p1'] = -5100.
-                    defaults['regbeg_p2'] = 19000.
-                    defaults['regend_m1'] = -5100.
-                    defaults['regend_p1'] = 19000.
-                    defaults['regend_p2'] = 38000.
-                params = set_params(defaults, row, issues, preamble, overrides,
-                                    verbose)
+                defaults = get_defaults("abscal.wfc3.reduce_grism_coadd", filter.lower())
+                params = set_params(defaults, row, issues, preamble, overrides, verbose)
 
                 spec_file = os.path.join(row['path'], row['extracted'])
                 if not os.path.isfile(spec_file):
@@ -421,7 +392,8 @@ def coadd(input_table, arg_list, overrides={}):
                         spec_mask = [r['extracted'] == spec_file for r in input_table]
                         spec_mask = np.ma.masked_array(spec_mask).astype(np.bool_)
                         row = input_table[spec_mask.filled(fill_value=False)]
-                        overrides = {'width': params['width']}
+                        if 'width' not in overrides:
+                            overrides['width'] = params['width']
                         try:
                             offset, arr = cross_correlate(net1[ib:ie+1],
                                                           neti[ib:ie+1],
@@ -536,22 +508,40 @@ def coadd(input_table, arg_list, overrides={}):
                         plt.show()
 
                         # Third Plot -- remove bad data
-                        fcor1 = spec_net + np.where(mask==0, 9e9, 0)
-                        ind = np.where((wcor[0,:] >= rb) & (wcor[0,:] < re))
+                        good_mask = np.where(mask[0,:]>0)
+                        bad_mask = np.where(mask[0,:]==0)
+                        wl_cor = wcor[0,good_mask]
+                        wl_bad = wcor[0,bad_mask]
+                        fcor1 = spec_net[igood[0],good_mask]
+                        fbad = spec_net[igood[0],bad_mask]
+                        ind = np.where((wl_cor >= rb) & (wl_cor < re))
+                        ind_bad = np.where((wl_bad >= rb) & (wl_bad < re))
                         fig = plt.figure()
                         ax = fig.add_subplot(111)
-                        title = 'Bad DQ for {} ({}) order {}'
+                        title = 'DQ Plot for {} ({}) order {}'
                         ax.set_title(title.format(obs, filter, iord))
                         plt.xlim(xrang)
-                        plt.ylim(0, 1e9)
-                        w, f = wcor[0,ind][0], fcor1[igood[0],ind][0]
+                        w, f = wl_cor[ind], fcor1[ind]
                         spec_label = 'Spectrum {}'.format(igood[0]+1)
-                        ax.plot(w/1.e4, f, label=spec_label)
+                        ax.scatter(w/1.e4, f, s=1., marker='.', label=spec_label)
+                        wb, fb = wl_bad[ind_bad], fbad[ind_bad]
+                        spec_label = 'Spectrum {} bad DQ'.format(igood[0]+1)
+                        ax.scatter(wb/1.e4, fb, s=1., marker='x', c='r', label='Bad DQ')
                         for i in range(1, ngood):
-                            ind = np.where((wcor[i,:] >= rb) & (wcor[i,:] < re))
-                            w, f = wcor[i,ind][0], fcor1[igood[i],ind][0]
+                            good_mask = np.where(mask[igood[i],:]>0)
+                            bad_mask = np.where(mask[igood[i],:]==0)
+                            wl_cor = wcor[i, good_mask]
+                            wl_bad = wcor[0,bad_mask]
+                            fcor1 = spec_net[igood[i],good_mask]
+                            fbad = spec_net[igood[i],bad_mask]
+                            ind = np.where((wl_cor >= rb) & (wl_cor < re))
+                            ind_bad = np.where((wl_bad >= rb) & (wl_bad < re))
+                            w, f = wl_cor[ind], fcor1[ind]
                             spec_label = 'Spectrum {}'.format(igood[i]+1)
-                            ax.plot(w/1.e4, f, label=spec_label)
+                            ax.scatter(w/1.e4, f, s=1., marker='.', label=spec_label)
+                            wb, fb = wl_bad[ind_bad], fbad[ind_bad]
+                            spec_label = 'Spectrum {} bad DQ'.format(igood[i]+1)
+                            ax.scatter(wb/1.e4, fb, s=1., marker='x', c='r')
                         ax.legend()
                         plt.show()
 
@@ -695,10 +685,10 @@ def coadd(input_table, arg_list, overrides={}):
             if interactive:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
-                spec_title = '{} {} ({}) Merged Spectra'
+                spec_title = '{} {} ({}) Co-added Spectra'
                 ax.set_title(spec_title.format(obs, target, filter))
                 plt.xlabel("Wavelength (micron)")
-                plt.ylabel("Flux")
+                plt.ylabel("Count Rate (electrons/s)")
                 ax.plot(wmrg/1.e4, nmrg, label='net')
                 ax.plot(wmrg/1.e4, gmrg, label='gross')
                 ax.legend()

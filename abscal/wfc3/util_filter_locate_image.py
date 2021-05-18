@@ -83,14 +83,14 @@ def locate_image(input_table, verbose=False, show_trace=False):
         msg = "{}: Starting WFC3 image location check for FILTER data."
         print(msg.format(task))
 
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    with open(known_issues_file, 'r') as inf:
-        known_issues = json.load(inf)
-    input_table.adjust(known_issues['metadata'])
     issues = []
-    if "reduction" in known_issues:
-        if "locate_image" in known_issues["reduction"]:
-            issues = known_issues["reduction"]["locate_image"]
+    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
+    if known_issues_file is not None:
+        with open(known_issues_file, 'r') as inf:
+            known_issues = json.load(inf)
+        if "reduction" in known_issues:
+            if "locate_image" in known_issues["reduction"]:
+                issues = known_issues["reduction"]["locate_image"]
     
     for row in input_table:
         root = row['root']

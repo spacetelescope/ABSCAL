@@ -330,33 +330,18 @@ class AbscalDataTable(Table):
         deleted, and the other of items to be edited. The dictionaries are structured as 
         follows:
         
-        - Delete
-        
-          column: str
-              The column to look at
-          value: str
-              The value to search for in the column
-          source: str
-              The original IDL file that this item comes from
-          reason: str
-              The reason (if any) provided in the IDL comments
-              
-        - Edit
-        
-          column: str
-              The column to look at
-          key: str
-              The value to search for in the column
-          operation: str
-              What to do to the value. Currently the supported operations are "replace",
-              "append", and "add"
-          value: str
-              In the case of replace, a string in the format [old]->[new], where any 
-              instance of old that's found should be made equal to new.
-          source: str
-              The original IDL file that this item comes from
-          reason: str
-              The reason (if any) provided in the IDL comments
+        column: str
+            column to look at
+        key: str
+            value to search for in the column
+        operation: str
+            operation to perform. ONLY PRESENT FOR EDIT
+        value: str
+            value to use when applying the operation. ONLY PRESENT FOR EDIT
+        source: str
+            Where the change came from
+        reason: str
+            Why the change needed to be made
         
         Parameters
         ----------
@@ -371,14 +356,14 @@ class AbscalDataTable(Table):
         # the exposure needed to be removed, as found in the adjustment dictionary.
         reasons = []
         for item in adjustments['delete']:
-            if item["value"] in self[item["column"]]:
+            if item["key"] in self[item["column"]]:
                 masked = self[self[item["column"]] == item["value"]]
                 masked["use"] = False
                 reason = removal_str.format(item["reason"], item["source"])
                 new_notes = ["{} {}".format(x, reason) for x in masked["notes"]]
                 masked["notes"][:] = new_notes[:]
         
-        # Currently the only supported edit is wholesale replacing one value with another.
+        # Currently the only supported edits are replacement or appending.
         for item in adjustments['edit']:
             value = item["key"]
             

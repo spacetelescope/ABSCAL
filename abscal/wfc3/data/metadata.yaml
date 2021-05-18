@@ -1,0 +1,45 @@
+# This file contains table metadata edits for WFC3.
+#
+# Currently supported metadata changes are:
+#   - edit: change the value of a table column for a specific exposure or exposures
+#   - delete: set the "use" flag to False for a specific exposure or exposures. Does not
+#             actually remove them from the table, but they will not be used for any 
+#             part of the reduction.
+#
+# Individual entries have the form:
+#
+#   - column: <column>
+#     key: <value>
+#     [operation: <operation>]
+#     [value: value]
+#     reason: <reason>
+#     source: source
+#
+# Where "column" specifies the column to look at in the table, "key" specifies the value 
+# or values to look for, reason is a string where you should provide the reason that the 
+# edit is needed, and source is a string specifying where the edit came from (if it came 
+# from one of Ralph's IDL files). Source should be set to N/A if there isn't such a source 
+# specified.
+#
+# The "operation" and "value" keywords are only used for edits. "operation" specifies 
+# what the edit should be (currently one of "replace" or "append"), and "value" is either
+# a string of the form "old->new" (where "old" and "new" are the current value and the 
+# desired value respectively), or a string containing the value to append to each matching 
+# entry.
+
+delete:
+    - column: obset
+      key: ic6907
+      source: prewfc.pro
+      reason: VY2 Bad WL Testing
+    - column: root
+      key: iab907jdq
+      source: wfc_process.pro
+      reason: POSTARG has wrong sign
+edit:
+    - column: obset
+      key: iab9a
+      operation: replace
+      value: iab9a->iab90
+      source: prewfc.pro
+      reason: Misnamed visit

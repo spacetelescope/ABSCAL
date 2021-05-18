@@ -46,11 +46,10 @@ along to the table creation)::
     output_table = populate_table(some_arguments=some_values)
 """
 
-__all__ = ['populate_table']
-
 import datetime
 import glob
 import os
+import yaml
 
 import numpy as np
 
@@ -62,7 +61,7 @@ from copy import deepcopy
 from abscal.common.args import parse
 from abscal.common.exposure_data_table import AbscalDataTable
 from abscal.common.standard_stars import find_star_by_name, find_closest_star
-from abscal.common.utils import absdate
+from abscal.common.utils import absdate, get_data_file
 
 def get_target_name(header):
     """
@@ -278,6 +277,13 @@ def populate_table(data_table=None, overrides={}, **kwargs):
             data_table.add_exposure(file_metadata)
     
     data_table.set_filter_images()
+    
+    # Adjust the values in the table based on the known metadata edits
+    adjustments_file = get_data_file("abscal.wfc3", "metadata.yaml")
+    if adjustments_file is not None:
+        with open(adjustments_file, 'r') as inf:
+            adjustments = yaml.safe_load(inf)
+        data_table.adjust(adjustments)
 
     if data_table.n_exposures == 0:
         error_str = "Error: no files found for filespec {}"
@@ -339,9 +345,9 @@ def parse_args():
     description_str = "Build metadata table from input files."
     default_output_file = 'dirtemp.log'
 
-    additional_args = additional_args()
+    args = additional_args()
 
-    res = parse(description_str, default_output_file, additional_args)
+    res = parse(description_str, default_output_file, args)
     
     if res.paths is not None: 
         if "," in res.paths:

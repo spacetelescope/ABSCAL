@@ -1,0 +1,1242 @@
+coadd_grism:
+  wend:
+  - column: obset
+    param_value: 11450.0
+    reason: end of uncontaminated WLs
+    source: wfc_coadd.pro
+    value: icqw01
+  width:
+  - column: obset
+    param_value: 26
+    reason: unknown
+    source: wfc_coadd.pro
+    value: ibwt01
+metadata:
+  delete:
+  - column: obset
+    reason: VY2 Bad WL Testing
+    source: prewfc.pro
+    value: ic6907
+  - column: root
+    reason: POSTARG has wrong sign
+    source: wfc_process.pro
+    value: iab907jdq
+  edit:
+  - column: obset
+    key: iab9a
+    operation: replace
+    reason: Misnamed visit
+    source: prewfc.pro
+    value: iab9a->iab90
+reduction:
+  locate_image:
+    xstar:
+    - column: obset
+      param_value: 182
+      reason: C2602
+      source: prewfc.pro
+      value: ibhj10
+    ystar:
+    - column: obset
+      param_value: 143
+      reason: C2602
+      source: prewfc.pro
+      value: ibhj10
+  reduce_grism:
+    ix_shift:
+    - column: root
+      param_value: 188
+      reason: unknown
+      source: calwfc_spec.pro
+      value: icqv02gjq
+    iy_shift:
+    - column: root
+      param_value: 1
+      reason: unknown
+      source: calwfc_spec.pro
+      value: icqv02gjq
+    - column: root
+      param_value: 6
+      reason: unknown
+      source: calwfc_spec.pro
+      value: ic6906c0q
+    - column: root
+      param_value: 2
+      reason: unknown
+      source: calwfc_spec.pro
+      value: icqv01aoq
+    wl_offset:
+    - column: root
+      param_value: 6.0
+      reason: Hardcoded value. 18Jul-G191B G102.
+      source: wfcwlfix.pro
+      value: ibcf51ibq
+    - column: root
+      param_value: -18.0
+      reason: Hardcoded value. 18Jun-G191B G102.
+      source: wfcwlfix.pro
+      value: ic6903y4q
+    - column: root
+      param_value: -13.0
+      reason: Hardcoded value. 18Jun-G191B G102.
+      source: wfcwlfix.pro
+      value: ic6903y5q
+    - column: root
+      param_value: 8.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: iab901emq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: iab901esq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1asgq
+    - column: root
+      param_value: -5.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1aswq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1aszq
+    - column: root
+      param_value: -11.0
+      reason: Hardcoded value. 18Jun-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1at2q
+    - column: root
+      param_value: -12.0
+      reason: Hardcoded value. 18Jun-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1at9q
+    - column: root
+      param_value: -5.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ibwq1atmq
+    - column: root
+      param_value: 5.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ich402avq
+    - column: root
+      param_value: 6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ich402awq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ich402azq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: ich402b0q
+    - column: root
+      param_value: -5.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: idco01rzq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: idpo02p2q
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD153 G102.
+      source: wfcwlfix.pro
+      value: idpo02p8q
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt01p1q
+    - column: root
+      param_value: -9.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt01p2q
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt01peq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt01plq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt01p8q
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03efq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03ehq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03emq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03epq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03esq
+    - column: root
+      param_value: -9.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibbt03f6q
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibll14tgq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibll14thq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibll14tiq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: ibll14tkq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: iblf01ckq
+    - column: root
+      param_value: -5.0
+      reason: Hardcoded value. 18Jul-GD71 G102.
+      source: wfcwlfix.pro
+      value: iblf01d9q
+    - column: root
+      param_value: -18.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01z1q
+    - column: root
+      param_value: -84.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01zjq
+    - column: root
+      param_value: -85.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01zrq
+    - column: root
+      param_value: -86.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01zvq
+    - column: root
+      param_value: -86.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01zyq
+    - column: root
+      param_value: -87.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01auq
+    - column: root
+      param_value: -90.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01ayq
+    - column: root
+      param_value: -91.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01b1q
+    - column: root
+      param_value: -19.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01b5q
+    - column: root
+      param_value: -19.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01b9q
+    - column: root
+      param_value: -17.0
+      reason: Hardcoded value. 18Jun-GD71 G102.
+      source: wfcwlfix.pro
+      value: icqw01bcq
+    - column: root
+      param_value: -4.6
+      reason: Hardcoded value. 18Jul-17571 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl81x1q
+    - column: root
+      param_value: -5.8
+      reason: Hardcoded value. 18Jul-17571 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl81x8q
+    - column: root
+      param_value: -21.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01egq
+    - column: root
+      param_value: -16.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01ehq
+    - column: root
+      param_value: -16.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01ejq
+    - column: root
+      param_value: -18.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01emq
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01eoq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jul-18022 G102.
+      source: wfcwlfix.pro
+      value: id2i01erq
+    - column: root
+      param_value: -6.0
+      reason: Hardcoded value. 18Jul-18083 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl82o8q
+    - column: root
+      param_value: -2.2
+      reason: Hardcoded value. 18Jul-18083 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl82o9q
+    - column: root
+      param_value: -12.6
+      reason: Hardcoded value. 18Jul-18083 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl82obq
+    - column: root
+      param_value: -4.1
+      reason: Hardcoded value. 18Jul-18083 G102 merge.
+      source: wfcwlfix.pro
+      value: ibwl82oeq
+    - column: root
+      param_value: -7.0
+      reason: Hardcoded value. 18Jul-18083 G102.
+      source: wfcwlfix.pro
+      value: ibwl82ofq
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-2M003 G102.
+      source: wfcwlfix.pro
+      value: icsf23bbq
+    - column: root
+      param_value: 13.0
+      reason: Hardcoded value. 18Jul-2M055 G102.
+      source: wfcwlfix.pro
+      value: icsf02j4q
+    - column: root
+      param_value: 14.0
+      reason: Hardcoded value. 18Jul-2M055 G102.
+      source: wfcwlfix.pro
+      value: icsf02j9q
+    - column: root
+      param_value: 32.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88acq
+    - column: root
+      param_value: 32.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88adq
+    - column: root
+      param_value: 33.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88aeq
+    - column: root
+      param_value: 31.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88afq
+    - column: root
+      param_value: 33.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88agq
+    - column: root
+      param_value: 36.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88ahq
+    - column: root
+      param_value: 32.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88aiq
+    - column: root
+      param_value: 32.0
+      reason: Hardcoded value. 18Jul-BD60D G102.
+      source: wfcwlfix.pro
+      value: ibwl88ajq
+    - column: root
+      param_value: 7.0
+      reason: Hardcoded value. 18Jul-GRW_7 G102.
+      source: wfcwlfix.pro
+      value: ibll92fqq
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-GRW_7 G102.
+      source: wfcwlfix.pro
+      value: ic5z10ogq
+    - column: root
+      param_value: -8.0
+      reason: Hardcoded value. 18Oct-hd37725 G102 eye.
+      source: wfcwlfix.pro
+      value: ibwl89tnq
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jul-P330E G102.
+      source: wfcwlfix.pro
+      value: ibwib6m8q
+    - column: root
+      param_value: -18.0
+      reason: Hardcoded value. 18Jul-P330E G102.
+      source: wfcwlfix.pro
+      value: ibwib6m9q
+    - column: root
+      param_value: -22.0
+      reason: Hardcoded value. 18Jul-P330E G102.
+      source: wfcwlfix.pro
+      value: ibwib6mbq
+    - column: root
+      param_value: -26.0
+      reason: Hardcoded value. 18Jul-P330E G102.
+      source: wfcwlfix.pro
+      value: ibwib6mdq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jul-P330E G102.
+      source: wfcwlfix.pro
+      value: ibwib6mfq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jul-snap2G102 stiscf.
+      source: wfcwlfix.pro
+      value: ibwi05t1q
+    - column: root
+      param_value: -20.0
+      reason: Hardcoded value. 18Jul-VB8 G102.
+      source: wfcwlfix.pro
+      value: icrw12l8q
+    - column: root
+      param_value: -65.0
+      reason: Hardcoded value. 18Jul-WD132 G102.
+      source: wfcwlfix.pro
+      value: icwg01geq
+    - column: root
+      param_value: -70.0
+      reason: Hardcoded value. 18Jun-WD132 G102.
+      source: wfcwlfix.pro
+      value: icwg01gfq
+    - column: root
+      param_value: 69.0
+      reason: Hardcoded value. 18Jul-WD234 G102.
+      source: wfcwlfix.pro
+      value: icwg02xvq
+    - column: root
+      param_value: 69.0
+      reason: Hardcoded value. 18Jul-WD234 G102.
+      source: wfcwlfix.pro
+      value: icwg02xwq
+    - column: root
+      param_value: 17.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ibwl84hwq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ibwl84i0q
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ibwl84i3q
+    - column: root
+      param_value: -20.0
+      reason: Hardcoded value. 18Jul-G191 G141 mrg ??? cannot arb. change WL of pts
+        of prime WDs, as the sens will be screwy!.
+      source: wfcwlfix.pro
+      value: ic6901wvq
+    - column: root
+      param_value: -20.0
+      reason: Hardcoded value. 18Jul-G191 G141 mrg.
+      source: wfcwlfix.pro
+      value: ic6901wwq
+    - column: root
+      param_value: -20.0
+      reason: Hardcoded value. 18Jul-G191 G141 mrg.
+      source: wfcwlfix.pro
+      value: ic6901x1q
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value. 18Jul-G191 G141 mrg eye.
+      source: wfcwlfix.pro
+      value: ic6901x2q
+    - column: root
+      param_value: -20.0
+      reason: Hardcoded value. 18Jul-G191 G141 mrg eye. 'actual' -7.?
+      source: wfcwlfix.pro
+      value: ic6901x5q
+    - column: root
+      param_value: 17.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ichg01dwq
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ichg01dyq
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-G191B G141.
+      source: wfcwlfix.pro
+      value: ichg01dzq
+    - column: root
+      param_value: -30.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: iab9a4muq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1bl3q
+    - column: root
+      param_value: -28.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1bl6q
+    - column: root
+      param_value: -36.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1blaq
+    - column: root
+      param_value: -33.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1bldq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1blhq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1blvq
+    - column: root
+      param_value: 16.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1bm2q
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ibwq1bmcq
+    - column: root
+      param_value: 13.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ic461ahdq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ic461aheq
+    - column: root
+      param_value: 13.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich401hwq
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich401i3q
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402b4q
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402b5q
+    - column: root
+      param_value: -22.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402b6q
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402b7q
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402bbq
+    - column: root
+      param_value: -16.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402bcq
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402bfq
+    - column: root
+      param_value: -23.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: ich402bhq
+    - column: root
+      param_value: -29.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02p1q
+    - column: root
+      param_value: -30.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02peq
+    - column: root
+      param_value: -25.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02qgq
+    - column: root
+      param_value: -22.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02qoq
+    - column: root
+      param_value: -25.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02qsq
+    - column: root
+      param_value: 14.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02qvq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-GD153 G141.
+      source: wfcwlfix.pro
+      value: id2q02qzq
+    - column: root
+      param_value: -29.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02pkq
+    - column: root
+      param_value: -29.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02poq
+    - column: root
+      param_value: 19.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02prq
+    - column: root
+      param_value: -33.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02pyq
+    - column: root
+      param_value: -27.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02q5q
+    - column: root
+      param_value: -32.0
+      reason: Hardcoded value. 18Jun-GD153 G141.
+      source: wfcwlfix.pro
+      value: idco02q9q
+    - column: root
+      param_value: -47.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt02b7q
+    - column: root
+      param_value: -34.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt02bkq
+    - column: root
+      param_value: -27.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt02byq
+    - column: root
+      param_value: -35.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt04gfq
+    - column: root
+      param_value: -39.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt04hiq
+    - column: root
+      param_value: -27.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt04hqq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jul-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibbt04hwq
+    - column: root
+      param_value: -16.0
+      reason: Hardcoded value. 18Jul-GD71 G141.
+      source: wfcwlfix.pro
+      value: ibll14ttq
+    - column: root
+      param_value: -32.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02c7q
+    - column: root
+      param_value: 12.0
+      reason: Hardcoded value. 18Jul-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02ceq
+    - column: root
+      param_value: -40.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02ciq
+    - column: root
+      param_value: -26.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02csq
+    - column: root
+      param_value: -11.0
+      reason: Hardcoded value. 18Jul-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02cwq
+    - column: root
+      param_value: -34.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: iblf02d4q
+    - column: root
+      param_value: -117.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02haq
+    - column: root
+      param_value: -123.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02heq
+    - column: root
+      param_value: -137.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02i2q
+    - column: root
+      param_value: -140.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02i5q
+    - column: root
+      param_value: -138.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02i9q
+    - column: root
+      param_value: -139.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02icq
+    - column: root
+      param_value: -139.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02igq
+    - column: root
+      param_value: -19.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02ijq
+    - column: root
+      param_value: -34.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02inq
+    - column: root
+      param_value: -25.0
+      reason: Hardcoded value. 18Jun-GD71 G141.
+      source: wfcwlfix.pro
+      value: icqw02iqq
+    - column: root
+      param_value: 21.0
+      reason: Hardcoded value. 18Jul-17571 G141mrg.
+      source: wfcwlfix.pro
+      value: ibwl81xfq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-17571 G141mrg.
+      source: wfcwlfix.pro
+      value: ibwl81xkq
+    - column: root
+      param_value: 29.0
+      reason: Hardcoded value. 18Jul-17571 G141mrg.
+      source: wfcwlfix.pro
+      value: ibwl81xlq
+    - column: root
+      param_value: 31.0
+      reason: Hardcoded value. 18Jul-17571 G141mrg.
+      source: wfcwlfix.pro
+      value: ibwl81xmq
+    - column: root
+      param_value: 20.0
+      reason: Hardcoded value. 18Jul-17571 G141mrg eye.
+      source: wfcwlfix.pro
+      value: ibwl81xnq
+    - column: root
+      param_value: 6.0
+      reason: Hardcoded value. 18Jul-18022 G141 eye.
+      source: wfcwlfix.pro
+      value: id2i02dvq
+    - column: root
+      param_value: -15.0
+      reason: Hardcoded value. 18Jul-18022 G141.
+      source: wfcwlfix.pro
+      value: id2i02dwq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-18083 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwl82ohq
+    - column: root
+      param_value: 5.0
+      reason: Hardcoded value. 18Jul-18083 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwl82oiq
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-18083 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwl82ojq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-2m003618 G141 mrg.
+      source: wfcwlfix.pro
+      value: icsf23agq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-2m003618 G141 mrg.
+      source: wfcwlfix.pro
+      value: icsf23amq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-2M055 G141 eye.
+      source: wfcwlfix.pro
+      value: icsf02j7q
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-2M055 G141 eye.
+      source: wfcwlfix.pro
+      value: icsf02jhq
+    - column: root
+      param_value: 42.0
+      reason: Hardcoded value. 18Jul-BD60D G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwl88a4q
+    - column: root
+      param_value: 36.0
+      reason: Hardcoded value. 18Jul-BD60D G141.
+      source: wfcwlfix.pro
+      value: ibwl88a5q
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-BD60D G141.
+      source: wfcwlfix.pro
+      value: ibwl88a6q
+    - column: root
+      param_value: 40.0
+      reason: Hardcoded value. 18Jul-BD60D G141.
+      source: wfcwlfix.pro
+      value: ibwl88a7q
+    - column: root
+      param_value: 46.0
+      reason: Hardcoded value. 18Jul-BD60D G141.
+      source: wfcwlfix.pro
+      value: ibwl88a8q
+    - column: root
+      param_value: 48.0
+      reason: Hardcoded value. 18Jul-BD60D G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwl88a9q
+    - column: root
+      param_value: 39.0
+      reason: Hardcoded value. 18Jul-BD60D G141 eye.
+      source: wfcwlfix.pro
+      value: ibwl88aaq
+    - column: root
+      param_value: 29.0
+      reason: Hardcoded value. 18Jul-BD60D G141.
+      source: wfcwlfix.pro
+      value: ibwl88abq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value.  18oct-c26202 G141. C26202 - 2018oct23 noisy, but make
+        ends @ 1.1,1.7mic match. Old mystery shifts were ~-22 and said mrg?.
+      source: wfcwlfix.pro
+      value: ibhj10vfq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value.  18oct-c26202 G141. C26202 - 2018oct23 noisy, but make
+        ends @ 1.1,1.7mic match. Old mystery shifts were ~-22 and said mrg?.
+      source: wfcwlfix.pro
+      value: ibhj10vmq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value.  18oct-c26202 G141. C26202 - 2018oct23 noisy, but make
+        ends @ 1.1,1.7mic match. Old mystery shifts were ~-22 and said mrg?.
+      source: wfcwlfix.pro
+      value: ibhj10vtq
+    - column: root
+      param_value: -10.0
+      reason: Hardcoded value.  18oct-c26202 G141. C26202 - 2018oct23 noisy, but make
+        ends @ 1.1,1.7mic match. Old mystery shifts were ~-22 and said mrg?.
+      source: wfcwlfix.pro
+      value: ibhj10w0q
+    - column: root
+      param_value: 7.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ibll42v1q
+    - column: root
+      param_value: 20.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141 eye.
+      source: wfcwlfix.pro
+      value: ibll92fpq
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141 0-tchang rms.
+      source: wfcwlfix.pro
+      value: iblla2x6q
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ibuc05awq
+    - column: root
+      param_value: 24.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ibuc12isq
+    - column: root
+      param_value: 10.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141 eye, unstable X-correl.
+      source: wfcwlfix.pro
+      value: ibuc15acq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141 eye.
+      source: wfcwlfix.pro
+      value: ibuc54skq
+    - column: root
+      param_value: 18.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ibuc42lsq
+    - column: root
+      param_value: -13.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ic5z03grq
+    - column: root
+      param_value: 22.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ic5z05ilq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ic5z06dqq
+    - column: root
+      param_value: 31.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ic5z10ofq
+    - column: root
+      param_value: 11.0
+      reason: Hardcoded value. 18Jul-GRW_7 G141.
+      source: wfcwlfix.pro
+      value: ich316lpq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-kf06t2 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwi07mnq
+    - column: root
+      param_value: 30.0
+      reason: Hardcoded value. 18Jul-kf06t2 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwi07mwq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-p330e G141 mrg.
+      source: wfcwlfix.pro
+      value: ibtwb4bdq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-p330e G141 mrg.
+      source: wfcwlfix.pro
+      value: ibtwb4bgq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-p330e G141 mrg.
+      source: wfcwlfix.pro
+      value: ibtwb4bjq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-p330e G141 mrg.
+      source: wfcwlfix.pro
+      value: ibtwb4bmq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-p330e G141 mrg.
+      source: wfcwlfix.pro
+      value: ibtwb4bpq
+    - column: root
+      param_value: 20.0
+      reason: Hardcoded value. 18Jul-snap2 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwi05szq
+    - column: root
+      param_value: 20.0
+      reason: Hardcoded value. 18Jul-snap2 G141 mrg.
+      source: wfcwlfix.pro
+      value: ibwi05t9q
+    - column: root
+      param_value: 22.0
+      reason: Hardcoded value. 18Jul-vb8 G141 mrg.
+      source: wfcwlfix.pro
+      value: icrw12l9q
+    - column: root
+      param_value: 22.0
+      reason: Hardcoded value. 18Jul-vb8 G141 mrg.
+      source: wfcwlfix.pro
+      value: icrw12laq
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. 18Jul-wd1327 G141.
+      source: wfcwlfix.pro
+      value: icwg01gcq
+    - column: root
+      param_value: -8.0
+      reason: Hardcoded value. 18Jul-wd1327 G141.
+      source: wfcwlfix.pro
+      value: icwg01gdq
+    - column: root
+      param_value: 16.0
+      reason: Hardcoded value. 18Jul-wd1657 G141.
+      source: wfcwlfix.pro
+      value: ibwi08mkq
+    - column: root
+      param_value: 14.0
+      reason: Hardcoded value. 18Jul-WD234 G141 eye.
+      source: wfcwlfix.pro
+      value: icwg02xtq
+    - column: root
+      param_value: 13.0
+      reason: Hardcoded value. 18Jul-WD234 G141.
+      source: wfcwlfix.pro
+      value: icwg02xuq
+    - column: obset
+      param_value: -30.0
+      reason: Hardcoded value. 18jul 2m055914 G141 mrg
+      source: wfcwlfix.pro
+      value: ica701
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. Gaia G102 Eye vs STIS.
+      source: wfcwlfix.pro
+      value: ie3f10c1qGAIA593_1968
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. Gaia G102 Eye vs STIS.
+      source: wfcwlfix.pro
+      value: ie3f10c2qGAIA593_1968
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. Gaia G102 Eye vs STIS.
+      source: wfcwlfix.pro
+      value: ie3f10c3qGAIA593_1968
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. Gaia G102 Eye vs STIS.
+      source: wfcwlfix.pro
+      value: ie3f10c4qGAIA593_1968
+    - column: root
+      param_value: 15.0
+      reason: Hardcoded value. Gaia G102 Eye vs STIS.
+      source: wfcwlfix.pro
+      value: ie3f10c5qGAIA593_1968
+    - column: root
+      param_value: -50.0
+      reason: 'Hardcoded value. G141: line up w/ G102 at ~11500A feature'
+      source: wfcwlfix.pro
+      value: ie3f10caqGAIA593_1968
+    - column: root
+      param_value: -50.0
+      reason: 'Hardcoded value. G141: line up w/ G102 at ~11500A feature'
+      source: wfcwlfix.pro
+      value: ie3f10cbqGAIA593_1968
+    - column: root
+      param_value: -50.0
+      reason: 'Hardcoded value. G141: line up w/ G102 at ~11500A feature'
+      source: wfcwlfix.pro
+      value: ie3f10ciqGAIA593_1968
+    - column: root
+      param_value: -50.0
+      reason: 'Hardcoded value. G141: line up w/ G102 at ~11500A feature'
+      source: wfcwlfix.pro
+      value: ie3f10cjqGAIA593_1968
+    - column: root
+      param_value: -50.0
+      reason: 'Hardcoded value. G141: line up w/ G102 at ~11500A feature'
+      source: wfcwlfix.pro
+      value: ie3f10ckqGAIA593_1968
+    - column: root
+      param_value: -1.0
+      reason: Hardcoded value. Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+      source: wfcwlfix.pro
+      value: ie3f10c1qGAIA593_9680
+    - column: root
+      param_value: -1.0
+      reason: Hardcoded value. Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+      source: wfcwlfix.pro
+      value: ie3f10c2qGAIA593_9680
+    - column: root
+      param_value: -1.0
+      reason: Hardcoded value. Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+      source: wfcwlfix.pro
+      value: ie3f10c3qGAIA593_9680
+    - column: root
+      param_value: -1.0
+      reason: Hardcoded value. Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+      source: wfcwlfix.pro
+      value: ie3f10c8qGAIA593_9680
+    - column: root
+      param_value: -1.0
+      reason: Hardcoded value. Gaia G102 Eye vs kf06t2 Model at ~8600A Cr?
+      source: wfcwlfix.pro
+      value: ie3f10c9qGAIA593_9680
+    wlrang_m1_high:
+    - column: root
+      param_value: 11000.0
+      reason: unknown
+      source: calwfc_spec.pro
+      value: ibbu01aaq
+    - column: target
+      param_value: 11000.0
+      reason: unknown
+      source: calwfc_spec.pro
+      value: PN
+    wlrang_m1_low:
+    - column: root
+      param_value: 8800.0
+      reason: unknown
+      source: calwfc_spec.pro
+      value: ibbu01aaq
+    - column: target
+      param_value: 8800.0
+      reason: unknown
+      source: calwfc_spec.pro
+      value: PN
+    yshift:
+    - column: obset
+      param_value: 1
+      reason: Fudge
+      source: calwfc_spec.pro
+      value: iab90
+wlmeas:
+  iab908seq:
+    '2':
+      '3':
+        xcentr: 685.4
+  ibbu02uyq:
+    '1':
+      '3':
+        xcentr: 422.6
+  ibbu02v9q:
+    '-1':
+      '4':
+        xcentr: 133.2
+  ic6906c0q:
+    '1':
+      '0':
+        xcentr: 902.2
+  ic6907ciq:
+    '-1':
+      '5':
+        xcentr: 69.6

@@ -1,0 +1,501 @@
+reduce:
+- column: root
+  ext: sci
+  reason: G141 WD1657+343
+  source: calwfc_spec.pro
+  value: 8.2
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 P330E
+  source: calwfc_spec.pro
+  value: 220.0
+  x:
+  - 940
+  - 941
+  y:
+  - 557
+- column: root
+  ext: sci
+  reason: G102 P330E
+  source: calwfc_spec.pro
+  value: 1010.0
+  x:
+  - 940
+  - 941
+  y:
+  - 558
+- column: root
+  ext: sci
+  reason: G141 GD153
+  source: calwfc_spec.pro
+  value: 110.0
+  x:
+  - 431
+  y:
+  - 712
+- column: root
+  ext: sci
+  reason: G141 GD153
+  source: calwfc_spec.pro
+  value: 122.0
+  x:
+  - 433
+  y:
+  - 713
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 310.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 10.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 68.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 53.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 131.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 23.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 10.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 93.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 321.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 234.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 311.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 99.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 7.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 9.5
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 6.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 45.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 8.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 321.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 1757132 deadpx
+  source: calwfc_spec.pro
+  value: 1900.0
+  x:
+  - 334
+  y:
+  - 290
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 208.0
+  x:
+  - 605
+  y:
+  - 557
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 280.0
+  x:
+  - 605
+  y:
+  - 558
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 75.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 GRW deadpx
+  source: calwfc_spec.pro
+  value: 49.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 683.0
+  x:
+  - 534
+  y:
+  - 562
+- column: root
+  ext: sci
+  reason: G141 GRW deadpx
+  source: calwfc_spec.pro
+  value: 45.0
+  x:
+  - 548
+  y:
+  - 555
+- column: root
+  ext: sci
+  reason: G102 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 178.0
+  x:
+  - 502
+  - 503
+  y:
+  - 168
+- column: root
+  ext: sci
+  reason: G102 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 150.0
+  x:
+  - 502
+  - 503
+  y:
+  - 169
+- column: root
+  ext: sci
+  reason: G102 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 27.0
+  x:
+  - 501
+  - 503
+  y:
+  - 170
+- column: root
+  ext: sci
+  reason: G141 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 35.0
+  x:
+  - 501
+  - 503
+  y:
+  - 169
+- column: root
+  ext: sci
+  reason: G141 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 115.0
+  x:
+  - 501
+  - 503
+  y:
+  - 170
+- column: root
+  ext: sci
+  reason: G141 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 52.0
+  x:
+  - 501
+  - 503
+  y:
+  - 171
+- column: root
+  ext: sci
+  reason: G141 gd71 deadpx
+  source: calwfc_spec.pro
+  value: 20
+  x:
+  - 501
+  - 503
+  y:
+  - 172
+- column: root
+  ext: sci
+  reason: G141 gd153 deadpx
+  source: calwfc_spec.pro
+  value: 45.0
+  x:
+  - 111
+  y:
+  - 816
+- column: root
+  ext: sci
+  reason: G141 gd153 deadpx
+  source: calwfc_spec.pro
+  value: 82.0
+  x:
+  - 95
+  - 96
+  y:
+  - 818
+- column: root
+  ext: sci
+  reason: G141 gd153 deadpx
+  source: calwfc_spec.pro
+  value: 15.0
+  x:
+  - 95
+  - 97
+  y:
+  - 819
+- column: root
+  ext: sci
+  reason: G102 gd153 deadpx
+  source: calwfc_spec.pro
+  value: 94.0
+  x:
+  - 453
+  - 454
+  y:
+  - 182
+- column: root
+  ext: sci
+  reason: G102 p330e deadpx
+  source: calwfc_spec.pro
+  value: 830.0
+  x:
+  - 924
+  - 925
+  y:
+  - 183
+- column: root
+  ext: sci
+  reason: G102 p330e deadpx
+  source: calwfc_spec.pro
+  value: 160.0
+  x:
+  - 922
+  - 925
+  y:
+  - 184
+- column: root
+  ext: sci
+  reason: G102 p330e deadpx
+  source: calwfc_spec.pro
+  value: 625.0
+  x:
+  - 980
+  y:
+  - 184
+- column: root
+  ext: sci
+  reason: G102 p330e deadpx
+  source: calwfc_spec.pro
+  value: 250.0
+  x:
+  - 878
+  y:
+  - 182
+- column: root
+  ext: sci
+  reason: G102 g191 deadpx
+  source: calwfc_spec.pro
+  value: 334.0
+  x:
+  - 927
+  y:
+  - 136
+- column: root
+  ext: sci
+  reason: G102 g191 deadpx
+  source: calwfc_spec.pro
+  value: 63.0
+  x:
+  - 929
+  y:
+  - 137
+- column: root
+  ext: sci
+  reason: G141 g191 deadpx
+  source: calwfc_spec.pro
+  value: 250.0
+  x:
+  - 877
+  y:
+  - 960
+- column: root
+  ext: sci
+  reason: G141 g191 hotpx
+  source: calwfc_spec.pro
+  value: 728.0
+  x:
+  - 877
+  y:
+  - 961
+- column: root
+  ext: sci
+  reason: G102gd71 deadpx dq=8
+  source: calwfc_spec.pro
+  value: 168.0
+  x:
+  - 185
+  y:
+  - 119
+- column: root
+  ext: sci
+  reason: G141VB8 deadpx dq=32
+  source: calwfc_spec.pro
+  value: 1910.0
+  x:
+  - 372
+  y:
+  - 260
+- column: root
+  ext: sci
+  reason: G141wd1657 hotpx dq=0
+  source: calwfc_spec.pro
+  value: 1.0
+  x:
+  - 606
+  y:
+  - 557
+- column: root
+  ext: sci
+  reason: G141wd1657 hotpx dq=0
+  source: calwfc_spec.pro
+  value: 2.0
+  x:
+  - 607
+  y:
+  - 554
+- column: root
+  ext: sci
+  reason: G141wd1657 hotpx dq=0
+  source: calwfc_spec.pro
+  value: 3.1
+  x:
+  - 625
+  y:
+  - 556

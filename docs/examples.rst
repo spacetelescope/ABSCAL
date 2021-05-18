@@ -34,7 +34,7 @@ column replaced by the actual path to the files).
 The next and final step is extracting the grism data and co-adding the grism exposures 
 taken with the same grism. To do this, enter the command::
 
-    wfc3_extract -fvdt dirtemp_grism.log
+    wfc3_coadd -fvdt dirtemp_grism.log
 
 When run, the script produces a number of extracted spectra (found in the "spec" 
 directory), and an updated table named "dirirstare.log". The "-f" option tells the script

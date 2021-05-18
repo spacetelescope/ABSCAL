@@ -10,7 +10,7 @@ Use
 ---
 This module is intended to be run from the command line::
 
-    wfc3_extract [options] input_table
+    wfc3_coadd [options] input_table
 """
 
 from abscal.wfc3.reduce_grism_coadd import main as do_coadd

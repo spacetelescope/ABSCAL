@@ -14,7 +14,7 @@ needed::
     from abscal.common.utils import absdate
 """
 
-import os
+import os, yaml
 
 import numpy as np
 
@@ -58,7 +58,36 @@ def absdate(pstrtime):
     return dt.year + year_part/year_length
 
 
-def get_data_file(module, fname):
+def get_base_data_dir():
+    """
+    Find the location of the ABSCAL data files.
+    
+    ABSCAL stores both default parameters and exposure-specific corrections and settings 
+    in a number of data files. There are default copies stored internally, but they can 
+    also be stored elsewhere. The ABSCAL_DATA environment variable points to that 
+    location, although there is always a fallback to local data if a specified file does 
+    not exist elsewhere.
+    
+    Returns
+    -------
+    data_dir : str
+        The directory pointed to by ABSCAL_DATA (if both the environment variable and 
+        the directory to which it points exist)
+    """
+    if "ABSCAL_DATA" in os.environ:
+        # First look for all-capitals
+        if os.path.isdir(os.environ["ABSCAL_DATA"]):
+            return os.environ["ABSCAL_DATA"]
+    elif "abscal_data" in os.environ:
+        # Next look for all lower-case
+        if os.path.isdir(os.environ["abscal_data"]):
+            return os.environ["abscal_data"]
+    
+    # Fall back to internal
+    return os.path.dirname(os.path.abspath(__file__))
+
+
+def get_data_file(module, fname, defaults=False):
     """
     Find an internal data file.
     
@@ -73,24 +102,137 @@ def get_data_file(module, fname):
         abscal.wfc3)
     fname : str
         The file name of interest
+    defaults : bool, default False
+        Whether to append a "defaults" directory to the final path
 
     Returns
     -------
-    data_file : str
-        Full path to the data file.
+    data_file : str or None
+        Full path to the data file. If no file is found at the generated path, None will 
+        be returned. This is not necessarily a failure state, because (for example) a 
+        function may call for a known-issues file even though there are no current known 
+        issues (and thus no file to return). This way, the code doesn't need to be 
+        changed when there *is* a file, and a user can add a file to their local directory 
+        without needing to alter the code, because the code will just transparently find 
+        the file.
     """
-    # /path/to/module/common
-    current_loc = os.path.dirname(os.path.abspath(__file__))
-
-    # /path/to/module
-    base_loc = os.path.dirname(current_loc)
-    base_loc = os.path.dirname(base_loc)
-
+    # /path/to/abscal (with /common/utils.py stripped off)
+    local_loc = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    current_loc = get_base_data_dir()
+    
+    module = module.replace("abscal.", "")
+    
     # Replace '.' with path separator
-    module_path = module.replace(".", "/")
+    module_path = module.replace(".", os.pathsep)
 
-    data_file = os.path.join(base_loc, module_path, "data", fname)
-    return data_file
+    data_path = os.path.join(current_loc, module_path, "data")
+    if defaults:
+        data_path = os.path.join(data_path, "defaults")
+    data_file = os.path.join(data_path, fname)
+    
+    if os.path.isfile(data_file):
+        # Try for the data file (with potential user-supplied path)
+        return data_file
+    elif os.path.isfile(data_file.replace(current_loc, local_loc)):
+        # Fall back to the local version
+        return data_file.replace(current_loc, local_loc)
+    
+    # Fall back to None.
+    return None
+    
+    
+def _extract_dict(input_dict, output_dict, input_keys):
+    """
+    Recursively extract values from a defaults dictionary.
+    
+    A defaults dictionary consists of:
+    
+    - an optional "all" key
+    - zero or more other keys, each of whose values is a defaults dictionary
+    
+    The goal is to add any matching values to an output dictionary, with more specific 
+    matching values overriding less specific matching values. As such, given an input 
+    dictionary and a list of keywords,
+    
+    - Add all key/value pairs from the "all" dictionary (if present) to the output 
+      dictionary.
+    - For each keyword in the list, if that keyword is in the dictionary, call this 
+      function recursively on the value of that key, which is (see above) a dictionary.
+    - Don't check on whether a value already exists in the output dictionary, because 
+      more-specific overrides less-specific (if you need a default for a specific value to 
+      definitely override a more general default, nest that value as a keyword inside the 
+      more general dictionary).
+    
+    Parameters
+    ----------
+    input_dict : dict
+        The dictionary to search
+    output_dict : dict
+        The dictionary to build from
+    input_keys : list
+        A list of keys to search for
+        
+    Returns
+    -------
+    output_dict : dict
+        The edited output dictionary
+    """
+    if "all" in input_dict:
+        for keyword in input_dict["all"].keys():
+            output_dict[keyword] = input_dict["all"][keyword]
+    
+    for keyword in input_keys:
+        if keyword in input_dict:
+            output_dict = _extract_dict(input_dict[keyword], output_dict, input_keys)
+    
+    return output_dict
+
+
+def get_defaults(module, *args):
+    """
+    Find an internal defaults data file, load it using YAML, and return the resulting 
+    dictionary.
+    
+    Takes the dot-separated module path (e.g. "abscal.wfc3.reduce_grism_extract"), splits 
+    off the last item (e.g. ["abscal.wfc3", "reduce_grism_extract"]), adds ".yaml" to the 
+    end of the second item (e.g. ["abscal.wfc3", "reduce_grism_extract.yaml"]), adds 
+    ".defaults" to the first item 
+    (e.g. ["abscal.wfc3.defaults", "reduce_grism_extract.yaml"]), and feeds the result 
+    into :code:`get_data_file()`. Then loads the resulting file as a dictionary, and 
+    builds a new dictionary consisting of:
+    
+    - All key/value pairs in the "all" dictionary
+    - All key/value pairs in any dictionary matching any of the keyword arguments
+    - The above two items from any dictionary matching any of the keyword arguments, 
+      extending recursively into the depths of the dictionary.
+    
+    The result will be a flat (i.e. single-level) dictionary.
+
+    Parameters
+    ----------
+    module : str
+        The module to search in, using standard dot separators (e.g. abscal.wfc3)
+    args : list
+        A list of specific keyword arguments, provided to ensure the inclusion of 
+        specific sub-values or sub-dictionaries.
+
+    Returns
+    -------
+    defaults : dict
+        Dictionary of default parameters.
+    """
+    items = module.split(".")
+    module = ".".join(items[:-1])
+    file_name = items[-1]+".yaml"
+    
+    defaults_file = get_data_file(module, file_name, defaults=True)
+    
+    with open(defaults_file, "r") as inf:
+        defaults_dict = yaml.safe_load(inf)
+    
+    defaults = _extract_dict(defaults_dict, {}, args)
+    
+    return defaults
 
 
 def set_param(param, default, row, issues, pre, overrides={}, verbose=False):

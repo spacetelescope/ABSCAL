@@ -1,0 +1,25 @@
+# This file contains the name of the WFC3-specific calibration files that have been 
+# defined so far. It produces a mapping from exposure parameters (e.g. grism, filter, 
+# spectral order, etc.) to a reference file (where the reference file is itself also found 
+# in the data directory).
+#
+# The format is:
+#
+#   reference_file_type: reference_file_name
+#
+# if there is only one possible reference file for that reduction stage, or
+#
+#   reference_file_type:
+#       keyword: reference_file_name_1
+#       keyword: reference_file_name_2
+#       keyword: reference_file_name_3
+#
+# if there are multiple possible reference files based on some keyword.
+
+flatfield:
+    G102: WFC3.IR.G102.sky.V1.0.fits
+    G141: WFC3.IR.G141.sky.V1.0.fits
+flatfield_cube:
+    G102: sedFFcube-both.fits
+    G141: sedFFcube-both.fits
+ic5117_data: pnref/IC5117_rudy.txt
