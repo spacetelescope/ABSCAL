@@ -1,0 +1,27 @@
+# Exposure-specific parameter settings for util_filter_locate_image
+#
+# Settings are in the form of a list for each parameter, with the following format:
+#
+#   - column: column
+#     value: value
+#     param_value: param_value
+#     source: source
+#     reason: reason
+#
+# where column/value identifies the exposure or exposures (by exact match), param_value is 
+# the value that the parameter in the parent list should be set to, source is the IDL file 
+# where the parameter was found (set to N/A if from a different source), and reason 
+# explains why the parameter needed to be changed.
+
+xstar:
+    - column: obset
+      param_value: 182
+      reason: C2602
+      source: prewfc.pro
+      value: ibhj10
+ystar:
+    - column: obset
+      param_value: 143
+      reason: C2602
+      source: prewfc.pro
+      value: ibhj10

@@ -37,6 +37,7 @@ import glob
 import json
 import os
 import warnings
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -53,7 +54,7 @@ from abscal.common.utils import get_data_file, set_param
 from abscal.common.exposure_data_table import AbscalDataTable
 
 
-def locate_image(input_table, verbose=False, show_trace=False):
+def locate_image(input_table, verbose=False, show_trace=False, overrides={}):
     """
     Locate the target image in a table of exposures
     
@@ -83,14 +84,11 @@ def locate_image(input_table, verbose=False, show_trace=False):
         msg = "{}: Starting WFC3 image location check for FILTER data."
         print(msg.format(task))
 
-    issues = []
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    if known_issues_file is not None:
-        with open(known_issues_file, 'r') as inf:
-            known_issues = json.load(inf)
-        if "reduction" in known_issues:
-            if "locate_image" in known_issues["reduction"]:
-                issues = known_issues["reduction"]["locate_image"]
+    issues = {}
+    exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
+    if exposure_parameter_file is not None:
+        with open(exposure_parameter_file, 'r') as inf:
+            issues = yaml.safe_load(inf)
     
     for row in input_table:
         root = row['root']
@@ -105,10 +103,8 @@ def locate_image(input_table, verbose=False, show_trace=False):
             crval1 = row['crval1']
             crval2 = row['crval2']
             
-            xstar = set_param("xstar", 0, row, issues, preamble, {}, 
-                              verbose=verbose)
-            ystar = set_param("ystar", 0, row, issues, preamble, {}, 
-                              verbose=verbose)            
+            xstar = set_param("xstar", 0, row, issues, preamble, overrides, verbose)
+            ystar = set_param("ystar", 0, row, issues, preamble, overrides, verbose)            
             
             with fits.open(input_file) as inf:
                 data = inf['SCI'].data

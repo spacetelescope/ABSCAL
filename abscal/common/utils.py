@@ -119,7 +119,7 @@ def get_data_file(module, fname, defaults=False):
     # /path/to/abscal (with /common/utils.py stripped off)
     local_loc = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     current_loc = get_base_data_dir()
-    
+        
     module = module.replace("abscal.", "")
     
     # Replace '.' with path separator
@@ -136,8 +136,27 @@ def get_data_file(module, fname, defaults=False):
     elif os.path.isfile(data_file.replace(current_loc, local_loc)):
         # Fall back to the local version
         return data_file.replace(current_loc, local_loc)
+
+    # This is a convenience. The exposure parameters file associated with a particular
+    # python file is that file's name with ".py" replaced with ".yaml". For example, the 
+    # util_grism_cross_correlate.py exposure parameters file would be 
+    # util_grism_cross_correlate.yaml.
+    #
+    # As such, this basically says that, if you're asking for a python file (e.g. by just 
+    # sending in __file__ to get_data_file) (recognized by the extension being ".py"), 
+    # then search for a ".yaml" file with the same name if the previous search failed.
+    if os.path.splitext(fname)[1] == ".py":
+        fname = os.path.splitext(fname)[0] + ".yaml"
+        data_file = os.path.join(data_path, fname)
     
-    # Fall back to None.
+        if os.path.isfile(data_file):
+            # Try for the data file (with potential user-supplied path)
+            return data_file
+        elif os.path.isfile(data_file.replace(current_loc, local_loc)):
+            # Fall back to the local version
+            return data_file.replace(current_loc, local_loc)
+    
+    # If nothing was found, return None
     return None
     
     

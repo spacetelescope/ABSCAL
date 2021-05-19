@@ -32,8 +32,8 @@ i2: int, default -1
 
 import datetime
 import glob
-import json
 import os
+import yaml
 
 import numpy as np
 
@@ -45,7 +45,7 @@ from copy import deepcopy
 from scipy import signal
 
 from abscal.common.args import parse
-from abscal.common.utils import get_data_file, set_params
+from abscal.common.utils import get_data_file, get_defaults, set_params
 from abscal.common.exposure_data_table import AbscalDataTable
 
 def cross_correlate(s1, s2, row, arg_list, overrides={}):
@@ -80,20 +80,13 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
     if verbose:
         print("{}: Starting WFC3 cross-correlation of GRISM data.".format(task))
 
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    with open(known_issues_file, 'r') as inf:
-        known_issues = json.load(inf)
-    issues = []
-    if "reduction" in known_issues:
-        if "cross_correlate" in known_issues["reduction"]:
-            issues = known_issues["reduction"]["cross_correlate"]
-    
-    defaults = {
-                'ishift': 0,
-                'width': 15,
-                'i1': 0,
-                'i2': -1
-               }
+    issues = {}
+    exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
+    if exposure_parameter_file is not None:
+        with open(exposure_parameter_file, 'r') as inf:
+            issues = yaml.safe_load(inf)
+
+    defaults = get_defaults("abscal.wfc3.util_grism_cross_correlate")
     defaults['i2'] = len(s1) - 1
     params = set_params(defaults, row, issues, preamble, overrides, verbose)
     approx = int(round(params['ishift']))

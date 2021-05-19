@@ -1,0 +1,27 @@
+# Exposure-specific parameter settings for reduce_grism_coadd
+#
+# Settings are in the form of a list for each parameter, with the following format:
+#
+#   - column: column
+#     value: value
+#     param_value: param_value
+#     source: source
+#     reason: reason
+#
+# where column/value identifies the exposure or exposures (by exact match), param_value is 
+# the value that the parameter in the parent list should be set to, source is the IDL file 
+# where the parameter was found (set to N/A if from a different source), and reason 
+# explains why the parameter needed to be changed.
+
+wend:
+  - column: obset
+    value: icqw01
+    param_value: 11450.0
+    source: wfc_coadd.pro
+    reason: end of uncontaminated WLs
+width:
+  - column: obset
+    value: ibwt01
+    param_value: 26
+    source: wfc_coadd.pro
+    reason: unknown

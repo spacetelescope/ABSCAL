@@ -1,0 +1,24 @@
+# These are the default parameters for the coadd() function in util_grism_cross_correlate. 
+#
+# The file is are formatted in ABSCAL's own idiosyncratic (yet quietly brilliant) defaults 
+# dictionary format. That format consists of:
+#
+#   - an "all:" tag. Put any actual values here
+#   - zero or more keyword tags. These are for parameters that vary based on the input 
+#     (e.g. a different set of defaults for each grism, spectral order, etc.)
+#   - each keyword tag itself contains a defaults dictionary, which means that it *also* 
+#     has an "all" tag containing any actual values, and zero-or-more keyword tags that 
+#     lead to yet-more-specific dictionaries (e.g. if you need to specify grism *and* 
+#     order).
+#
+# The defaults dictionary itself will comment each value keyword with what it is, and 
+# what data type it is expected to have.
+
+all:
+    ishift: 0               # int. Initial pixel shift to use
+    width: 15               # int. Width of the window to use for cross-correlating
+    i1: 0                   # int. First pixel of spectrum to look at
+    i2: -1                  # int. Last pixel of spectrum to look at. Set by the script to 
+                            #           len(first_spectrum) - 1
+                            #      so not set as a default here, because yaml doesn't do 
+                            #      that.

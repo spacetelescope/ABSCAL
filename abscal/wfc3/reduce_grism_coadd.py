@@ -57,6 +57,7 @@ import datetime
 import glob
 import json
 import os
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -122,13 +123,11 @@ def coadd(input_table, arg_list, overrides={}):
     flags = 4 | 8 | 16 | 64 | 128 | 256
     filters = ['G102', 'G141']
 
-    issues = []
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    if known_issues_file is not None:
-        with open(known_issues_file, 'r') as inf:
-            known_issues = json.load(inf)
-        if "coadd_grism" in known_issues:
-            issues = known_issues["coadd_grism"]
+    issues = {}
+    exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
+    if exposure_parameter_file is not None:
+        with open(exposure_parameter_file, 'r') as inf:
+            issues = yaml.safe_load(inf)
 
     unique_obs = list(set(input_table['obset']))
 

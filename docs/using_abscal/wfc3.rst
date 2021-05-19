@@ -89,6 +89,8 @@ extracted spectrum available, then for the group,
   each spectral order, sorted so that the wavelengths are monotonically increasing. The 
   result is written out as a FITS file and an astropy table.
 
+For more detail, `see the reduce_grism_coadd API reference <../autoapi/abscal/wfc3/reduce_grism_coadd/index.html>`_. 
+
 Adjustable Parameters
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -137,8 +139,6 @@ Exposure-specific Overrides
 Exposure-specific overrides for reduce_grism_coadd are found at 
 "abscal_base/wfc3/data/reduce_grism_coadd.yaml".
 
-For more detail, `see the reduce_grism_coadd API reference <../autoapi/abscal/wfc3/reduce_grism_coadd/index.html>`_. 
-
 
 :code:`reduce_grism_extract.py`
 -------------------------------
@@ -186,6 +186,8 @@ through the table and, for each grism exposure:
     * Create a FITS file with a bintable extension containing all of the 1D spectra 
       extracted, as well as header cards specifying the keywords used to obtain the 
       extractions.
+
+For more detail, `see the reduce_grism_extract API reference <../autoapi/abscal/wfc3/reduce_grism_extract/index.html>`_. 
 
 Adjustable Parameters
 ~~~~~~~~~~~~~~~~~~~~~
@@ -272,7 +274,140 @@ Exposure-specific Overrides
 Exposure-specific overrides for reduce_grism_coadd are found at 
 "abscal_base/wfc3/data/reduce_grism_extract.yaml".
 
-For more detail, `see the reduce_grism_extract API reference <../autoapi/abscal/wfc3/reduce_grism_extract/index.html>`_. 
+
+:code:`reduce_grism_wavelength.py`
+----------------------------------
+
+This module has two central functions, :code:`wlmeas()` and :code:`wlmake()`, which will 
+be discussed separately.
+
+:code:`wlmeas`
+~~~~~~~~~~~~~~
+
+This function takes a table of exposures, selects those that are marked as being grism 
+exposures of planetary nebulae (PN), and uses them to produce a final wavelength scale for 
+WFC3 IR grism exposures. It does this by:
+
+* Taking a list of emission lines found in PN spectra
+* For each PN exposure,
+
+    * For each spectral order present on the detector,
+    
+        * Identifying the emission lines that are found within that spectral order
+        * Using the wavelength scale from `reduce_grism_extract.py`_ to find the 
+          approximate pixel location of that line
+        * Taking the net spectrum in the line-finding region, and making a flux-weighted 
+          centroid of the region
+        * If a successful fit is found, letting the user approve, modify, or reject it
+        * If no fit is found, letting the user add one if desired
+        * Recording the fit location (or the centre of the search region if there was no 
+          successful fit) to an output table
+
+Once all of the exposures have had all of their emission line fits recorded, the output 
+table is written out in astropy format.
+
+:code:`wlmake`
+~~~~~~~~~~~~~~
+
+This function takes the same input table of exposures as `wlmeas`_, as well as the output 
+table produced by `wlmeas`_, and derives a wavelength fit based on a pixel's location 
+relative to the centre of the zeroth-order image. It derives a separate fit for each order 
+of each grism, and records the fit parameters to an output table.
+
+For more detail, `see the reduce_grism_wavelength API reference <../autoapi/abscal/wfc3/reduce_grism_wavelength/index.html>`_. 
+
+Adjustable parameters
+~~~~~~~~~~~~~~~~~~~~~
+
+Neither function currently has any adjustable parameters.
+
+
+:code:`util_filter_locate_image.py`
+-----------------------------------
+
+This module locates the target centroid in imaging exposures. The main entry point 
+function, :code:`locate_image()`, takes a table of exposures, filters out any non-imaging 
+exposures and, for each exposure,
+
+* Take the image data, and set the edges of the image to zero.
+* Use the image WCS and the target co-ordinates (corrected for proper motion if the target 
+  was recognized as a standard star) to predict the target location on the detector
+* If the target was not close to the edge of the detector,
+
+    * Set the image data to zero except for a small region around the predicted location
+    * Median-filter the image with a 3-pixel kernel
+    * Take an even small region of the image around the brightest pixel in the smoothed
+      image
+    * Subtract the median value of the small region from the region
+    * Subtract 1/5 of the brightest pixel value from the region
+    * Set any pixels with negative values to zero
+    * Create two image profiles, one collapsed along the X axis and the other collapsed 
+      along the Y axis
+    * Produce a flux-weighted mean value for each profile, and set the target pixel 
+      position to those values
+    * Set the error values to :math:`\rm{pos}_{found} - \rm{pos}_{predicted}`.
+
+* If the target was close to the detector edge, or not found, return "-1" as co-ordinates.
+* Return the image co-ordinates and image error values.
+
+For more detail, `see the util_filter_locate_image API reference <../autoapi/abscal/wfc3/util_filter_locate_image/index.html>`_. 
+
+Adjustable Parameters
+~~~~~~~~~~~~~~~~~~~~~
+
+The adjustable parameters for util_filter_locate_image consist of a pair of default 
+values.
+
+Default Values
+..............
+
+These are passed to the :code:`locate_image()` function via the :code:`overrides` 
+parameter,  which takes a python dictionary. The default parameter values are zero. The 
+parameters are:
+
+xstar: float, default 0
+    The predicted star x position. 0 means unknown.
+ystar: float, default 0
+    The predicted star y position. 0 means unknown.
+
+If either of these values is set to something other than zero, the WCS fitting part of the 
+function will not be run, and the provided values will be treated as the predicted 
+position.
+
+
+:code:`util_grism_cross_correlate.py`
+-------------------------------------
+
+This module cross-correlates two spectra. The entry point function, 
+:code:`cross_correlate()` takes two spectra and computes a correlation coefficient for 
+every shift within a provided width, then returns the maximum signal value along with an 
+array of values.
+
+For more detail, `see the util_grism_cross_correlate API reference <../autoapi/abscal/wfc3/util_grism_cross_correlate/index.html>`_. 
+
+Adjustable Parameters
+~~~~~~~~~~~~~~~~~~~~~
+
+The adjustable parameters for util_grism_cross_correlate consist of a set of default 
+values.
+
+Default Values
+..............
+
+These are passed to the :code:`cross_correlate()` function via the :code:`overrides` 
+parameter,  which takes a python dictionary.  The default parameter values are found in 
+the abscal.wfc3.data.defaults sub-module/directory, stored as a 
+`parameter file <./parameter_files.html>`_. The parameters are:
+
+ishift: int, default 0
+    Approximate initial shift. The correlation search will start here. This value will 
+    also be added to the final fit.
+width: int, default 15
+    Size (in pixels) of the correlation search region
+i1: int, default 0
+    First pixel of the spectrum to use in correlation search
+i2: int, default :code:`len(first_spectrum)-1`
+    Last pixel of the spectrum to use in correlation search.
 
 
 Notes
@@ -305,7 +440,7 @@ Notes
    1st order, and 2nd order). A wavelength being in a particular region does not mean that 
    the wavelength is a valid part of that spectral order (i.e. a wavelength at which the 
    grism has non-zero throughput for that order).
-.. [#f] This parameter is passed directly through to `util_grism_cross_correlate`_, and 
+.. [#f] This parameter is passed directly through to `util_grism_cross_correlate.py`_, and 
    is not used directly in co-adding.
 .. [#g] It is possible to set the :code:`slope` parameter in order to bypass the trace 
    fitting and use a supplied angle instead.
