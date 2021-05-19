@@ -2137,14 +2137,11 @@ def reduce(input_table, arg_list, overrides={}):
     if verbose:
         print("{}: Starting WFC3 data reduction for GRISM data.".format(task))
 
-    issues = []
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    if known_issues_file is not None:
-        with open(known_issues_file, 'r') as inf:
-            known_issues = json.load(inf)
-        if "reduction" in known_issues:
-            if "reduce_grism" in known_issues["reduction"]:
-                issues = known_issues["reduction"]["reduce_grism"]
+    issues = {}
+    exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
+    if exposure_parameter_file is not None:
+        with open(exposure_parameter_file, 'r') as inf:
+            issues = yaml.safe_load(inf)
 
     for row in input_table:
         root = row['root']

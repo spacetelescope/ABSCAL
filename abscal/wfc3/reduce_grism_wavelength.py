@@ -48,6 +48,7 @@ import datetime
 import glob
 import json
 import os
+import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -194,6 +195,12 @@ def wlmeas(input_table, arg_list, overrides={}):
     task = "wlmeas"
     verbose = arg_list.verbose
     interactive = arg_list.trace
+
+    issues = {}
+    exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
+    if exposure_parameter_file is not None:
+        with open(exposure_parameter_file, 'r') as inf:
+            issues = yaml.safe_load(inf)
     
     fwhm = {
                 'G102': {
@@ -232,13 +239,6 @@ def wlmeas(input_table, arg_list, overrides={}):
         print(msg.format(task))
         print("{}: Input table is:".format(task))
         print(input_table)
-
-    known_issues_file = get_data_file("abscal.wfc3", "known_issues.json")
-    with open(known_issues_file, 'r') as inf:
-        known_issues = json.load(inf)
-    issues = []
-    if "wlmeas" in known_issues:
-        issues = known_issues["wlmeas"]
 
     roots = []
     stars = []
@@ -365,9 +365,11 @@ def wlmeas(input_table, arg_list, overrides={}):
                     print("WARNING: Centred using bad DQ")
 
                 if root in issues:
-                    if iord in issues[root]:
-                        if ilin in issues[root][iord]:
-                            xline[ilin] = issues[root][iord][ilin]["xcentr"]
+                    siord = str(iord)
+                    silin = str(ilin)
+                    if siord in issues[root]:
+                        if silin in issues[root][siord]:
+                            xline[ilin] = float(issues[root][siord][silin]["xcentr"])
                             fit_status = "hardcoded"
 
                 # Only do the centroiding if the line hasn't been set
