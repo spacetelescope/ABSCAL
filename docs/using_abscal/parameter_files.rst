@@ -30,9 +30,15 @@ within the module itself::
             data/
                 defaults/
                     reduce_grism_coadd.yaml
+                    reduce_grism_extract.yaml
+                    util_grism_cross_correlate.yaml
                 calibration_files.yaml
                 image_edits.yaml
-                known_issues.yaml
+                metadata.yaml
+                reduce_grism_coadd.yaml
+                reduce_grism_extract.yaml
+                reduce_grism_wavelength.yaml
+                util_filter_locate_image.yaml
 
 Note that, if a data file is fetched by :code:`abscal.common.utils.get_data_file()` then 
 the :code:`data` directory will be automatically appended to whatever module path is 

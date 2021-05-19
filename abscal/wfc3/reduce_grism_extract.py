@@ -267,9 +267,9 @@ def reduce_flatfield(input_table, params):
     coef3 = np.zeros((1014, 1014), dtype='float64')
 
     # Get flatfield data cube
-    cal_data = get_data_file("abscal.wfc3", "calibration_files.json")
+    cal_data = get_data_file("abscal.wfc3", "calibration_files.yaml")
     with open(cal_data, 'r') as inf:
-        cal_files = json.load(inf)
+        cal_files = yaml.safe_load(inf)
     flat_file_name = cal_files["flatfield_cube"]["wfc3"][filter]
     flat_file = get_data_file("abscal.wfc3", flat_file_name)
 
@@ -1444,9 +1444,9 @@ def reduce_stare(row, params, arg_list):
         y_shift = params['yshift']
         yapprox = yc + y_offset + (x_arr-xc)*(np.sin(angle) + y_shift)
 
-        image_edit_file = get_data_file("abscal.wfc3", "image_edits.json")
+        image_edit_file = get_data_file("abscal.wfc3", "image_edits.yaml")
         with open(image_edit_file, 'r') as inf:
-            image_edits = json.load(inf)
+            image_edits = yaml.safe_load(inf)
         issues = []
         if "reduce" in image_edits:
             issues = image_edits["reduce"]

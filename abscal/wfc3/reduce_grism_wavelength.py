@@ -220,10 +220,10 @@ def wlmeas(input_table, arg_list, overrides={}):
     wl_vac = air2vac(wl_air)
 
     # Get wavelength reference file
-    cal_data = get_data_file("abscal.wfc3", "calibration_files.json")
+    cal_data = get_data_file("abscal.wfc3", "calibration_files.yaml")
     with open(cal_data, 'r') as inf:
-        cal_files = json.load(inf)
-    pn_ref_name = cal_files["ic5117_data"]["wfc3"]
+        cal_files = yaml.safe_load(inf)
+    pn_ref_name = cal_files["ic5117_data"]
     pn_ref = get_data_file("abscal.wfc3", pn_ref_name)
 
     # Columns are 'wavelength' and 'flux'
