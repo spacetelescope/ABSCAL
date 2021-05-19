@@ -1,6 +1,0 @@
-:mod:`abscal.common.tests`
-==========================
-
-.. py:module:: abscal.common.tests
-
-
