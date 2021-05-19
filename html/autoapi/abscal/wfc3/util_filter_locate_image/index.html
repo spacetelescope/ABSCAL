@@ -1,0 +1,294 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>abscal.wfc3.util_filter_locate_image &mdash; abscal 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="abscal.wfc3.util_grism_cross_correlate" href="../util_grism_cross_correlate/index.html" />
+    <link rel="prev" title="abscal.wfc3.setup_package" href="../setup_package/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+            <a href="../../../../index.html" class="icon icon-home"> abscal
+            
+            <img src="../../../../_static/stsci_pri_combo_mark_white.png" class="logo" />
+          </a>
+
+          
+            
+            
+          
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+  
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installing ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../using_abscal.html">Using ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_handbook.html">ABSCAL Handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_idl_code.html">ABSCAL IDL Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_testing.html">ABSCAL Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">ABSCAL Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">abscal</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../../index.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a> &raquo;</li>
+        
+          <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3</span></code></a> &raquo;</li>
+        
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.util_filter_locate_image</span></code></li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../../../_sources/autoapi/abscal/wfc3/util_filter_locate_image/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-abscal.wfc3.util_filter_locate_image">
+<span id="abscal-wfc3-util-filter-locate-image"></span><h1><a class="reference internal" href="#module-abscal.wfc3.util_filter_locate_image" title="abscal.wfc3.util_filter_locate_image"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.util_filter_locate_image</span></code></a><a class="headerlink" href="#module-abscal.wfc3.util_filter_locate_image" title="Permalink to this headline">¶</a></h1>
+<p>This file takes an input metadata table and loops through the rows. For every imaging
+exposure, it uses the target location and observation wcs to determine the expected
+location of the target on the detector, and then runs a centroid algorithm to find the
+actual location.</p>
+<div class="section" id="authors">
+<h2>Authors<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Brian York (all python code)</p></li>
+<li><p>Ralph Bohlin (original IDL code)</p></li>
+</ul>
+</div>
+<div class="section" id="use">
+<h2>Use<a class="headerlink" href="#use" title="Permalink to this headline">¶</a></h2>
+<p>This file is intended ot be called from <cite>reduce_grism_extract.py</cite>, although it can be
+used by direct import:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">abscal.wfc3.util_filter_locate_image</span> <span class="kn">import</span> <span class="n">locate_image</span>
+
+<span class="n">output_table</span> <span class="o">=</span> <span class="n">locate_image</span><span class="p">(</span><span class="n">input_table</span><span class="p">,</span> <span class="n">verbose</span><span class="p">,</span> <span class="n">show_trace</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The function takes a table of exposure data, loops through the rows, and finds a source
+location in each image that is within 30 pixels of the location pointed to by the target
+location and image WCS values.</p>
+</div>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.util_filter_locate_image.locate_image" title="abscal.wfc3.util_filter_locate_image.locate_image"><code class="xref py py-obj docutils literal notranslate"><span class="pre">locate_image</span></code></a>(input_table, verbose=False, show_trace=False, overrides={})</p></td>
+<td><p>Locate the target image in a table of exposures</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.util_filter_locate_image.locate_image">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.util_filter_locate_image.</span></span><span class="sig-name descname"><span class="pre">locate_image</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">show_trace</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.util_filter_locate_image.locate_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Locate the target image in a table of exposures</p>
+<p>This function uses the image WCS and target co-ordinates to determine the theoretical
+target location on the detector, and then uses a centroiding search function to find
+the actual location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_table</strong> (<em>astropy.table.Table</em>) – <p>Input exposure table. Must have columns named</p>
+<ul>
+<li><p>root</p></li>
+<li><p>target</p></li>
+<li><p>filter</p></li>
+<li><p>use</p></li>
+<li><p>crval1</p></li>
+<li><p>crval2</p></li>
+</ul>
+</p></li>
+<li><p><strong>verbose</strong> (<em>bool</em><em> (</em><em>default False</em><em>)</em>) – Print diagnostic output</p></li>
+<li><p><strong>show_trace</strong> (<em>bool</em><em> (</em><em>default False</em><em>)</em>) – Display plot of calculated target location.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../util_grism_cross_correlate/index.html" class="btn btn-neutral float-right" title="abscal.wfc3.util_grism_cross_correlate" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../setup_package/index.html" class="btn btn-neutral float-left" title="abscal.wfc3.setup_package" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian York.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

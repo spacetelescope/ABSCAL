@@ -1,0 +1,22 @@
+:mod:`wfcdir`
+=============
+
+.. py:module:: wfcdir
+
+.. autoapi-nested-parse::
+
+   This module acts as an IDL interface (using the IDL 'wfcdir' name) to the WFC3
+   'create_table' script. It calls that script with IDL compatibility set to True.
+
+   Author
+   -------
+       - Brian York
+
+   Use
+   ---
+       This module is intended to be run from the command line.
+       ::
+           python wfcdir.py <file_path>
+
+
+

@@ -1,0 +1,42 @@
+:mod:`abscal.version`
+=====================
+
+.. py:module:: abscal.version
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.version.get_git_devstr
+
+
+
+.. function:: get_git_devstr(sha=False, show_warning=True, path=None)
+
+   Determines the number of revisions in this repository.
+
+   :param sha: If True, the full SHA1 hash will be returned. Otherwise, the total
+               count of commits in the repository will be used as a "revision
+               number".
+   :type sha: bool
+   :param show_warning: If True, issue a warning if git returns an error code, otherwise errors
+                        pass silently.
+   :type show_warning: bool
+   :param path: If a string, specifies the directory to look in to find the git
+                repository.  If `None`, the current working directory is used, and must
+                be the root of the git repository.
+                If given a filename it uses the directory containing that file.
+   :type path: str or None
+
+   :returns: **devversion** -- Either a string with the revision number (if `sha` is False), the
+             SHA1 hash of the current commit (if `sha` is True), or an empty string
+             if git version info could not be identified.
+   :rtype: str
+
+

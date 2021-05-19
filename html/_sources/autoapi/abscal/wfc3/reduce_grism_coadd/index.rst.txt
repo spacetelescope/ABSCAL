@@ -1,0 +1,140 @@
+:mod:`abscal.wfc3.reduce_grism_coadd`
+=====================================
+
+.. py:module:: abscal.wfc3.reduce_grism_coadd
+
+.. autoapi-nested-parse::
+
+   Extract and co-add a group of WFC3 grism spectra.
+
+   This submodule
+
+   - Takes an input exposure table (from `preprocess_table_create`)
+   - Groups the exposures by grating
+   - Finds and extracts the standard star spectrum from each exposure
+   - Groups the extracted spectra by program and visit
+   - Co-adds together each group
+
+   While it can produce substantial output, both in logging and plots, it can also run
+   without user intervention. User intervention is only asked for in choosing the best
+   centroid fit for the zeroth order image.
+
+   Authors
+   -------
+   - Brian York (all python code)
+   - Ralph Bohlin (original IDL code)
+
+   Use
+   ---
+   This module can be run from the command line (although one of the `abscal.commands` or
+   `abscal.idl_commands` scripts would be preferred for that), but is mostly intended to be
+   imported, either by binary scripts or for use from within python::
+
+       from abscal.wfc3.reduce_grism_coadd import coadd
+
+       output_table = coadd(input_table, command_line_arg_namespace, override_dict)
+
+   The override dict allows for many of the default input parameters to be overriden (as
+   defaults -- individual per-exposure overrides defined in the data files will still take
+   priority). Parameters that can be overriden in coadd are:
+
+   width: default 22
+       The width (in pixels) of the cross-correlation search region
+   wbeg: default 7500 (G102), 10000 (G141)
+       The lowest valid wavelength
+   wend: default 11800 (G102), 17500 (G141)
+       The highest valid wavelength
+   regbeg_m1: default -13500 (G102), -19000 (G141)
+       The start of the -1st spectral order region
+   regend_m1: default -3800 (G102), -5100 (G141)
+       The end of the -1st spectral order region
+   regbeg_p1: default -3800 (G102), -5100 (G141)
+       The start of the 1st spectral order region
+   regend_p1: default 13500 (G102), 19000 (G141)
+       The end of the 1st spectral order region
+   regbeg_p2: default 13500 (G102), 19000 (G141)
+       The start of the 2nd spectral order region
+   regend_p2: default 27000 (G102), 38000 (G141)
+       The end of the 2nd spectral order region
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.wfc3.reduce_grism_coadd.coadd
+   abscal.wfc3.reduce_grism_coadd.additional_args
+   abscal.wfc3.reduce_grism_coadd.parse_args
+   abscal.wfc3.reduce_grism_coadd.main
+
+
+
+.. function:: coadd(input_table, arg_list, overrides={})
+
+   Co-adds grism data
+
+   Takes the input table, and
+
+   - filters out the grism exposures, then for each
+
+       - looks for an extracted spectrum
+       - if none is found, call reduce_grism_extract to make one
+
+   - groups the grism exposures by program/visit/grism, then for each group
+
+       - co-adds the spectra in that group
+       - creates a FITS file (and an ASCII table) for each co-added spectrum
+
+   - writes out a new version of the input table with updated values (if any)
+
+   :param input_table: The initial table of exposures
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param arg_list: The command-line argument values that might affect behaviour
+   :type arg_list: namespace
+   :param overrides: A dictionary of overrides to the default command-line arguments and to the default
+                     co-add parameters.
+   :type overrides: dict
+
+   :returns: **input_table** -- The updated table of exposures
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: additional_args()
+
+   Additional command-line arguments.
+
+   Provides additional command-line arguments that are unique to the co-add process.
+
+   :returns: **additional_args** -- Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument
+             parser to create a new command-line option
+   :rtype: dict
+
+
+.. function:: parse_args()
+
+   Parse command-line arguments.
+
+   Gets the custom arguments from co-add and extract, and passes them to the joint
+   command-line option function.
+
+   :returns: **res** -- parsed argument namespace
+   :rtype: namespace
+
+
+.. function:: main(overrides={})
+
+   Run the coadd function.
+
+   Runs the co-add function if called from the command line, with command-line arguments
+   added in.
+
+   :param overrides: Dictionary of parameters to override when running.
+   :type overrides: dict
+
+

@@ -1,0 +1,392 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>abscal.wfc3.reduce_grism_coadd &mdash; abscal 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="abscal.wfc3.reduce_grism_extract" href="../reduce_grism_extract/index.html" />
+    <link rel="prev" title="abscal.wfc3.preprocess_table_create" href="../preprocess_table_create/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+            <a href="../../../../index.html" class="icon icon-home"> abscal
+            
+            <img src="../../../../_static/stsci_pri_combo_mark_white.png" class="logo" />
+          </a>
+
+          
+            
+            
+          
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+  
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installing ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../using_abscal.html">Using ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_handbook.html">ABSCAL Handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_idl_code.html">ABSCAL IDL Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_testing.html">ABSCAL Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">ABSCAL Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">abscal</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../../index.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a> &raquo;</li>
+        
+          <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3</span></code></a> &raquo;</li>
+        
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.reduce_grism_coadd</span></code></li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../../../_sources/autoapi/abscal/wfc3/reduce_grism_coadd/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-abscal.wfc3.reduce_grism_coadd">
+<span id="abscal-wfc3-reduce-grism-coadd"></span><h1><a class="reference internal" href="#module-abscal.wfc3.reduce_grism_coadd" title="abscal.wfc3.reduce_grism_coadd"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.reduce_grism_coadd</span></code></a><a class="headerlink" href="#module-abscal.wfc3.reduce_grism_coadd" title="Permalink to this headline">¶</a></h1>
+<p>Extract and co-add a group of WFC3 grism spectra.</p>
+<p>This submodule</p>
+<ul class="simple">
+<li><p>Takes an input exposure table (from <cite>preprocess_table_create</cite>)</p></li>
+<li><p>Groups the exposures by grating</p></li>
+<li><p>Finds and extracts the standard star spectrum from each exposure</p></li>
+<li><p>Groups the extracted spectra by program and visit</p></li>
+<li><p>Co-adds together each group</p></li>
+</ul>
+<p>While it can produce substantial output, both in logging and plots, it can also run
+without user intervention. User intervention is only asked for in choosing the best
+centroid fit for the zeroth order image.</p>
+<div class="section" id="authors">
+<h2>Authors<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Brian York (all python code)</p></li>
+<li><p>Ralph Bohlin (original IDL code)</p></li>
+</ul>
+</div>
+<div class="section" id="use">
+<h2>Use<a class="headerlink" href="#use" title="Permalink to this headline">¶</a></h2>
+<p>This module can be run from the command line (although one of the <cite>abscal.commands</cite> or
+<cite>abscal.idl_commands</cite> scripts would be preferred for that), but is mostly intended to be
+imported, either by binary scripts or for use from within python:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">abscal.wfc3.reduce_grism_coadd</span> <span class="kn">import</span> <span class="n">coadd</span>
+
+<span class="n">output_table</span> <span class="o">=</span> <span class="n">coadd</span><span class="p">(</span><span class="n">input_table</span><span class="p">,</span> <span class="n">command_line_arg_namespace</span><span class="p">,</span> <span class="n">override_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The override dict allows for many of the default input parameters to be overriden (as
+defaults – individual per-exposure overrides defined in the data files will still take
+priority). Parameters that can be overriden in coadd are:</p>
+<dl class="simple">
+<dt>width: default 22</dt><dd><p>The width (in pixels) of the cross-correlation search region</p>
+</dd>
+<dt>wbeg: default 7500 (G102), 10000 (G141)</dt><dd><p>The lowest valid wavelength</p>
+</dd>
+<dt>wend: default 11800 (G102), 17500 (G141)</dt><dd><p>The highest valid wavelength</p>
+</dd>
+<dt>regbeg_m1: default -13500 (G102), -19000 (G141)</dt><dd><p>The start of the -1st spectral order region</p>
+</dd>
+<dt>regend_m1: default -3800 (G102), -5100 (G141)</dt><dd><p>The end of the -1st spectral order region</p>
+</dd>
+<dt>regbeg_p1: default -3800 (G102), -5100 (G141)</dt><dd><p>The start of the 1st spectral order region</p>
+</dd>
+<dt>regend_p1: default 13500 (G102), 19000 (G141)</dt><dd><p>The end of the 1st spectral order region</p>
+</dd>
+<dt>regbeg_p2: default 13500 (G102), 19000 (G141)</dt><dd><p>The start of the 2nd spectral order region</p>
+</dd>
+<dt>regend_p2: default 27000 (G102), 38000 (G141)</dt><dd><p>The end of the 2nd spectral order region</p>
+</dd>
+</dl>
+</div>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_coadd.coadd" title="abscal.wfc3.reduce_grism_coadd.coadd"><code class="xref py py-obj docutils literal notranslate"><span class="pre">coadd</span></code></a>(input_table, arg_list, overrides={})</p></td>
+<td><p>Co-adds grism data</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_coadd.additional_args" title="abscal.wfc3.reduce_grism_coadd.additional_args"><code class="xref py py-obj docutils literal notranslate"><span class="pre">additional_args</span></code></a>()</p></td>
+<td><p>Additional command-line arguments.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_coadd.parse_args" title="abscal.wfc3.reduce_grism_coadd.parse_args"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_args</span></code></a>()</p></td>
+<td><p>Parse command-line arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_coadd.main" title="abscal.wfc3.reduce_grism_coadd.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(overrides={})</p></td>
+<td><p>Run the coadd function.</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_coadd.coadd">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_coadd.</span></span><span class="sig-name descname"><span class="pre">coadd</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_coadd.coadd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Co-adds grism data</p>
+<p>Takes the input table, and</p>
+<ul>
+<li><p>filters out the grism exposures, then for each</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>looks for an extracted spectrum</p></li>
+<li><p>if none is found, call reduce_grism_extract to make one</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>groups the grism exposures by program/visit/grism, then for each group</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>co-adds the spectra in that group</p></li>
+<li><p>creates a FITS file (and an ASCII table) for each co-added spectrum</p></li>
+</ul>
+</div></blockquote>
+</li>
+<li><p>writes out a new version of the input table with updated values (if any)</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_table</strong> (<a class="reference internal" href="../../common/exposure_data_table/index.html#abscal.common.exposure_data_table.AbscalDataTable" title="abscal.common.exposure_data_table.AbscalDataTable"><em>abscal.common.exposure_data_table.AbscalDataTable</em></a>) – The initial table of exposures</p></li>
+<li><p><strong>arg_list</strong> (<em>namespace</em>) – The command-line argument values that might affect behaviour</p></li>
+<li><p><strong>overrides</strong> (<em>dict</em>) – A dictionary of overrides to the default command-line arguments and to the default
+co-add parameters.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>input_table</strong> – The updated table of exposures</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p><a class="reference internal" href="../../common/exposure_data_table/index.html#abscal.common.exposure_data_table.AbscalDataTable" title="abscal.common.exposure_data_table.AbscalDataTable">abscal.common.exposure_data_table.AbscalDataTable</a></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_coadd.additional_args">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_coadd.</span></span><span class="sig-name descname"><span class="pre">additional_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_coadd.additional_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Additional command-line arguments.</p>
+<p>Provides additional command-line arguments that are unique to the co-add process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>additional_args</strong> – Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument
+parser to create a new command-line option</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_coadd.parse_args">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_coadd.</span></span><span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_coadd.parse_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse command-line arguments.</p>
+<p>Gets the custom arguments from co-add and extract, and passes them to the joint
+command-line option function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>res</strong> – parsed argument namespace</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>namespace</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_coadd.main">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_coadd.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_coadd.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the coadd function.</p>
+<p>Runs the co-add function if called from the command line, with command-line arguments
+added in.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>overrides</strong> (<em>dict</em>) – Dictionary of parameters to override when running.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../reduce_grism_extract/index.html" class="btn btn-neutral float-right" title="abscal.wfc3.reduce_grism_extract" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../preprocess_table_create/index.html" class="btn btn-neutral float-left" title="abscal.wfc3.preprocess_table_create" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian York.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

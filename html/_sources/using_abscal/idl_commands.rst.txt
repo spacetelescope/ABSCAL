@@ -1,0 +1,303 @@
+Using ABSCAL IDL Commands
+=========================
+
+This section describes using the ABSCAL IDL command scripts. These scripts are interfaces 
+to the abscal module that can be called directly, and that are given the same name as the
+equivalent IDL script. In addition, they run the code with compatibility mode set to True,
+so in addition to the standard output tables they also produce output tables in the same 
+format produced by the IDL scripts.
+
+.. contents:: Contents
+    :local:
+    :depth: 2
+
+Wide Field Camera 3 (WFC3)
+--------------------------
+
+wfcdir
+~~~~~~
+
+This command creates a data table of exposures to be used in future pipline steps. Its 
+help text and options are as follows::
+
+    usage: wfcdir [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f] [-v]
+                  [-d DUPLICATES]
+                  template
+    
+    Build metadata table from input files.
+    
+    positional arguments:
+      template              The file template to match, or the path to search and the file
+                            template to match within that directory. If the '-p' option is
+                            used to specify one or more input paths, then file file template
+                            will be joined to each input path.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATHS, --paths PATHS
+                            A comma-separated list of input paths.
+      -i IN_FILE, --input IN_FILE
+                            Optional additional input table file. If provided, the program
+                            will begin by reading the input table and adding all of its
+                            exposures to the metadata table. See the duplicates flag for
+                            options on processing duplicate entries.
+      -o OUT_FILE, --output OUT_FILE
+                            Output metadata file. The default value is dirtemp_<item>.log
+                            where item is 'all' for all files, 'grism' for grism files (and
+                            associated filter images), 'filter' is filter files, and 'scan' is
+                            all scan-mode files.
+      -s SPEC_DIR, --spec_dir SPEC_DIR
+                            Subdirectory where extracted and co-added spectra are stored. The
+                            default value is 'spec'.
+      -c, --strict_compat   Activate strict compatibility mode. In this mode, the script will
+                            produce additional output that is as close as possible to
+                            indistinguishable from the IDL code. (default False)
+      -f, --force           Force steps to run even if output already exists.
+      -v, --verbose         Print diagnostic information while running.
+      -d DUPLICATES, --duplicates DUPLICATES
+                            How to handle duplicate entries (entries defined as duplicates if
+                            they have the same ipppssoot). Valid values are 'both' (keep
+                            both), 'preserve' (keep first), 'replace' (keep second), and
+                            'neither' (delete both). Duplicates should only be an issue if an
+                            input table is specified. Default: 'both'
+
+
+The wfcdir script searches a set of directories (defaulting to the directory in which 
+the script is run, and adjustable via the :code:`-p` option) for files matching a 
+template. The standard template to use is "i*flt.fits" (with quotes included), which will 
+look for all WFC3 flatfielded exposures. The script has the option to add an additional 
+input table, whose files will also be added to the output table. Duplicate entries (either 
+present in the additional table, or between the new data files and the additional table) 
+are handled according to the :code:`-d` flag, with a default of keeping both files.
+
+The output table has entries for file root (in ipppssoot_ form), the observation set (the 
+ipppss of ipppssoot_, indicating program and visit), filter/grism, aperture, exposure 
+type, target, size, date, proposal, exposure time, POSTARG values from the proposal,
+scan rate (if any), path on disk, a boolean "use" flag indicating whether the exposure is 
+valid to use, an associated filter exposure for each grism exposure (indicating a filter 
+exposure taken during the same visit and with the same POSTARG), full file name, the 
+calculated location of the target on the detector (with associated error), the CRVAL fits 
+header keywords, the RA and DEC of the target (corrected for target proper motion and date 
+of observation), the name and location of the extracted spectrum (if any exists), the name 
+and location of the co-added spectrum that includes the observation (if any exists), a 
+boolean flag indicating whether the target is a planetary nebula (and so is to be used to 
+calculate a wavelength solution), and a general notes column.
+
+prewfc
+~~~~~~
+
+This command takes the table of exposures generated by :code:`wfcdir` and, for each
+grism exposures, locates the zeroth order image on the detector, fits the spectral trace, 
+generates an approximate wavelength fit, and extracts the spectrum. It then groups the 
+extracted spectra by proposal, visit, and grism, and co-adds together all such spectra 
+into a single spectrum. Its help text and options are as follows::
+
+    usage: prewfc [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f]
+                  [-v] [-d] [--prefix PREFIX] [-t] [-b BKG_FLAT_ORDER]
+                  table
+    
+    Process files from metadata table.
+    
+    positional arguments:
+      table                 The input metadata table to use.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATHS, --paths PATHS
+                            A comma-separated list of input paths.
+      -i IN_FILE, --input IN_FILE
+                            Optional additional input table file. If provided, the program
+                            will begin by reading the input table and adding all of its
+                            exposures to the metadata table. See the duplicates flag for
+                            options on processing duplicate entries.
+      -o OUT_FILE, --output OUT_FILE
+                            Output metadata file. The default value is dirirstare_<item>.log
+                            where item is 'all' for all files, 'grism' for grism files (and
+                            associated filter images), 'filter' is filter files, and 'scan' is
+                            all scan-mode files.
+      -s SPEC_DIR, --spec_dir SPEC_DIR
+                            Subdirectory where extracted and co-added spectra are stored. The
+                            default value is 'spec'.
+      -c, --strict_compat   Activate strict compatibility mode. In this mode, the script will
+                            produce additional output that is as close as possible to
+                            indistinguishable from the IDL code. (default False)
+      -f, --force           Force steps to run even if output already exists.
+      -v, --verbose         Print diagnostic information while running.
+      -d, --double          Subsample output wavelength vector by a factor of 2 (default
+                            False).
+      --prefix PREFIX       Prefix for co-added spectra
+      -t, --trace           Include result plots while running (default False).
+      -b BKG_FLAT_ORDER, --bkg_flat_order BKG_FLAT_ORDER
+                            Whether to subtract background before or after applying flatfield.
+                            Default is 'flat_first'. Available options are 'flat_first',
+                            'bkg_first' and 'bkg_only'.
+
+The prewfc script takes the table of exposure information provided by wfcdir and 
+loops through the grism exposures. For each exposure, if there is an associated imaging 
+exposure, prewfc locates the expected target image position in this exposure, and 
+then fits a centroid to the expected region to find the actual source centre. It then 
+projects the location of the zeroth order position based on the relative WCS offset, and 
+uses that to locate and fit the zeroth order position. If no associated image is 
+available, then prewfc instead uses the target co-ordinates and POSTARG values to 
+estimate the zeroth order position directly, and then fits that position as above.
+
+After locating the zeroth order image, prewfc estimates the location of the spectral 
+order traces (based on its approximate wavelength solution and an approximate trace 
+angle). Then, for each spectral order that is visible on the detector, prewfc 
+collapses the order in the x direction to generate a 1D profile, and finds the centre of 
+that profile. Then, based on the X locations of the zeroth image and the order centres, 
+and the y positions of the zeroth image and the order profiles, prewfc fits a linear 
+trace to the spectrum, and extracts the trace centre as well as a user-defined box (with 
+a default width of 11 pixels) centered on the projected y location for each column of the 
+exposure. It then extracts background regions that parallel the trace, and divides by a 
+synthetic flatfield and subtracts the background (whether these are done before or after 
+the extraction, and in what order they're done, is user-defined). The extracted spectrum 
+is then saved as a FITS binary table.
+
+Finally, prewfc groups the exposures into sets which
+
+* Have the same target
+* Use the same grism
+* Are part of the same proposal and visit
+
+and cross-correlates the spectral profile for all exposures in the group, and then 
+co-adds them together. The extracted spectra and co-added spectra are saved in a 
+sub-directory of the data directory.
+
+wlmeas
+~~~~~~
+
+The wlmeas script takes a set of extracted spectra produced by the above 
+scripts, and obtained from observation of planetary nebulae, and uses a combination of 
+automatic and manual line fitting to determine the pixel position of the centre of a group 
+of six emission lines found in the spectral orders. Its help text and options are as 
+follows::
+
+    usage: wlmeas [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f] [-v] [-t]
+                  table
+    
+    Process files from metadata table.
+    
+    positional arguments:
+      table                 The input metadata table to use.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATHS, --paths PATHS
+                            A comma-separated list of input paths.
+      -i IN_FILE, --input IN_FILE
+                            Optional additional input table file. If provided, the program
+                            will begin by reading the input table and adding all of its
+                            exposures to the metadata table. See the duplicates flag for
+                            options on processing duplicate entries.
+      -o OUT_FILE, --output OUT_FILE
+                            Output metadata file. The default value is wlmeastmp_<item>.log
+                            where item is 'all' for all files, 'grism' for grism files (and
+                            associated filter images), 'filter' is filter files, and 'scan' is
+                            all scan-mode files.
+      -s SPEC_DIR, --spec_dir SPEC_DIR
+                            Subdirectory where extracted and co-added spectra are stored. The
+                            default value is 'spec'.
+      -c, --strict_compat   Activate strict compatibility mode. In this mode, the script will
+                            produce additional output that is as close as possible to
+                            indistinguishable from the IDL code. (default False)
+      -f, --force           Force steps to run even if output already exists.
+      -v, --verbose         Print diagnostic information while running.
+      -t, --trace           Include result plots while running.
+
+The wlmeas script takes as input the output table created by the 
+:code:`prewfc` script. It then filters out all image exposures, as well as all 
+exposures of targets that are not planetary nebulae. For each such exposure, it determines 
+the grism used and, for each order found in the extracted spectrum, wlmeas 
+determines which emission lines are visible in that order. Then, for each line, 
+wlmeas chooses a region around the estimated line position, and attempts to 
+find a line centre for the line automatically. Whether or not it is successful, 
+wlmeas offers the user the ability to adjust the fit, manually select a fit 
+if none was found, or reject an automatic fit and mark the line as not found.
+
+The line centroiding code attempts to deal with widely varying planetary nebula spectra 
+in its find routine by
+
+* Taking the net flux over the search region, along with a continuum estimate
+* Subtracting the continuum from the flux, setting any negative fluxes to zero
+* For any points that are farther from the centre than another point that has been set to 
+  zero, set that point to zero. The net result of this is that the only possible points 
+  with positive flux are a set of connected points spanning the line centre.
+* If there are no positive points, mark the fit as bad and return the centre of the search 
+  range as the notional solution
+* If there are positive points, take the flux-weighted mean of those pixel positions, and 
+  return that as the found centre
+
+The output is a table of exposures where, for each exposure, there is a single row for 
+each spectral order containing the zeroth order location and, for each emission line, 
+a location and a note. The location is either "-1" (indicating that the line is not 
+visible in the order) or a pixel value. The note is one of "good" (fit found 
+automatically), "good (ima)" (fit found to a saturated line by looking at the first ramp 
+in the corresponding IMA file), "bad" (no fit found, location set to centre of search 
+range), "custom" (user-selected location), or "rejected" (automatic fit found but rejected 
+by user, and location set to centre of search range as for a bad fit).
+
+wlmake
+~~~~~~
+
+The wlmake script takes the output of the :code:`wlmeas` script and 
+uses it to generate a 2D wavelength fit over the entire grism. Its help text and options 
+are as follows::
+
+    usage: wlmake [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f] [-v] [-t]
+           table
+    
+    Process files from metadata table.
+    
+    positional arguments:
+      table                 The input metadata table to use.
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      -p PATHS, --paths PATHS
+                            A comma-separated list of input paths.
+      -i IN_FILE, --input IN_FILE
+                            Optional additional input table file. If provided, the program
+                            will begin by reading the input table and adding all of its
+                            exposures to the metadata table. See the duplicates flag for
+                            options on processing duplicate entries.
+      -o OUT_FILE, --output OUT_FILE
+                            Output metadata file. The default value is wlmeastmp_<item>.log
+                            where item is 'all' for all files, 'grism' for grism files (and
+                            associated filter images), 'filter' is filter files, and 'scan' is
+                            all scan-mode files.
+      -s SPEC_DIR, --spec_dir SPEC_DIR
+                            Subdirectory where extracted and co-added spectra are stored. The
+                            default value is 'spec'.
+      -c, --strict_compat   Activate strict compatibility mode. In this mode, the script will
+                            produce additional output that is as close as possible to
+                            indistinguishable from the IDL code. (default False)
+      -f, --force           Force steps to run even if output already exists.
+      -v, --verbose         Print diagnostic information while running.
+      -t, --trace           Include result plots while running.
+
+The wlmake script takes the output of the :code:`wlmeas` script, 
+and loops over the rows filtering by grism and then by order. For each order, it selects 
+all emission lines where at least half of the input data have a good fit for that line. It 
+then takes the two farthest apart selected lines and uses them to derive an approximate 
+dispersion solution. It then uses all of the files and all of the selected lines to fit a 
+wavelength solution to the detector of the form
+
+.. math::
+
+    \lambda = b + m \times \Delta \rm{px}
+
+where :math:`\Delta \rm{px}` is the distance of the pixel from the zeroth order image,
+:math:`b = b_1 + b_2 x + b_3 y` where :math:`b_n` is a constant, and 
+:math:`m = m_1 + m_2 x + m_3 y` where :math:`m_n` is a constant. In effect,
+wlmake uses the least squares method to fit a plane over the detector, where 
+each individual good line fit acts as an :math:`(x,y,z)` point for fitting b and m, with 
+the distance of the point from the zeroth order centre acting as the z value for b, and 
+the dispersion at that point acting as the z value for m.
+
+The wlmake script then takes the resulting best-fit parameters, tests them 
+against the various input files to display error estimates, and writes the fit parameters 
+to an output table with a single entry for each order of each grism for which a fit could 
+be derived.
+
+.. _ipppssoot: https://archive.stsci.edu/hlsp/ipppssoot.html

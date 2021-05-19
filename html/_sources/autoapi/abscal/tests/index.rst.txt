@@ -1,0 +1,20 @@
+:mod:`abscal.tests`
+===================
+
+.. py:module:: abscal.tests
+
+.. autoapi-nested-parse::
+
+   This module contains package tests.
+
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   test_example/index.rst
+
+

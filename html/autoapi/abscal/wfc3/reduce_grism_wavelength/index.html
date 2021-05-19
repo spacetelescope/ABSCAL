@@ -1,0 +1,443 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <title>abscal.wfc3.reduce_grism_wavelength &mdash; abscal 1.0 documentation</title>
+  
+
+  
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/pygments.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/stsci.css" type="text/css" />
+  <link rel="stylesheet" href="../../../../_static/graphviz.css" type="text/css" />
+
+  
+  
+
+  
+  
+
+  
+
+  
+  <!--[if lt IE 9]>
+    <script src="../../../../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+    
+      <script type="text/javascript" id="documentation_options" data-url_root="../../../../" src="../../../../_static/documentation_options.js"></script>
+        <script data-url_root="../../../../" id="documentation_options" src="../../../../_static/documentation_options.js"></script>
+        <script src="../../../../_static/jquery.js"></script>
+        <script src="../../../../_static/underscore.js"></script>
+        <script src="../../../../_static/doctools.js"></script>
+    
+    <script type="text/javascript" src="../../../../_static/js/theme.js"></script>
+
+    
+    <link rel="index" title="Index" href="../../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../../search.html" />
+    <link rel="next" title="abscal.wfc3.setup_package" href="../setup_package/index.html" />
+    <link rel="prev" title="abscal.wfc3.reduce_grism_extract" href="../reduce_grism_extract/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav">
+
+   
+  <div class="wy-grid-for-nav">
+    
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+          
+            <a href="../../../../index.html" class="icon icon-home"> abscal
+            
+            <img src="../../../../_static/stsci_pri_combo_mark_white.png" class="logo" />
+          </a>
+
+          
+            
+            
+          
+          
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+  
+        </div>
+
+        
+        <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../../../installation.html">Installing ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../using_abscal.html">Using ABSCAL</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_handbook.html">ABSCAL Handbook</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_idl_code.html">ABSCAL IDL Code</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../abscal_testing.html">ABSCAL Testing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../../examples.html">ABSCAL Examples</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../../../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2 current"><a class="reference internal" href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a><ul class="current">
+<li class="toctree-l3 current"><a class="reference internal" href="../../index.html#subpackages">Subpackages</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+            
+          
+        </div>
+        
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap">
+
+      
+      <nav class="wy-nav-top" aria-label="top navigation">
+        
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../../../index.html">abscal</a>
+        
+      </nav>
+
+
+      <div class="wy-nav-content">
+        
+        <div class="rst-content">
+        
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="wy-breadcrumbs">
+    
+      <li><a href="../../../../index.html" class="icon icon-home"></a> &raquo;</li>
+        
+          <li><a href="../../../index.html">API Reference</a> &raquo;</li>
+        
+          <li><a href="../../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal</span></code></a> &raquo;</li>
+        
+          <li><a href="../index.html"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3</span></code></a> &raquo;</li>
+        
+      <li><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.reduce_grism_wavelength</span></code></li>
+    
+    
+      <li class="wy-breadcrumbs-aside">
+        
+          
+            <a href="../../../../_sources/autoapi/abscal/wfc3/reduce_grism_wavelength/index.rst.txt" rel="nofollow"> View page source</a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+            
+  <div class="section" id="module-abscal.wfc3.reduce_grism_wavelength">
+<span id="abscal-wfc3-reduce-grism-wavelength"></span><h1><a class="reference internal" href="#module-abscal.wfc3.reduce_grism_wavelength" title="abscal.wfc3.reduce_grism_wavelength"><code class="xref py py-mod docutils literal notranslate"><span class="pre">abscal.wfc3.reduce_grism_wavelength</span></code></a><a class="headerlink" href="#module-abscal.wfc3.reduce_grism_wavelength" title="Permalink to this headline">¶</a></h1>
+<p>This module takes a table of exposures, finds all exposures tagged as planetary nebula
+exposures, and:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt>For each grism</dt><dd><ul>
+<li><dl class="simple">
+<dt>For each spectral order</dt><dd><ul>
+<li><dl class="simple">
+<dt>For each file</dt><dd><ul>
+<li><p>Determines which emission lines fall in that order of that file</p></li>
+<li><p>Attempts to automatically fit the line location</p></li>
+<li><p>Allows the user to override the result of the automatic fit</p></li>
+<li><p>Records the resulting fit location and status (good/bad/custom/etc.)</p></li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+</dd>
+</dl>
+</li>
+</ul>
+<p>The module then saves a table of the results.</p>
+<p>In addition, the module can take the result table above and use it to derive an overall
+wavelength fit for each grism/order value of the inputs, and produce yet another output
+table given the results of that fit.</p>
+<div class="section" id="authors">
+<h2>Authors<a class="headerlink" href="#authors" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><p>Brian York (all python code)</p></li>
+<li><p>Ralph Bohlin (original IDL code)</p></li>
+</ul>
+</div>
+<div class="section" id="use">
+<h2>Use<a class="headerlink" href="#use" title="Permalink to this headline">¶</a></h2>
+<p>This module can be run from the command line (although one of the <cite>abscal.commands</cite> or
+<cite>abscal.idl_commands</cite> scripts would be preferred for that), but is mostly intended to be
+imported, either by binary scripts or for use from within python:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">abscal.wfc3.reduce_grism_wavelength</span> <span class="kn">import</span> <span class="n">wlmeas</span><span class="p">,</span> <span class="n">wlmake</span>
+
+<span class="n">interim_table</span> <span class="o">=</span> <span class="n">wlmeas</span><span class="p">(</span><span class="n">input_table</span><span class="p">,</span> <span class="n">command_line_arg_namespace</span><span class="p">,</span> <span class="n">override_dict</span><span class="p">)</span>
+<span class="n">final_table</span> <span class="o">=</span> <span class="n">wlmake</span><span class="p">(</span><span class="n">input_table</span><span class="p">,</span> <span class="n">interim_table</span><span class="p">,</span> <span class="n">command_line_arg_namespace</span><span class="p">,</span> <span class="n">override_dict</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The override dict allows for many of the default input parameters to be overriden (as
+defaults – individual per-exposure overrides defined in the data files will still take
+priority). There are currently no default parameters that can be overriden in this module.</p>
+</div>
+<div class="section" id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="functions">
+<h3>Functions<a class="headerlink" href="#functions" title="Permalink to this headline">¶</a></h3>
+<table class="longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.wlimaz" title="abscal.wfc3.reduce_grism_wavelength.wlimaz"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wlimaz</span></code></a>(root, y_arr, wave_arr, directory, verbose)</p></td>
+<td><p>Find a line from the IMA zero-read.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.wlmeas" title="abscal.wfc3.reduce_grism_wavelength.wlmeas"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wlmeas</span></code></a>(input_table, arg_list, overrides={})</p></td>
+<td><p>Measure planetary nebula emission line locations.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.wlmake" title="abscal.wfc3.reduce_grism_wavelength.wlmake"><code class="xref py py-obj docutils literal notranslate"><span class="pre">wlmake</span></code></a>(input_table, wl_table, arg_list, overrides={})</p></td>
+<td><p>Derives a grism wavelength fit.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.additional_args" title="abscal.wfc3.reduce_grism_wavelength.additional_args"><code class="xref py py-obj docutils literal notranslate"><span class="pre">additional_args</span></code></a>()</p></td>
+<td><p>Additional command-line arguments.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.parse_args" title="abscal.wfc3.reduce_grism_wavelength.parse_args"><code class="xref py py-obj docutils literal notranslate"><span class="pre">parse_args</span></code></a>()</p></td>
+<td><p>Parse command-line arguments.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#abscal.wfc3.reduce_grism_wavelength.main" title="abscal.wfc3.reduce_grism_wavelength.main"><code class="xref py py-obj docutils literal notranslate"><span class="pre">main</span></code></a>(overrides={}, do_measure=True, do_make=True)</p></td>
+<td><p>Run the wavelength fitting function(s).</p></td>
+</tr>
+</tbody>
+</table>
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.wlimaz">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">wlimaz</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">root</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">y_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wave_arr</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">directory</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">verbose</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.wlimaz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find a line from the IMA zero-read.</p>
+<p>If the very bright 10380A line falls in the first order, you can end up
+trying to centre a saturated line. In this case, use the _ima.fits file,
+which holds all of the individual reads, and measure the line centre from
+the zero-read ima file in the first order.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>root</strong> (<em>str</em>) – The file name to be checked</p></li>
+<li><p><strong>y_arr</strong> (<em>np.ndarray</em>) – The y-values (flux values) from the flt file</p></li>
+<li><p><strong>wave_arr</strong> (<em>np.ndarray</em>) – The approximate wavelength values from the flt file</p></li>
+<li><p><strong>directory</strong> (<em>str</em>) – The directory where the flt file is located (and where the ima file
+should be located)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>star_x</strong> (<em>float</em>) – The x centre of the line</p></li>
+<li><p><strong>star_y</strong> (<em>float</em>) – The y centre of the line</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.wlmeas">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">wlmeas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.wlmeas" title="Permalink to this definition">¶</a></dt>
+<dd><p>Measure planetary nebula emission line locations.</p>
+<p>There are six planetary nebula emission lines that fall neatly into the WFC3 grism
+spectral orders, and this function uses the approximate wavelength solution to find
+the rough location of these lines, and then uses flux-weighting to determine the line
+centre. The user is able to override a given fit if the script is run in interactive
+mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_table</strong> (<a class="reference internal" href="../../common/exposure_data_table/index.html#abscal.common.exposure_data_table.AbscalDataTable" title="abscal.common.exposure_data_table.AbscalDataTable"><em>abscal.common.exposure_data_table.AbscalDataTable</em></a>) – Table of exposures with emission lines to fit.</p></li>
+<li><p><strong>arg_list</strong> (<em>namespace</em>) – Namespace of command-line arguments.</p></li>
+<li><p><strong>overrides</strong> (<em>dict</em>) – Dictionary of overrides to the default reduction parameters</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>output_table</strong> – Table of emission line locations</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>astropy.table.Table</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.wlmake">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">wlmake</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">wl_table</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">arg_list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.wlmake" title="Permalink to this definition">¶</a></dt>
+<dd><p>Derives a grism wavelength fit.</p>
+<p>Once planetary nebula emission lines have been located and fit, it is possible to use
+them as input in creating a full wavelength fit for the grism detector. ABSCAL fits
+the wavelength set with a linear slope and intercept, where both the slope and the
+intercept have constant terms, linear terms in X, and linear terms in y.</p>
+<p>Once the fit has been calculated, the script prints out fit errors based on the input
+exposures, and creates an output table with all of the fit terms. A separate fit is
+derived for each order of each grism.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_table</strong> (<a class="reference internal" href="../../common/exposure_data_table/index.html#abscal.common.exposure_data_table.AbscalDataTable" title="abscal.common.exposure_data_table.AbscalDataTable"><em>abscal.common.exposure_data_table.AbscalDataTable</em></a>) – Table of exposures to be fit.</p></li>
+<li><p><strong>wl_table</strong> (<em>astropy.table.Table</em>) – Output of wlmeas.</p></li>
+<li><p><strong>arg_list</strong> (<em>namespace</em>) – Namespace of command-line arguments.</p></li>
+<li><p><strong>overrides</strong> (<em>dict</em>) – Dictionary of overrides to the default reduction parameters</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>output_table</strong> – Table of wavelength fit values</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>astropy.table.Table</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.additional_args">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">additional_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.additional_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Additional command-line arguments.</p>
+<p>Provides additional command-line arguments that are unique to the wavelength fitting
+process.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>additional_args</strong> – Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument
+parser to create a new command-line option</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.parse_args">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">parse_args</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.parse_args" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse command-line arguments.</p>
+<p>Gets the custom arguments from wavelength fitting, and passes them to the common
+command-line option function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>res</strong> – parsed argument namespace</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>namespace</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="abscal.wfc3.reduce_grism_wavelength.main">
+<span class="sig-prename descclassname"><span class="pre">abscal.wfc3.reduce_grism_wavelength.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">overrides</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">{}</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_measure</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">do_make</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#abscal.wfc3.reduce_grism_wavelength.main" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the wavelength fitting function(s).</p>
+<p>Runs the wavelength fitting function(s) if called from the command line, with
+command-line arguments added in. Can run wlmeas, wlmake, or both.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>overrides</strong> (<em>dict</em>) – Dictionary of parameters to override when running.</p></li>
+<li><p><strong>do_measure</strong> (<em>bool</em><em>, </em><em>default True</em>) – Run wlmeas function</p></li>
+<li><p><strong>do_make</strong> (<em>bool</em><em>, </em><em>default</em><em>, </em><em>True</em>) – Run wlmake function</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+</div>
+</div>
+
+
+           </div>
+           
+          </div>
+          <footer>
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+        <a href="../setup_package/index.html" class="btn btn-neutral float-right" title="abscal.wfc3.setup_package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="../reduce_grism_extract/index.html" class="btn btn-neutral float-left" title="abscal.wfc3.reduce_grism_extract" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>
+        &#169; Copyright 2021, Brian York.
+
+    </p>
+  </div>
+    
+    
+    
+    Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    
+    provided by <a href="https://readthedocs.org">Read the Docs</a>. 
+
+</footer>
+        </div>
+      </div>
+
+    </section>
+
+  </div>
+  
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>
+
+  
+  
+    
+   
+
+</body>
+</html>

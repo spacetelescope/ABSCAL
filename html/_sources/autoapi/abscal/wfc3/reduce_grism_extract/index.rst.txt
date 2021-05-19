@@ -1,0 +1,344 @@
+:mod:`abscal.wfc3.reduce_grism_extract`
+=======================================
+
+.. py:module:: abscal.wfc3.reduce_grism_extract
+
+.. autoapi-nested-parse::
+
+   This submodule takes an input metadata table, sorts out the grism exposures, and then for
+   each exposure
+
+   - Locates the zeroth order position of the target star
+   - Derives an approximate wavelength solution based on the location of the zeroth order
+   - Finds the grism spectral order locations based on the approximate wavelength solution
+   - For each spectral order that falls on the detector
+
+       - Collapses the order along the X direction to generate a profile in Y
+       - Uses that profile to locate the approximate Y centre of the profile
+       - Uses the approximate centre of the wavelength range to find the X centre of the
+         profile
+
+   - Uses the order centres and the zeroth order location to generate a linear detector trace
+   - Extracts along the trace to generate a spectrum
+   - Extracts two regions parallel to the trace to generate a background spectrum
+   - Saves the resulting spectrum as a FITS bintable file
+
+   In addition to the above, the central function also performs background subtraction and
+   flatfielding of the input file.
+
+   Authors
+   -------
+   - Brian York (all python code)
+   - Ralph Bohlin (original IDL code)
+
+   Use
+   ---
+
+   This submodule is not intended to be run directly. Instead, it is intended to be called
+   on an as-needed basis by the reduce_grism_coadd submodule. If you need to import it
+   directly, you can use the form::
+
+       from abscal.wfc3.reduce_grism_extract import reduce
+
+       output_table = reduce(input_table, command_line_arg_namespace, override_dict)
+
+   The override dict allows for many of the default input parameters to be overriden (as
+   defaults -- individual per-exposure overrides defined in the data files will still take
+   priority). Parameters that can be overriden in coadd are:
+
+   xc: default -1
+       X centre of zeroth order image. If set to a negative value, the submodule will find
+       and fit the centre itself, either from a corresponding filter exposure (preferred) or
+       from the grism exposure directly.
+   yc: default -1
+       Y centre of zeroth order image. Acts as xc.
+   xerr: default -1
+       Measured error in xc. Set when xc is set. Included for information.
+   yerr: default -1
+       Measured error in yc. Acts as xerr.
+   ywidth: default 11
+       Width of the extraction box at each x pixel.
+   y_offset: default 0
+       Offset of the initial spectral trace in the y direction. Added directly to the
+       approximate initial trace fit, before the actual trace is fit.
+   gwidth: default 6
+       Width of smoothing kernel for background smoothing
+   bwidth: default 13
+       Width of background extraction box at each x pixel
+   bmedian: default 7
+       Width of background median-smoothing region
+   bmean1: default 7
+       Width of first background boxcar-smoothing box
+   bmean2: default 7
+       Width of second background boxcar-smoothing box
+   bdist: default 25 + bwidth/2
+       Distance from spectral trace centre to background trace centres.
+   slope: default 1
+       Slope of spectral trace in radians. If this is set, then the trace will not be fit
+       by the submodule
+   yshift: default 0
+       Offset to the initial spectral trace slope. Added directly to the approximate initial
+       trace fit, before the actual trace is fit.
+   ix_shift: default 252 (G102), 188 (G141)
+       Delta in the x direction from the target centroid in the imaging exposure to the
+       zeroth order centroid in the grism exposure.
+   iy_shift: default 4 (G102), 1 (G141)
+       As per ix_shift, but in the y direction
+   wl_offset: default 0
+       Offset of the wavelength fit. Added directly to the fit.
+   wlrang_m1_low: default 8000 (G102), 10800 (G141)
+       Start of the -1st order wavelength range. Multiplied by -1 on use.
+   wlrang_m1_high: default 10000 (G102), 16000 (G141)
+       End of the -1st order wavelength range.  Multiplied by -1 on use.
+   wlrang_p1_low: default 8800 (G102), 10800 (G141)
+       Start of the 1st order wavelength range.
+   wlrang_p1_high: default 11000 (G102), 16000 (G141)
+       End of the 1st order wavelength range.
+   wlrang_p2_low: default 8000 (G102), 10000 (G141)
+       Start of the -1st order wavelength range. Multiplied by 2 on use.
+   wlrang_p2_high: default 10800 (G102), 13000 (G141)
+       End of the -1st order wavelength range.  Multiplied by 2 on use.
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.wfc3.reduce_grism_extract.make_monotonic
+   abscal.wfc3.reduce_grism_extract.set_hdr
+   abscal.wfc3.reduce_grism_extract.reduce_flatfield
+   abscal.wfc3.reduce_grism_extract.calculate_order
+   abscal.wfc3.reduce_grism_extract.reduce_wave_axe
+   abscal.wfc3.reduce_grism_extract.reduce_wave_zord
+   abscal.wfc3.reduce_grism_extract.reduce_scan
+   abscal.wfc3.reduce_grism_extract.reduce_stare
+   abscal.wfc3.reduce_grism_extract.reduce
+   abscal.wfc3.reduce_grism_extract.additional_args
+   abscal.wfc3.reduce_grism_extract.parse_args
+   abscal.wfc3.reduce_grism_extract.main
+
+
+
+.. function:: make_monotonic(wave, indx)
+
+   Make an array monotonically increasing.
+
+   Take a supplied (wavelength) array, along with a list of index values that were just
+   replaced from another array, and ensure that the full array is monotonically
+   increasing.
+
+   :param wave: Array of wavelength values
+   :type wave: np.ndarray
+   :param indx: Index of wave entries that were just replaced by a different order.
+   :type indx: np.ndarray
+
+
+.. function:: set_hdr(hdr, params)
+
+   Update FITS header with extraction info.
+
+   After the extraction, a number of informational parameters should be added to the FITS
+   header of extracted exposures. Because it's always the same parameters that need to be
+   added, this is broken out as a function.
+
+   :param h: The header to edit. Must be writable.
+   :type h: astropy.io.fits header
+   :param params: Dictionary of parameters to write.
+   :type params: dict
+
+   :returns: **h** -- Edited header.
+   :rtype: astropy.io.fits header
+
+
+.. function:: reduce_flatfield(input_table, params)
+
+   Scale synthetic flatfield image.
+
+   Scale the flatfield image based on the coefficients in a provided flatfield cube.
+
+   :param input_table: Single-row input
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param params: Parameter dictionary. Contains
+
+                  image: np.ndarray
+                      Science image
+                  hdr: astropy.io.fits.header
+                      FITS header for the science image
+                  flat: np.ndarray
+                      image file of the WFC3 flatfield
+                  wave: np.ndarray
+                      wavelength mapping for the science image
+                  verbose: bool
+                      Whether to print diagnostic output
+   :type params: dict
+
+   :returns: * **image** (*np.ndarray*) -- Flatfielded science image
+             * **flatfile** (*str*) -- File name of the flatfield used.
+
+
+.. function:: calculate_order(params, xc, yc)
+
+   Calculate spectral order centre.
+
+   Calculate a spectral order centre given the corresponding coefficients and the centre
+   of the zeroth-order image.
+
+   :param params: Dictionary of coefficients. Contains 6 coefficients labeled as
+                  a, b, c, d, e, f, which correspond to a constant (a), linear terms in
+                  x (b) and y (c), and quadratic terms in x (d), xy (e), and y (f)
+   :type params: dict
+   :param xc: Central x pixel of spectrum.
+   :type xc: float
+   :param yc: Central y pixel of spectrum.
+   :type yc: float
+
+   :returns: **result** -- The result of the calculation.
+   :rtype: float
+
+
+.. function:: reduce_wave_axe(row, params)
+
+   Apply the aXe default wavelength approximation.
+
+   Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
+   this should only be used for the AXE solution. The (preferred) Zero-order (Z-ORD)
+   solution should use a different function.
+
+   :param input_table: Table containing the input data
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param params: Dictionary of parameters, including:
+
+                  xc: float
+                      predicted central location in x
+                  yc: float
+                      predicted central location in y
+                  verbose: bool
+                      whether to print diagnostic output
+   :type params: dict
+
+   :returns: * **x_arr** (*np.ndarray*) -- X pixel co-ordinate array (just effectively np.arange(1014))
+             * **wave** (*np.ndarray*) -- Wavelength vector, customized for each order
+             * **angle** (*float*) -- Average slope of spectrum
+             * **wav1st** (*np.ndarray*) -- First-order wavelengths for flatfielding with FF cube data.
+
+
+.. function:: reduce_wave_zord(row, params)
+
+   Apply default wavelength values based on zeroth order position.
+
+   Calculate the wavelength vector for a WFC3 grism image. Per the IDL code,
+   this should only be used for the Zeroth Order (ZORD) solution. This is the preferred
+   solution when possible. The aXe solution should use a different function.
+
+   :param row: Row of astropy Table containing the input data
+   :type row: abscal.common.exposure_data_table.AbscalDataTable.Row
+   :param params: Dictionary of parameters, including:
+
+                  xc: float
+                      predicted central location in x
+                  yc: float
+                      predicted central location in y
+                  verbose: bool
+                      whether to print diagnostic output
+   :type params: dict
+
+   :returns: * **x_arr** (*np.ndarray*) -- X pixel co-ordinate array (just effectively np.arange(1014))
+             * **wave** (*np.ndarray*) -- Wavelength vector, customized for each order
+             * **angle** (*float*) -- Average slope of spectrum
+             * **wav1st** (*np.ndarray*) -- First-order wavelengths for flatfielding with FF cube data.
+
+
+.. function:: reduce_scan(row, params, arg_list)
+
+   Reduce scan-mode grism data
+
+   .. warning::
+       This function is not yet implemented. It will raise an exception.
+
+   :param row: Single-row table of the exposure to be extracted.
+   :type row: abscal.common.exposure_data_table.AbscalDataTable
+   :param params: Dictionary of parameters to use for the reduction
+   :type params: dict
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+
+   :returns: **row** -- Updated single-row table of the exposure
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: reduce_stare(row, params, arg_list)
+
+   Reduces stare-mode grism data.
+
+   Takes a single grism exposure that was not taken in scan mode, extracts a spectrum,
+   and saves the extracted spectrum as a FITS file. Also updates the row based on new
+   information determined during extraction.
+
+   :param row: Single-row table of the exposure to be extracted.
+   :type row: abscal.common.exposure_data_table.AbscalDataTable
+   :param params: Dictionary of parameters to use for the reduction
+   :type params: dict
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+
+   :returns: **row** -- Updated single-row table of the exposure
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: reduce(input_table, arg_list, overrides={})
+
+   Reduces grism data.
+
+   Takes a table of grism data, and dispatches individual exposures to either the
+   scan-mode or stare-mode reduction function as appropriate.
+
+   :param input_table: Table of exposures to be extracted.
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+   :param overrides: Dictionary of overrides to the default reduction parameters
+   :type overrides: dict
+
+   :returns: **input_table** -- Updated table of exposures
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: additional_args()
+
+   Additional command-line arguments.
+
+   Provides additional command-line arguments that are unique to the extraction process.
+
+   :returns: **additional_args** -- Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument
+             parser to create a new command-line option
+   :rtype: dict
+
+
+.. function:: parse_args()
+
+   Parse command-line arguments.
+
+   Gets the custom arguments for extractions, and passes them to the common command-line
+   option function.
+
+   :returns: **res** -- parsed argument namespace
+   :rtype: namespace
+
+
+.. function:: main(overrides={})
+
+   Run the extract function.
+
+   Runs the extract function if called from the command line, with command-line arguments
+   added in.
+
+   :param overrides: Dictionary of parameters to override when running.
+   :type overrides: dict
+
+

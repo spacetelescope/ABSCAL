@@ -1,0 +1,22 @@
+:mod:`abscal.stis.setup_package`
+================================
+
+.. py:module:: abscal.stis.setup_package
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.stis.setup_package.get_package_data
+
+
+
+.. function:: get_package_data()
+
+

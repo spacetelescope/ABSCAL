@@ -1,0 +1,173 @@
+:mod:`abscal.wfc3`
+==================
+
+.. py:module:: abscal.wfc3
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   tests/index.rst
+
+
+Submodules
+----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 1
+
+   preprocess_table_create/index.rst
+   reduce_grism_coadd/index.rst
+   reduce_grism_extract/index.rst
+   reduce_grism_wavelength/index.rst
+   setup_package/index.rst
+   util_filter_locate_image/index.rst
+   util_grism_cross_correlate/index.rst
+
+
+Package Contents
+----------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.wfc3.populate_table
+   abscal.wfc3.coadd
+   abscal.wfc3.reduce
+   abscal.wfc3.wlmeas
+   abscal.wfc3.wlmake
+
+
+
+.. function:: populate_table(data_table=None, overrides={}, **kwargs)
+
+   Search a directory and produce a table of exposures.
+
+   Uses glob to search all directories in the table's `search_dirs` array for
+   files matching the table's `search_str` template, and adds rows to the table
+   containing metadata based on the files that were found.
+
+   :param data_table: The table (which may contain existing data) to which the new data should
+                      be added.
+   :type data_table: abscal.common.exposure_data_table.AbscalDataTable, default None
+   :param kwargs: A dictionary of optional keywords. Currently checked keywords are:
+
+                  verbose : bool
+                      Flag to indicate whether or not the program should print out
+                      informative text whilst running.
+                  compat : bool
+                      Whether to operate in strict IDL compatibility mode
+   :type kwargs: dict
+   :param If data_table is None:
+   :param a new table will be created in the function. In that case:
+   :param the:
+   :param kwargs dict will be passed to that table:
+   :param so any table-creation keywords will be sent:
+   :param through.:
+
+   :returns: **data_table** -- A table containing an entry for each input file and necessary metadata
+             obtained from the FITS header of that file.
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: coadd(input_table, arg_list, overrides={})
+
+   Co-adds grism data
+
+   Takes the input table, and
+
+   - filters out the grism exposures, then for each
+
+       - looks for an extracted spectrum
+       - if none is found, call reduce_grism_extract to make one
+
+   - groups the grism exposures by program/visit/grism, then for each group
+
+       - co-adds the spectra in that group
+       - creates a FITS file (and an ASCII table) for each co-added spectrum
+
+   - writes out a new version of the input table with updated values (if any)
+
+   :param input_table: The initial table of exposures
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param arg_list: The command-line argument values that might affect behaviour
+   :type arg_list: namespace
+   :param overrides: A dictionary of overrides to the default command-line arguments and to the default
+                     co-add parameters.
+   :type overrides: dict
+
+   :returns: **input_table** -- The updated table of exposures
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: reduce(input_table, arg_list, overrides={})
+
+   Reduces grism data.
+
+   Takes a table of grism data, and dispatches individual exposures to either the
+   scan-mode or stare-mode reduction function as appropriate.
+
+   :param input_table: Table of exposures to be extracted.
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+   :param overrides: Dictionary of overrides to the default reduction parameters
+   :type overrides: dict
+
+   :returns: **input_table** -- Updated table of exposures
+   :rtype: abscal.common.exposure_data_table.AbscalDataTable
+
+
+.. function:: wlmeas(input_table, arg_list, overrides={})
+
+   Measure planetary nebula emission line locations.
+
+   There are six planetary nebula emission lines that fall neatly into the WFC3 grism
+   spectral orders, and this function uses the approximate wavelength solution to find
+   the rough location of these lines, and then uses flux-weighting to determine the line
+   centre. The user is able to override a given fit if the script is run in interactive
+   mode.
+
+   :param input_table: Table of exposures with emission lines to fit.
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+   :param overrides: Dictionary of overrides to the default reduction parameters
+   :type overrides: dict
+
+   :returns: **output_table** -- Table of emission line locations
+   :rtype: astropy.table.Table
+
+
+.. function:: wlmake(input_table, wl_table, arg_list, overrides={})
+
+   Derives a grism wavelength fit.
+
+   Once planetary nebula emission lines have been located and fit, it is possible to use
+   them as input in creating a full wavelength fit for the grism detector. ABSCAL fits
+   the wavelength set with a linear slope and intercept, where both the slope and the
+   intercept have constant terms, linear terms in X, and linear terms in y.
+
+   Once the fit has been calculated, the script prints out fit errors based on the input
+   exposures, and creates an output table with all of the fit terms. A separate fit is
+   derived for each order of each grism.
+
+   :param input_table: Table of exposures to be fit.
+   :type input_table: abscal.common.exposure_data_table.AbscalDataTable
+   :param wl_table: Output of wlmeas.
+   :type wl_table: astropy.table.Table
+   :param arg_list: Namespace of command-line arguments.
+   :type arg_list: namespace
+   :param overrides: Dictionary of overrides to the default reduction parameters
+   :type overrides: dict
+
+   :returns: **output_table** -- Table of wavelength fit values
+   :rtype: astropy.table.Table
+
+

@@ -1,0 +1,97 @@
+:mod:`abscal.common.standard_stars`
+===================================
+
+.. py:module:: abscal.common.standard_stars
+
+.. autoapi-nested-parse::
+
+   This module includes a list of standard stars used by STScI/ABSCAL for flux
+   calibration, along with their canonical names and, for each, a set of names
+   that are known to be used by PIs when filling in the target name in APT (and
+   thus may be present in the TARGNAME field). In addition, the list contains the
+   RA and DEC values for the standard stars, along with their proper motion data.
+
+   Authors
+   -------
+   - Brian York
+
+   Use
+   ---
+   This module is intended to be imported if you need to get information about a particular
+   standard star, and have its name (or the value in the TARGNAME field)::
+
+       from abscal.common.standard_stars import find_star_by_name
+
+   You can also import starlist directly if you have some other need for the ABSCAL standard
+   star list::
+
+       from abscal.common.standard_stars import starlist
+
+
+
+Module Contents
+---------------
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.common.standard_stars.find_star_by_name
+   abscal.common.standard_stars.find_closest_star
+
+
+
+Attributes
+~~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.common.standard_stars.starlist_data
+   abscal.common.standard_stars.starlist
+
+
+.. data:: starlist_data
+   
+
+   
+
+.. data:: starlist
+   
+
+   
+
+.. function:: find_star_by_name(name)
+
+   Finds the standard star with a matching name.
+
+   Goes through the list of standard stars, looking for one with the same name
+   as was provided. If it finds one, returns it. If not, returns None.
+
+   :param name: The name to look for
+   :type name: str
+
+   :returns: **star** -- The found star (or None if none was found)
+   :rtype: dict
+
+
+.. function:: find_closest_star(ra, dec, max_distance=None)
+
+   Finds the closest standard star on the sky.
+
+   Goes through the list of standard stars, looking for the closest co-ordinate match,
+   and returning that standard (or, optionally, if max_distance is set to a positive
+   value, returning None if no star in the list is within max_distance).
+
+   :param ra: RA in decimal degrees
+   :type ra: float
+   :param dec: DEC in decimal degrees
+   :type dec: float
+   :param max_distance: If set, the maximum distance (in arcseconds) for a match to be valid.
+   :type max_distance: float, default None
+
+   :returns: **star** -- The found star (or None if none is found)
+   :rtype: dict
+
+

@@ -1,0 +1,24 @@
+:mod:`abscal`
+=============
+
+.. py:module:: abscal
+
+.. autoapi-nested-parse::
+
+   This is the top-level abscal module.
+
+
+
+Subpackages
+-----------
+.. toctree::
+   :titlesonly:
+   :maxdepth: 3
+
+   common/index.rst
+   extern/index.rst
+   stis/index.rst
+   tests/index.rst
+   wfc3/index.rst
+
+

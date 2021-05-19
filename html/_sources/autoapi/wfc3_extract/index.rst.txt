@@ -1,0 +1,21 @@
+:mod:`wfc3_extract`
+===================
+
+.. py:module:: wfc3_extract
+
+.. autoapi-nested-parse::
+
+   This module acts as an interface to the WFC3 'reduce_grism' script.
+
+   Author
+   -------
+       - Brian York
+
+   Use
+   ---
+       This module is intended to be run from the command line.
+       ::
+           python wfc3_extract.py <input_table> [options]
+
+
+

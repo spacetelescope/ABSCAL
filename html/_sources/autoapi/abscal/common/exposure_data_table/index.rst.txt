@@ -1,0 +1,339 @@
+:mod:`abscal.common.exposure_data_table`
+========================================
+
+.. py:module:: abscal.common.exposure_data_table
+
+.. autoapi-nested-parse::
+
+   This module contains the ExposureTable class. The class contains a table of
+   exposure metadata, as well as the ability to export that table in formats
+   suitable for IDL compatibility, or for further use by later scripts.
+
+   Authors
+   -------
+       - Brian York
+
+   Use
+   ---
+
+   This module provides the AbscalDataTable class, which holds an astropy table
+   of exposure metadata, along with the ability to present that data either in
+   a form expected by IDL, or in a form more suitable for passing on to
+   later scripts in abscal::
+
+       from abscal.common.exposure_data_table import AbscalDataTable
+       t = AbscalDataTable()
+
+       t.add_exposure(<exposure metadata>)
+       ... # repeat as needed
+       t.write_to_file(<file>,<idl_mode>,<other arguments>)
+
+   The goal is to create an astropy.table.Table subclass that has the ability to successfully
+   read in IDL-formatted tables, and to write out IDL-formatted tables *as an additional
+   option*, but that generally uses its own format.
+
+
+
+Module Contents
+---------------
+
+Classes
+~~~~~~~
+
+.. autoapisummary::
+
+   abscal.common.exposure_data_table.AbscalDataTable
+
+
+
+Functions
+~~~~~~~~~
+
+.. autoapisummary::
+
+   abscal.common.exposure_data_table.scan_rate_formatter
+
+
+
+.. function:: scan_rate_formatter(scan_rate)
+
+   Format the IDL table 'SCAN_RAT' column.
+
+   In IDL at least, the scan rate column has a very particular format (0.0000 for cases
+   where there is no scan being done, left-aligned). There's no good one-step way of
+   doing that formatting in python, so here's what we're stuck with.
+
+   :param scan_rate: The scan rate to format
+   :type scan_rate: float
+
+   :returns: **scan_rate_str** -- The scan rate, formatted as a four-decimal-place floating point, and left-aligned.
+   :rtype: str
+
+
+.. class:: AbscalDataTable(data=None, masked=None, names=None, dtype=None, meta=None, copy=True, rows=None, copy_indices=True, **kwargs)
+
+
+   Bases: :py:obj:`astropy.table.Table`
+
+   A class to represent HST exposure metadata for ABSCAL
+
+   .. attribute:: column_mappings
+      
+
+      
+
+   .. attribute:: default_format
+      :annotation: = ascii.ipac
+
+      
+
+   .. attribute:: standard_columns
+      
+
+      
+
+   .. method:: from_idl_table(cls, table_file)
+      :classmethod:
+
+      Reads in an IDL-formatted text table, and turns it into a standard table. Because
+      it uses the "add_exposure()" function (defined below), rows that just aren't
+      present in the IDL table will have default values.
+
+      :param cls: The class type to return
+      :type cls: class
+      :param table_file: The file to read.
+      :type table_file: str
+
+      :returns: **table** -- The populated table
+      :rtype: instantiated class cls
+
+
+   .. method:: read(*args, **kwargs)
+
+      Override the read method to make sure that strings have the Object type. That way
+      they don't have a fixed character count, and we can append to them as needed.
+
+      :param args: List of positional arguments. Passed directly to super.
+      :type args: list
+      :param kwargs: Dictionary of keyword arguments. Passed directly to super.
+      :type kwargs: dictionary
+
+      :returns: **out** -- The table that was read in.
+      :rtype: astropy.table.Table
+
+
+   .. method:: add_exposure(self, metadata_dict)
+
+      Add a new row to the table from a dictionary built up from an exposure.
+      The dictionary should contain all of the standard abscal columns. If the
+      value of the root column is already in the table, then deal with it as
+      provided for in the internal duplicates metadata.
+
+      Handling duplicates can currently be any of:
+
+      - both: keep the existing entry, add the new entry.
+      - preserve: keep the existing entry, discard the new entry.
+      - replace: remove the existing entry, add the new entry.
+      - neither: remove the existing entry, discard the new entry.
+
+      :param metadata_dict: A dictionary containing information on a single exposure.
+      :type metadata_dict: dict
+
+      :returns: **success** -- True if the column was added, False if not. Will generally only be
+                False in the case of duplicate columns.
+      :rtype: bool
+
+
+   .. method:: adjust(self, adjustments)
+
+      Adjust the table based on an adjustment dictionary. The dictionary may contain
+      entries that edit columns or delete rows. This is provided because there are
+      several observations in the calibration set which are apparently just *wrong* in
+      some fundamental way (visit number incorrect, proposal incorrect, etc.) These
+      exposures need to be put into the correct place if they're found.
+
+      This is a fairly generic function because we don't know when there might be
+      another exposure that needs to have something done to it.
+
+      The adjustments dictionary consists of two sub-dictionaries, one of items to be
+      deleted, and the other of items to be edited. The dictionaries are structured as
+      follows:
+
+      column: str
+          column to look at
+      key: str
+          value to search for in the column
+      operation: str
+          operation to perform. ONLY PRESENT FOR EDIT
+      value: str
+          value to use when applying the operation. ONLY PRESENT FOR EDIT
+      source: str
+          Where the change came from
+      reason: str
+          Why the change needed to be made
+
+      :param adjustments: Dictionary of adjustments
+      :type adjustments: dict
+
+
+   .. method:: set_filter_images(self)
+
+      For any grism exposures, look for the nearest associated filter
+      exposure and, if one is found, associate it using the filter_root
+      column. A filter image is considered associated if it:
+
+      - is from the same program
+      - is from the same visit
+      - has the same POSTARG values
+
+      If there is more than one appropriate exposure, take the one that's closest in
+      time.
+
+
+   .. method:: filtered_copy(self, filter_or_filters)
+
+      Get a copy of the table, filtered by the specified filters. The is a convenience
+      function that implicitly creates a deep copy, specifically so that edits can be
+      made to the now-filtered table without altering the original (or even needing to
+      know that there *is* and original).
+
+      :param filter_or_filters: The filters to apply
+      :type filter_or_filters: list of filters or single filter
+
+      :returns: **table** -- The filtered table
+      :rtype: AbscalDataTable
+
+
+   .. method:: write_to_file(self, file_name, idl_mode, **kwargs)
+
+      Write the table to a file, optionally using IDL strict compatibility.
+
+      :param file_name: The file to write the table to.
+      :type file_name: str
+      :param idl_mode: Whether to write the table in IDL compatibility mode.
+      :type idl_mode: bool
+      :param kwargs:
+                     Optional keyword arguments. Known arguments are:
+                         filters : list
+                             List of filters to apply to the table before writing it.
+      :type kwargs: dict
+
+
+   .. method:: n_exposures(self)
+      :property:
+
+      Return the number of rows in the table.
+
+
+   .. method:: _filter_table(table, filter)
+      :staticmethod:
+
+      Filter a table by means of a particular filter. The filter should be
+      either a known string value, or a callable which takes an astropy table
+      and returns a filtered version of the table.
+
+      :param table: The table to filter. Should probably in fact be an AbscalDataTable.
+      :type table: astropy.table.Table
+      :param filter: Either a keyword string or a callable. Known strings are:
+
+                     stare:
+                         remove scan_rate > 0
+                     scan:
+                         remove scan_rate == 0
+                     filter:
+                         remove grism data
+                     grism:
+                         keep all grism data and the closest-in-time filter exposure from the
+                         same visit as the grism exposure.
+                     obset:<value>:
+                         keep all data where the root column begins with <value>
+      :type filter: str or callable
+
+      :returns: **filtered_table** -- Filtered table.
+      :rtype: astropy.table.Table
+
+
+   .. method:: _grism_filter(table)
+      :staticmethod:
+
+      Filter the table as follows:
+
+      - keep all grism exposures
+      - for each grism exposure,
+
+        - if there is at least one filter exposure from the same program and visit,
+          keep the filter exposure closest in time to the grism exposure
+        - else annotate the grism that no corresponding filter was found
+
+      In order to do this, the function uses the above set_filter_images function.
+
+      :param table: The table to filter.
+      :type table: astropy.table.Table
+
+      :returns: **filtered_table** -- The filtered table.
+      :rtype: astropy.table.Table
+
+
+   .. method:: _read_file_to_table(self, file_name, idl_mode, **kwargs)
+
+      Read an abscal table from a file, optionally using IDL compatibility mode. Note
+      that, even if idl_mode is set to False, if reading the table fails with the
+      standard method, then the program will attempt to read the table with the IDL
+      reader.
+
+      :param file_name: The table file to read.
+      :type file_name: str
+      :param idl_mode: Whether to operate in IDL compatibility mode.
+      :type idl_mode: bool
+      :param kwargs: Optional keyword arguments. Known arguments are:
+
+                     format: str
+                         Table format to attempt to read.
+      :type kwargs: dict
+
+      :returns: **t** -- The table that was read in.
+      :rtype: astropy.table.Table
+
+
+   .. method:: _write_to_idl(file_name, table, **kwargs)
+      :staticmethod:
+
+      Write the table in strict IDL mode. This mode uses different columns (which
+      are sometimes combinations of several variables that need to be separated for
+      use, and are thus stored in separate columns in standard mode).
+
+      :param file_name: The file to write to.
+      :type file_name: str
+      :param table: The (filtered) table to write
+      :type table: astropy.table.Table
+      :param kwargs: Dictionary of optional keywords. Known keywords include:
+
+                     create_time: datetime.DateTime
+                         Table creation date
+      :type kwargs: dict
+
+
+   .. method:: _get_kwarg(key, default, kwargs)
+      :staticmethod:
+
+      Get an abscal-specific keyword argument from the kwargs dictionary (if present),
+      and pop that keyword out of the kwargs dictionary. If not present, return a
+      (supplied) default value.
+
+      :param key: The kwarg key to look for
+      :type key: str
+      :param default: The default value of key
+      :type default: obj
+      :param kwargs: The keyword dictionary to search.
+      :type kwargs: dict
+
+      :returns: * **value** (*obj*) -- The value found (or the default value)
+                * **kwargs** (*dict*) -- The keyword dictionary with 'key' removed from it (if it was present).
+
+
+   .. method:: _fix_columns(self)
+
+      Adjust all columns to replace fixed-length strings with objects.
+
+
+
