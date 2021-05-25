@@ -1,0 +1,28 @@
+# These are the default parameters for the common command-line arguments. 
+#
+# The file is are formatted in ABSCAL's own idiosyncratic (yet quietly brilliant) defaults 
+# dictionary format. That format consists of:
+#
+#   - an "all:" tag. Put any actual values here
+#   - zero or more keyword tags. These are for parameters that vary based on the input 
+#     (e.g. a different set of defaults for each grism, spectral order, etc.)
+#   - each keyword tag itself contains a defaults dictionary, which means that it *also* 
+#     has an "all" tag containing any actual values, and zero-or-more keyword tags that 
+#     lead to yet-more-specific dictionaries (e.g. if you need to specify grism *and* 
+#     order).
+#
+# The defaults dictionary itself will comment each value keyword with what it is, and 
+# what data type it is expected to have.
+
+all:
+    # Defaults for command-line arguments
+    paths: null             # additional paths to search for input files
+    in_file: null           # file name of additional input table
+    spec_dir: spec          # sub-directory where spectra will be put
+    compat: false           # run in IDL compatibility mode
+    split_output: true      # Should the default output file name be divided into multiple
+                            #   files based on exposure type (e.g. filter, grism)
+    force: false            # create new output files even if there are existing files 
+                            #   with the same name(s)
+    verbose: false          # run in verbose mode (i.e. print out additional diagnostic 
+                            #   data and intermediate results)

@@ -107,7 +107,10 @@ class AbscalDataTable(Table):
         self.create_time, kwargs = self._get_kwarg('create_date', datetime.datetime.now(),
                                                    kwargs)
         self.search_str, kwargs = self._get_kwarg('search_str', 'i*flt.fits', kwargs)
-        self.search_dirs, kwargs = self._get_kwarg('search_dirs', os.getcwd(), kwargs)
+        search_dirs, kwargs = self._get_kwarg('search_dirs', os.getcwd(), kwargs)
+        if isinstance(search_dirs, str):
+            search_dirs = [search_dirs]
+        self.search_dirs = search_dirs
         self.duplicates, kwargs = self._get_kwarg('duplicates', 'both', kwargs)
         
         # Creation Flags
@@ -838,6 +841,7 @@ class AbscalDataTable(Table):
                                           'default': ''},
                             'coadded': {'dtype': 'O', 'idl': False, 
                                         'default': ''},
+                            'wl_offset': {'dtype': 'f8', 'idl': False, 'default': -1.},
                             'planetary_nebula': {'dtype': '?', 'idl': False,
                                                  'default': False},
                             'notes': {'dtype': 'O', 'idl': False, 

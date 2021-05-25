@@ -66,7 +66,8 @@ from scipy.stats import mode
 
 from abscal.common.args import parse
 from abscal.common.standard_stars import find_star_by_name
-from abscal.common.utils import air2vac, get_data_file, linecen, smooth_model, tabinv
+from abscal.common.utils import air2vac, get_data_file, get_defaults, linecen
+from abscal.common.utils import smooth_model, tabinv
 from abscal.common.exposure_data_table import AbscalDataTable
 
 def wlimaz(root, y_arr, wave_arr, directory, verbose):
@@ -168,33 +169,35 @@ def wlimaz(root, y_arr, wave_arr, directory, verbose):
         return star_x, star_y
 
 
-def wlmeas(input_table, arg_list, overrides={}):
+def wlmeas(input_table, overrides={}, **kwargs):
     """
     Measure planetary nebula emission line locations.
     
     There are six planetary nebula emission lines that fall neatly into the WFC3 grism 
     spectral orders, and this function uses the approximate wavelength solution to find 
     the rough location of these lines, and then uses flux-weighting to determine the line 
-    centre. The user is able to override a given fit if the script is run in interactive 
-    mode.
+    centre. The user is able to override a given fit if the script is run with the 
+    show_plots flag.
     
     Parameters
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Table of exposures with emission lines to fit.
-    arg_list : namespace
-        Namespace of command-line arguments.
     overrides : dict
         Dictionary of overrides to the default reduction parameters
+    kwargs : dict
+        Dictionary of (e.g.) command-line option choices
     
     Returns
     -------
     output_table : astropy.table.Table
         Table of emission line locations
     """
-    task = "wlmeas"
-    verbose = arg_list.verbose
-    interactive = arg_list.trace
+    task = "wfc3: grism: wlmeas"
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
 
     issues = {}
     exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
@@ -228,9 +231,9 @@ def wlmeas(input_table, arg_list, overrides={}):
 
     # Columns are 'wavelength' and 'flux'
     pn_ref_table = Table.read(pn_ref, format="ascii.basic")
-
+    
     input_table = deepcopy(input_table)
-    input_table = input_table[input_table["planetary_nebula"] == "True"]
+    input_table = input_table[input_table["planetary_nebula"] == True]
 
     xpx = np.arange(1014, dtype=np.float64)
 
@@ -335,7 +338,7 @@ def wlmeas(input_table, arg_list, overrides={}):
                 max_x = wl[np.max(xgood)] + 50
                 net_max = np.min(net[xgood])
 
-                if interactive:
+                if show_plots:
                     wl_good = np.where((wl > min_x-1000.) & (wl < max_x+1000.))
 
                     fig = plt.figure()
@@ -393,89 +396,93 @@ def wlmeas(input_table, arg_list, overrides={}):
                 cmd = {"choice": "unknown", "fit_status": fit_status, "msg": "",
                        "finished": False, "submitted": False}
 
-                while not cmd["finished"]:
-
-                    cmd["submitted"] = False
-
-                    fig, ax = plt.subplots()
-                    fig.subplots_adjust(bottom=0.2)
-
-                    title_str = "{} {} order={} line={}"
-                    ax.set_title(title_str.format(grat, root, iord, wlr))
-                    xrud = tabinv((wl/iord), wrud[xgdrud])
-                    min_y = 0.
-                    max_y = np.max(net[xgood])*1.1
-#                     plt.plot(xrud, smorud[xgdrud], linestyle='--', label='WFC3 FWHM')
-                    plt.scatter(wl[good_dq], net[good_dq], label='Good DQ')
-                    plt.scatter(wl[bad_dq], net[bad_dq], label='Bad DQ')
-                    if cmd["fit_status"] in ["custom", "rejected"]:
-                        x_int = np.floor(cmd["choice"]).astype(np.int32)
-                        xwl = wl[x_int] + (cmd["choice"]-x_int)*(wl[x_int+1]-wl[x_int])
-                    else:
-                        x_int = np.floor(xcentr).astype(np.int32)
-                        xwl = wl[x_int] + (xcentr-x_int)*(wl[x_int+1]-wl[x_int])
-                    if cmd["fit_status"] == "good" or cmd["fit_status"] == "good (ima)":
-                        plt.plot([xwl, xwl], [0., 1.e10], color='green', label='Fit')
-                    elif cmd["fit_status"] == "bad" or cmd["fit_status"] == "rejected":
-                        plt.plot([xwl, xwl], [0., 1.e10], color='red',
-                                 label='Bad Fit, Rejected Fit, or Not Found')
-                    elif cmd["fit_status"] == "ima":
-                        plt.plot([xwl, xwl], [0., 1.e10], color='blue',
-                                 label='IMA zeroth read.')
-                    elif cmd["fit_status"] == "hardcoded":
-                        plt.plot([xwl, xwl], [0., 1.e10], color='grey',
-                                 label='Hardcoded from Known Issues.')
-                    elif cmd["fit_status"] == "custom":
-                        plt.plot([xwl, xwl], [0., 1.e10], color='grey',
-                                 label='User Custom')
-                    else:
-                        plt.plot([xwl, xwl], [0., 1.e10], color='red',
-                                 label='UNKNOWN FIT')
-                    plt.xlim(min_x, max_x)
-                    plt.ylim(min_y, max_y)
-                    plt.legend()
-
-                    text_axes = fig.add_axes([0.75, 0.05, 0.15, 0.075])
-                    msg = "Empty to accept fit, X to reject all fits, Wavelength "
-                    msg += "for custom fit:"
-                    text_box = TextBox(text_axes, msg, initial=cmd["msg"])
-
-                    def submit(choice):
-                        if choice == "":
-                            cmd["finished"] = True
-                            cmd["submitted"] = True
-                        elif choice in ['x', 'X']:
-                            wl_choice = wl[xgood][(len(xgood[0])-1)//2]
-                            pix = np.searchsorted(wl, wl_choice)
-                            cmd["choice"] = pix
-                            cmd["fit_status"] = "rejected"
-                            cmd["submitted"] = True
+                if show_plots or (("good" not in cmd["fit_status"]) and \
+                                  ("hardcoded" not in cmd["fit_status"])):
+                
+                    while not cmd["finished"]:
+    
+                        cmd["submitted"] = False
+    
+                        fig, ax = plt.subplots()
+                        fig.subplots_adjust(bottom=0.2)
+    
+                        title_str = "{} {} order={} line={}"
+                        ax.set_title(title_str.format(grat, root, iord, wlr))
+                        xrud = tabinv((wl/iord), wrud[xgdrud])
+                        min_y = 0.
+                        max_y = np.max(net[xgood])*1.1
+#                         plt.plot(xrud, smorud[xgdrud], linestyle='--', label='WFC3 FWHM')
+                        plt.scatter(wl[good_dq], net[good_dq], label='Good DQ')
+                        plt.scatter(wl[bad_dq], net[bad_dq], label='Bad DQ')
+                        if cmd["fit_status"] in ["custom", "rejected"]:
+                            x_int = np.floor(cmd["choice"]).astype(np.int32)
+                            xwl = wl[x_int] + (cmd["choice"]-x_int)*(wl[x_int+1]-wl[x_int])
                         else:
-                            try:
-                                custom_wl = float(choice)
-                                pix = np.searchsorted(wl, custom_wl)
-                                remainder = (custom_wl - wl[pix])/(wl[pix+1]-wl[pix])
-                                cmd["choice"] = pix + remainder
-                                cmd["fit_status"] = "custom"
-                                cmd["msg"] = ""
+                            x_int = np.floor(xcentr).astype(np.int32)
+                            xwl = wl[x_int] + (xcentr-x_int)*(wl[x_int+1]-wl[x_int])
+                        if cmd["fit_status"] == "good" or cmd["fit_status"] == "good (ima)":
+                            plt.plot([xwl, xwl], [0., 1.e10], color='green', label='Fit')
+                        elif cmd["fit_status"] == "bad" or cmd["fit_status"] == "rejected":
+                            plt.plot([xwl, xwl], [0., 1.e10], color='red',
+                                     label='Bad Fit, Rejected Fit, or Not Found')
+                        elif cmd["fit_status"] == "ima":
+                            plt.plot([xwl, xwl], [0., 1.e10], color='blue',
+                                     label='IMA zeroth read.')
+                        elif cmd["fit_status"] == "hardcoded":
+                            plt.plot([xwl, xwl], [0., 1.e10], color='grey',
+                                     label='Hardcoded from Known Issues.')
+                        elif cmd["fit_status"] == "custom":
+                            plt.plot([xwl, xwl], [0., 1.e10], color='grey',
+                                     label='User Custom')
+                        else:
+                            plt.plot([xwl, xwl], [0., 1.e10], color='red',
+                                     label='UNKNOWN FIT')
+                        plt.xlim(min_x, max_x)
+                        plt.ylim(min_y, max_y)
+                        plt.legend()
+
+                        text_axes = fig.add_axes([0.75, 0.05, 0.15, 0.075])
+                        msg = "Empty to accept fit, X to reject all fits, Wavelength "
+                        msg += "for custom fit:"
+                        text_box = TextBox(text_axes, msg, initial=cmd["msg"])
+
+                        def submit(choice):
+                            if choice == "":
+                                cmd["finished"] = True
                                 cmd["submitted"] = True
-                            except Exception as e:
-                                msg = "Enter nothing to accept fit, a floating point "
-                                msg += "value to choose a custom fit, or 'X' to reject"
-                                msg += "any fit."
-                                cmd["msg"] = msg
-                                cmd["fit_status"] = fit_status
+                            elif choice in ['x', 'X']:
+                                wl_choice = wl[xgood][(len(xgood[0])-1)//2]
+                                pix = np.searchsorted(wl, wl_choice)
+                                cmd["choice"] = pix
+                                cmd["fit_status"] = "rejected"
                                 cmd["submitted"] = True
-                        plt.close("all")
+                            else:
+                                try:
+                                    custom_wl = float(choice)
+                                    pix = np.searchsorted(wl, custom_wl)
+                                    remainder = (custom_wl - wl[pix])/(wl[pix+1]-wl[pix])
+                                    cmd["choice"] = pix + remainder
+                                    cmd["fit_status"] = "custom"
+                                    cmd["msg"] = ""
+                                    cmd["submitted"] = True
+                                except Exception as e:
+                                    msg = "Enter nothing to accept fit, a floating point "
+                                    msg += "value to choose a custom fit, or 'X' to reject"
+                                    msg += "any fit."
+                                    cmd["msg"] = msg
+                                    cmd["fit_status"] = fit_status
+                                    cmd["submitted"] = True
+                            plt.close("all")
 
-                    text_box.on_submit(submit)
+                        text_box.on_submit(submit)
 
-                    def handle_close(evt):
-                        if not cmd["submitted"]:
-                            submit(text_box.text)
+                        def handle_close(evt):
+                            if not cmd["submitted"]:
+                                submit(text_box.text)
 
-                    fig.canvas.mpl_connect('close_event', handle_close)
-                    plt.show()
+                        fig.canvas.mpl_connect('close_event', handle_close)
+                        plt.show()
+                # end if showing the plot.
 
                 if cmd["fit_status"] == "custom":
                     fit_status = "custom"
@@ -535,7 +542,7 @@ def wlmeas(input_table, arg_list, overrides={}):
     return output_table
 
 
-def wlmake(input_table, wl_table, arg_list, overrides={}):
+def wlmake(input_table, wl_table, overrides={}, **kwargs):
     """
     Derives a grism wavelength fit.
     
@@ -554,19 +561,21 @@ def wlmake(input_table, wl_table, arg_list, overrides={}):
         Table of exposures to be fit.
     wl_table : astropy.table.Table
         Output of wlmeas.
-    arg_list : namespace
-        Namespace of command-line arguments.
     overrides : dict
         Dictionary of overrides to the default reduction parameters
+    kwargs : dict
+        Dictionary of (e.g.) command-line parameters.
     
     Returns
     -------
     output_table : astropy.table.Table
         Table of wavelength fit values
     """
-    task = "wlmake"
-    verbose = arg_list.verbose
-    interactive = arg_list.trace
+    task = "wfc3: grism: wlmake"
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
     
     if verbose:
         print("Starting {}\nInput data:\n{}".format(task, wl_table))
@@ -765,7 +774,7 @@ def wlmake(input_table, wl_table, arg_list, overrides={}):
                 print("b rms={}".format(np.std(bmeas-bfit)))
                 print("m rms={}".format(np.std(dmeas-mfit)))
             
-            if interactive:
+            if show_plots:
                 for igd in range(ngood):
                     row = current_table[igd]
                     full_row = input_table[input_table['root']==row['root']]
@@ -829,7 +838,37 @@ def wlmake(input_table, wl_table, arg_list, overrides={}):
     return output_table
 
 
-def additional_args():
+def wl_offset(input_table, overrides={}, **kwargs):
+    """
+    Derives wavelength offsets for white dwarf exposures.
+    
+    Cross-correlates flux and net from white dwarf exposures against one another to derive 
+    offsets
+
+    Parameters
+    ----------
+    input_table : abscal.common.exposure_data_table.AbscalDataTable
+        Table of exposures to have offsets generated.
+    overrides : dict
+        Dictionary of overrides to the default reduction parameters
+    kwargs : dict
+        Dictionary of (e.g.) command-line parameters
+    
+    Returns
+    -------
+    output_table : astropy.table.Table
+        Updated table
+    """
+    task = "wfc3: grism: wloffset"
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
+    
+    return input_table
+
+
+def additional_args(**kwargs):
     """
     Additional command-line arguments. 
     
@@ -842,6 +881,8 @@ def additional_args():
         Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
         parser to create a new command-line option
     """
+    module_name = kwargs.get('module_name', __name__)
+    base_defaults = get_defaults(module_name)
 
     additional_args = {}
 
@@ -850,16 +891,16 @@ def additional_args():
     table_kwargs = {'help': table_help}
     additional_args['table'] = (table_args, table_kwargs)
 
-    trace_help = "Include result plots while running."
-    trace_args = ["-t", "--trace"]
-    trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
-                    'help': trace_help}
-    additional_args['trace'] = (trace_args, trace_kwargs)
+    plots_help = "Include result plots while running."
+    plots_args = ["-p", "--plots"]
+    plots_kwargs = {'dest': 'plots', 'action': 'store_true', 
+                    'default': base_defaults['plots'], 'help': plots_help}
+    additional_args['plots'] = (plots_args, plots_kwargs)
 
     return additional_args
 
 
-def parse_args():
+def parse_args(**kwargs):
     """
     Parse command-line arguments.
     
@@ -872,11 +913,12 @@ def parse_args():
         parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
-    default_output_file = 'wlmeastmp.log'
+    default_out_file = kwargs.get('default_input_file', 'dirirstare.log')
+    default_in_file = kwargs.get('default_input_file', 'dirirstare.log')
 
-    args = additional_args()
+    args = additional_args(**kwargs)
 
-    res = parse(description_str, default_output_file, args)
+    res = parse(description_str, default_out_file, args, **kwargs)
 
     if res.paths is not None:
         if "," in res.paths:
@@ -895,7 +937,7 @@ def parse_args():
     return res
 
 
-def main(overrides={}, do_measure=True, do_make=True):
+def main(overrides={}, do_measure=True, do_make=True, **kwargs):
     """
     Run the wavelength fitting function(s).
     
@@ -911,7 +953,8 @@ def main(overrides={}, do_measure=True, do_make=True):
     do_make : bool, default, True
         Run wlmake function
     """
-    parsed = parse_args()
+    kwargs['default_output_file'] = 'wlmeastmp.log'
+    parsed = parse_args(**kwargs)
 
     for key in overrides:
         if hasattr(parsed, key):
@@ -924,17 +967,18 @@ def main(overrides={}, do_measure=True, do_make=True):
 
     measure_fname = parsed.out_file
     if do_measure:
-        wl_calib_table = wlmeas(input_table, parsed, overrides)
+        wl_calib_table = wlmeas(input_table, overrides, **vars(parsed), **kwargs)
         wl_calib_table.write(measure_fname, format='ascii.ipac', overwrite=True)
     else:
         wl_calib_table = Table.read(measure_fname, format='ascii.ipac')
     
     if do_make:
-        final_wave_table = wlmake(input_table, wl_calib_table, parsed, overrides)
+        final_wave_table = wlmake(input_table, wl_calib_table, overrides, **vars(parsed),
+                                  **kwargs)
         (table_file, table_ext) = os.path.splitext(parsed.out_file)
         final_fname = table_file + "_final" + table_ext
         final_wave_table.write(final_fname, format='ascii.ipac', overwrite=True)
     # Done.
 
 if __name__ == "__main__":
-    main()
+    main(module_name='abscal.wfc3.reduce_grism_wavelength')

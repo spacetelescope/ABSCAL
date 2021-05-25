@@ -17,7 +17,7 @@ used by direct import::
 
     from abscal.wfc3.util_filter_locate_image import locate_image
     
-    output_table = locate_image(input_table, verbose, show_trace)
+    output_table = locate_image(input_table, verbose, show_plots)
 
 The function takes a table of exposure data, loops through the rows, and finds a source 
 location in each image that is within 30 pixels of the location pointed to by the target 
@@ -54,7 +54,7 @@ from abscal.common.utils import get_data_file, set_param
 from abscal.common.exposure_data_table import AbscalDataTable
 
 
-def locate_image(input_table, verbose=False, show_trace=False, overrides={}):
+def locate_image(input_table, verbose=False, show_plots=False, overrides={}):
     """
     Locate the target image in a table of exposures
     
@@ -76,7 +76,7 @@ def locate_image(input_table, verbose=False, show_trace=False, overrides={}):
     
     verbose : bool (default False)
         Print diagnostic output
-    show_trace : bool (default False)
+    show_plots : bool (default False)
         Display plot of calculated target location.
     """
     task = "locate_image"
@@ -128,7 +128,7 @@ def locate_image(input_table, verbose=False, show_trace=False, overrides={}):
                 if verbose:
                     msg = "{}: {} has image astrometry position ({},{})"
                     print(msg.format(task, root, xastr, yastr))
-                if show_trace:
+                if show_plots:
                     fig = plt.figure()
                     ax = fig.add_subplot(111)
                     targ_str = "{} - {} ({})".format(root, target, filter)

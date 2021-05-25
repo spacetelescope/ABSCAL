@@ -26,12 +26,15 @@ This module is intended to be imported for argument parsing::
     arg = [<positional arguments to add_argument>, <keyword arguments same>]
     arg_list.append(arg)
     ...
-    res = parse(description, default_out_file, arg_list)
+    res = parse(description, default_out_file, arg_list, **kwargs)
 """
 
-import argparse, os
+import argparse
+import os
 
-def parse(description_str, default_out_file, arg_list, split_output=True):
+from .utils import get_defaults
+
+def parse(description, default_out_file, arg_list, **kwargs):
     """
     Create an ArgumentParser, add in the common arguments that everything in ABSCAL uses 
     (along with any custom arguments passed in), parse the provided arguments, and return 
@@ -39,22 +42,28 @@ def parse(description_str, default_out_file, arg_list, split_output=True):
     
     Parameters
     ----------
-    description_str : str
+    description : str
         Description of the sub-module to be printed in --help
     default_out_file : str
         Name of the default output file produced by the sub-module
     arg_list : list
         List of custom arguments, consisting of tuples of (<fixed arguments list>,
         <keyword argument dict>)
-    split_output : bool, default True
-        If multiple output files are created based on some characteristic, set this to 
-        True
+    kwargs : dict
+        Keyword parameters, including
+        
+        split_output: bool, default True
+            If multiple output files are created based on some characteristic, set this to 
+            True
     
     Returns
     -------
     res : populated namespace
         Result of parsing all of the command-line arguments.
     """
+    
+    default_values = get_defaults('abscal.common.args')
+    split_output = kwargs.get('split_output', default_values['split_output'])
 
     path_help = "A comma-separated list of input paths."
     
@@ -85,24 +94,26 @@ def parse(description_str, default_out_file, arg_list, split_output=True):
     
     verbose_help = "Print diagnostic information while running."
 
-    parser = argparse.ArgumentParser(description=description_str)
-    parser.add_argument('-p', '--paths', dest='paths', help=path_help)
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('--paths', dest='paths', help=path_help)
     parser.add_argument('-i', '--input', dest='in_file', help=in_help,
-                        default=None)
+                        default=default_values['in_file'])
     parser.add_argument('-o', '--output', dest='out_file', help=out_help,
                         default=default_out_file)
     parser.add_argument('-s', '--spec_dir', dest='spec_dir', help=spec_help,
-                        default='spec')
+                        default=default_values['spec_dir'])
     parser.add_argument('-c', '--strict_compat', dest="compat", 
-                        action='store_true', default=False, help=compat_help)
+                        action='store_true', default=default_values['compat'], 
+                        help=compat_help)
     parser.add_argument('-f', '--force', dest="force", action="store_true",
-                        default=False, help=force_help)
+                        default=default_values['force'], help=force_help)
     parser.add_argument('-v', '--verbose', dest="verbose",
-                        action='store_true', default=False, help=verbose_help)
+                        action='store_true', default=default_values['verbose'], 
+                        help=verbose_help)
     for arg_name in arg_list.keys():
         args, kwargs = arg_list[arg_name]
         parser.add_argument(*args, **kwargs)
-
+    
     res = parser.parse_args()
     
     return res

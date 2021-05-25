@@ -1,4 +1,5 @@
-# These are the default parameters for the coadd() function in reduce_grism_coadd. 
+# These are the default parameters for the wlmeas, wlmake, and wloffset functions in 
+# reduce_grism_wavelength. 
 #
 # The file is are formatted in ABSCAL's own idiosyncratic (yet quietly brilliant) defaults 
 # dictionary format. That format consists of:

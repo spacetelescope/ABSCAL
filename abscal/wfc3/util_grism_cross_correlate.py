@@ -73,7 +73,7 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
         Correlation matrix
     """
     verbose = arg_list.verbose
-    interactive = arg_list.trace
+    show_plots = arg_list.plots
     task = "cross_correlate"
     preamble = "{}: {}".format(task, row['root'][0])
 

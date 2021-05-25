@@ -97,6 +97,7 @@ wlrang_p2_high: default 10800 (G102), 13000 (G141)
 
 import datetime
 import glob
+import importlib
 import json
 import os
 import yaml
@@ -270,7 +271,7 @@ def reduce_flatfield(input_table, params):
     cal_data = get_data_file("abscal.wfc3", "calibration_files.yaml")
     with open(cal_data, 'r') as inf:
         cal_files = yaml.safe_load(inf)
-    flat_file_name = cal_files["flatfield_cube"]["wfc3"][filter]
+    flat_file_name = cal_files["flatfield_cube"][filter]
     flat_file = get_data_file("abscal.wfc3", flat_file_name)
 
     with fits.open(flat_file) as in_flat:
@@ -787,7 +788,7 @@ def reduce_wave_zord(row, params):
     return x_arr, wave, angle, wav1st
 
 
-def reduce_scan(row, params, arg_list):
+def reduce_scan(row, params, **kwargs):
     """
     Reduce scan-mode grism data
     
@@ -809,9 +810,12 @@ def reduce_scan(row, params, arg_list):
         Updated single-row table of the exposure
     """
     raise NotImplementedError("Scan mode is not yet available.")
+
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
     
     verbose = arg_list.verbose
-    interactive = arg_list.trace
+    show_plots = arg_list.plots
     bkg_flat_order = arg_list.bkg_flat_order
 
     file = os.path.join(row["path"], row["filename"])
@@ -1000,7 +1004,7 @@ def reduce_scan(row, params, arg_list):
 # 	endif
 
 
-def reduce_stare(row, params, arg_list):
+def reduce_stare(row, params, **kwargs):
     """
     Reduces stare-mode grism data.
     
@@ -1014,28 +1018,38 @@ def reduce_stare(row, params, arg_list):
         Single-row table of the exposure to be extracted.
     params : dict
         Dictionary of parameters to use for the reduction
-    arg_list : namespace
-        Namespace of command-line arguments.
+    kwargs : dict
+        Dictionary of command-line arguments
     
     Returns
     -------
     row : abscal.common.exposure_data_table.AbscalDataTable
         Updated single-row table of the exposure
     """
-    verbose = arg_list.verbose
-    interactive = arg_list.trace
-    bkg_flat_order = arg_list.bkg_flat_order
-    task = "wfc3_grism_reduce_stare"
+    task = "wfc3: grism: extract: stare"
+
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
+    bkg_flat_order = kwargs.get('bkg_flat_order', base_defaults['bkg_flat_order'])
+    out_file = kwargs.get('out_file', kwargs['default_output_file'])
+    out_dir, out_table = os.path.split(out_file)
+    if out_dir == '':
+        out_dir = os.getcwd()
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
+
     file = os.path.join(row["path"], row["filename"])
     root = row['root']
     target = row['target']
     ref = row['filter_root']
     filter = row['filter']
+
     preamble = '{}: {}'.format(task, root)
 
     np_formatter = {'float_kind':lambda x: "{:8.2f}".format(x)}
-    np_opt = {'max_line_width': 175, 'formatter': np_formatter,
-              'threshold': 2000000}
+    np_opt = {'max_line_width': 175, 'formatter': np_formatter, 'threshold': 2000000}
 
     if verbose:
         print("{}: starting {}.".format(preamble, row['filename']))
@@ -1184,7 +1198,7 @@ def reduce_stare(row, params, arg_list):
                 if verbose:
                     print("\tDAOFind Failed: {}".format(e))
 
-            if interactive:
+            if show_plots:
                 if row['planetary_nebula'] == "True":
                     default = "Centre of Mass"
                 else:
@@ -1549,7 +1563,7 @@ def reduce_stare(row, params, arg_list):
                             yp = yprofile[maxpos-1:maxpos+2]
                             pf = profile.astype('float64')[maxpos-1:maxpos+2]
                             yfound[iord] = np.sum(yp*pf)/np.sum(pf)
-                        if verbose or interactive:
+                        if verbose or show_plots:
                             xf, yf = xfound[iord], yfound[iord]
                             msg = "{}: order {}, ".format(preamble, iord)
                             msg += "contin. x,y position=({},{})".format(xf, yf)
@@ -1584,8 +1598,7 @@ def reduce_stare(row, params, arg_list):
                             msg = "\tEmission Line at {},{} for order=-1"
                             print(msg.format(xfound[nbins], yfound[nbins]))
 
-                    # Replaces the separate trace flag
-                    if interactive:
+                    if show_plots:
                         fig = plt.figure()
                         ax = fig.add_subplot(111)
                         targ_str = "{} - {} ({})".format(root, target, filter)
@@ -1658,7 +1671,7 @@ def reduce_stare(row, params, arg_list):
             coef = np.polyfit(poly_x, poly_y, 1)
             fit_angle = np.arctan(coef[0])*180./np.pi
             print("{}: Found coefficients {} angle {}".format(preamble, coef, fit_angle))
-            if interactive:
+            if show_plots:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
                 t_axes = ax.transAxes
@@ -1843,7 +1856,7 @@ def reduce_stare(row, params, arg_list):
                 print("{}: Setting fit to lower fit.".format(preamble))
             s_back = lo_fit
 
-        if interactive:
+        if show_plots:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             targ_str = "{} - {} ({})".format(root, target, filter)
@@ -1888,7 +1901,7 @@ def reduce_stare(row, params, arg_list):
                        }
 
         # Create trace image
-        if interactive:
+        if show_plots:
             imagt = image
             ytmp = yfit
 #             if np.max(yfit) > 700:
@@ -2042,7 +2055,7 @@ def reduce_stare(row, params, arg_list):
 # 	endif
 
         # Create trace image
-        if interactive:
+        if show_plots:
             fig = plt.figure()
             ax = fig.add_subplot(111)
             targ_str = "{} - {} ({})".format(root, target, filter)
@@ -2094,14 +2107,10 @@ def reduce_stare(row, params, arg_list):
 
         extracted_file = fits.HDUList([primary_hdu, table_hdu])
 
-        out_dir, out_table = os.path.split(arg_list.out_file)
-        if out_dir == '':
-            out_dir = os.getcwd()
-        spec_dir = os.path.join(out_dir, arg_list.spec_dir)
         Path(spec_dir).mkdir(parents=True, exist_ok=True)
         extracted_dest = os.path.join(spec_dir, extracted_file_name)
         extracted_file.writeto(extracted_dest, overwrite=True)
-        row['extracted'] = os.path.join(arg_list.spec_dir, extracted_file_name)
+        row['extracted'] = os.path.join(spec_name, extracted_file_name)
 
     with fits.open(file, mode='update') as f:
         set_hdr(f[0].header, params)
@@ -2109,7 +2118,7 @@ def reduce_stare(row, params, arg_list):
     return row
 
 
-def reduce(input_table, arg_list, overrides={}):
+def reduce(input_table, overrides={}, **kwargs):
     """
     Reduces grism data.
     
@@ -2120,19 +2129,31 @@ def reduce(input_table, arg_list, overrides={}):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Table of exposures to be extracted.
-    arg_list : namespace
-        Namespace of command-line arguments.
     overrides : dict
         Dictionary of overrides to the default reduction parameters
+    kwargs : dict
+        Keyword arguments including command-line options
     
     Returns
     -------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Updated table of exposures
     """
-    verbose = arg_list.verbose
-    interactive = arg_list.trace
-    task = "grism_reduce"
+    task = "wfc3: grism: extract"
+    
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
+    force = kwargs.get('force', base_defaults['force'])
+
+    bkg_flat_order = kwargs.get('bkg_flat_order', base_defaults['bkg_flat_order'])
+    out_file = kwargs.get('out_file', kwargs['default_output_file'])
+    out_dir, out_table = os.path.split(out_file)
+    if out_dir == '':
+        out_dir = os.getcwd()
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
 
     if verbose:
         print("{}: Starting WFC3 data reduction for GRISM data.".format(task))
@@ -2152,12 +2173,9 @@ def reduce(input_table, arg_list, overrides={}):
         # Don't extract if there's already an extracted version of
         #   the file present.
         if row['extracted'] != '':
-            out_dir, out_table = os.path.split(arg_list.out_file)
-            if out_dir == '':
-                out_dir = os.getcwd()
             ext_file = os.path.join(out_dir, row['extracted'])
             if os.path.isfile(ext_file):
-                if arg_list.force:
+                if force:
                     if verbose:
                         msg = "{}: {}: extracted file exists. Re-extracting."
                         print(msg.format(task, root))
@@ -2167,17 +2185,13 @@ def reduce(input_table, arg_list, overrides={}):
                         print(msg.format(task, root))
                     continue
         else:
-            out_dir, out_table = os.path.split(arg_list.out_file)
-            if out_dir == '':
-                out_dir = os.getcwd()
-            spec_dir = os.path.join(out_dir, arg_list.spec_dir)
             extracted_file_name = "{}_{}_x1d.fits".format(root, target)
             extracted_dest = os.path.join(spec_dir, extracted_file_name)
 
             # If there is already an extracted file for this input, skip.
             if os.path.isfile(extracted_dest):
-                ext_str = os.path.join(arg_list.spec_dir, extracted_file_name)
-                if arg_list.force:
+                ext_str = os.path.join(spec_dir, extracted_file_name)
+                if force:
                     if verbose:
                         msg = "{}: {}: extracted file exists. Re-extracting."
                         print(msg.format(task, root))
@@ -2216,7 +2230,7 @@ def reduce(input_table, arg_list, overrides={}):
                 # Process the filter image only if its XC and YC haven't been
                 #   set to an actual value yet.
                 if float(ref_row['xc'][0]) < 0 or float(ref_row['yc'][0]) < 0:
-                    res = locate_image(ref_row, verbose, interactive)
+                    res = locate_image(ref_row, verbose, show_plots)
                     input_table['xc'][input_table['root']==ref] = float(res['xc'][0])
                     input_table['yc'][input_table['root']==ref] = float(res['yc'][0])
                     input_table['xerr'][input_table['root']==ref] = float(res['xerr'][0])
@@ -2231,10 +2245,10 @@ def reduce(input_table, arg_list, overrides={}):
 
             if scan_rate > 0:
                 print("{}: Reducing SCAN MODE data.".format(task))
-                reduced = reduce_scan(row, params, arg_list)
+                reduced = reduce_scan(row, params, **kwargs)
             else:
                 print("{}: Reducing STARE MODE data.".format(task))
-                reduced = reduce_stare(row, params, arg_list)
+                reduced = reduce_stare(row, params, **kwargs)
 
             row['extracted'] = reduced['extracted']
             row['xc'] = reduced['xc']
@@ -2254,7 +2268,7 @@ def reduce(input_table, arg_list, overrides={}):
     return input_table
 
 
-def additional_args():
+def additional_args(**kwargs):
     """
     Additional command-line arguments. 
     
@@ -2266,6 +2280,8 @@ def additional_args():
         Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
         parser to create a new command-line option
     """
+    module_name = kwargs.get('module_name', __name__)
+    base_defaults = get_defaults(module_name)
 
     additional_args = {}
 
@@ -2278,20 +2294,20 @@ def additional_args():
     bkg_help += "flatfield. Default is 'flat_first'. Available options are "
     bkg_help += "'flat_first', 'bkg_first' and 'bkg_only'."
     bkg_args = ['-b', '--bkg_flat_order']
-    bkg_kwargs = {'dest': 'bkg_flat_order', 'default': 'flat_first',
+    bkg_kwargs = {'dest': 'bkg_flat_order', 'default': base_defaults['bkg_flat_order'],
                   'help': bkg_help}
     additional_args['bkg_flat_order'] = (bkg_args, bkg_kwargs)
 
-    trace_help = "Include result plots while running (default False)."
-    trace_args = ["-t", "--trace"]
-    trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
-                    'help': trace_help}
-    additional_args['trace'] = (trace_args, trace_kwargs)
+    plots_help = "Include result plots while running (default False)."
+    plots_args = ["-p", "--plots"]
+    plots_kwargs = {'dest': 'plots', 'action': 'store_true', 
+                    'default': base_defaults['plots'], 'help': trace_help}
+    additional_args['plots'] = (plots_args, plots_kwargs)
 
     return additional_args
 
 
-def parse_args():
+def parse_args(**kwargs):
     """
     Parse command-line arguments.
     
@@ -2304,11 +2320,12 @@ def parse_args():
         parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
-    default_output_file = 'ir_grism_stare_reduced.log'
+    default_out_file = kwargs.get('default_input_file', 'dirirstare.log')
+    default_in_file = kwargs.get('default_input_file', 'dirirstare.log')
 
-    args = additional_args()
+    args = additional_args(**kwargs)
 
-    res = parse(description_str, default_output_file, args)
+    res = parse(description_str, default_out_file, args, **kwargs)
 
     if res.paths is not None:
         if "," in res.paths:
@@ -2327,7 +2344,7 @@ def parse_args():
     return res
 
 
-def main(overrides={}):
+def main(overrides={}, **kwargs):
     """
     Run the extract function.
     
@@ -2339,7 +2356,8 @@ def main(overrides={}):
     overrides : dict
         Dictionary of parameters to override when running.
     """
-    parsed = parse_args()
+    kwargs['default_output_file'] = 'ir_grism_stare_reduced.log'
+    parsed = parse_args(**kwargs)
 
     for key in overrides:
         if hasattr(parsed, key):
@@ -2350,11 +2368,11 @@ def main(overrides={}):
                                   search_str='',
                                   search_dirs=parsed.paths)
 
-    output_table = reduce(input_table, parsed, overrides)
+    output_table = reduce(input_table, overrides, **vars(parsed), **kwargs)
 
     table_fname = res.out_file
     output_table.write_to_file(table_fname, res.compat)
 
 
 if __name__ == "__main__":
-    main()
+    main(module_name='abscal.wfc3.reduce_grism_extract')

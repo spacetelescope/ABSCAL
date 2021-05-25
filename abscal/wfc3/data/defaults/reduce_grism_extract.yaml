@@ -15,6 +15,11 @@
 # what data type it is expected to have.
 
 all:
+    # Command-line Keywords
+    bkg_flat_order: flat_first
+    plots: False
+
+    # Extraction Keywords
     xc: -1.0                    # float. pre-supplied zeroth image x co-ordinate
     xerr: -1.0                  # float. error in xc
     yc: -1.0                    # float. pre-supplied zeroth image y co-ordinate

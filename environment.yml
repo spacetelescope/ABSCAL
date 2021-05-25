@@ -27,7 +27,7 @@ channels:
 dependencies:
   # Base dependencies
   - pip
-  - python>=3.7
+  - python>=3.9 # because abscal uses dictionary merging.
   - Cython
   - jupyter
   - nb_conda

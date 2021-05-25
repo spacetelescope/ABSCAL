@@ -61,7 +61,7 @@ from copy import deepcopy
 from abscal.common.args import parse
 from abscal.common.exposure_data_table import AbscalDataTable
 from abscal.common.standard_stars import find_star_by_name, find_closest_star
-from abscal.common.utils import absdate, get_data_file
+from abscal.common.utils import absdate, get_data_file, get_defaults
 
 def get_target_name(header):
     """
@@ -120,6 +120,8 @@ def populate_table(data_table=None, overrides={}, **kwargs):
     data_table : abscal.common.exposure_data_table.AbscalDataTable, default None
         The table (which may contain existing data) to which the new data should
         be added.
+    overrides : dict
+        A dictionary of overrides to keyword default values
     kwargs : dict
         A dictionary of optional keywords. Currently checked keywords are:
         
@@ -139,13 +141,16 @@ def populate_table(data_table=None, overrides={}, **kwargs):
         A table containing an entry for each input file and necessary metadata
         obtained from the FITS header of that file.
     """
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    
     if data_table is None:
         data_table = AbscalDataTable(**kwargs)
     
     paths = data_table.search_dirs
     file_template = data_table.search_str
-    idl_strict = kwargs.get('compat', False)
-    verbose = kwargs.get('verbose', False)
+    idl_strict = kwargs.get('compat', base_defaults['compat'])
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
     task = "create_table"
 
     for path in paths:
@@ -293,7 +298,7 @@ def populate_table(data_table=None, overrides={}, **kwargs):
     return data_table
 
 
-def additional_args():
+def additional_args(**kwargs):
     """
     Adds process-specific command-line arguments.
     
@@ -310,20 +315,25 @@ def additional_args():
         Dictionary of tuples of arguments for building a module command-line argument 
         list.
     """
+    module_name = kwargs.get('module_name', __name__)
+    base_defaults = get_defaults(module_name)
+
     args = {}
     
     dup_help = "How to handle duplicate entries (entries defined as "
     dup_help += "duplicates if they have the same ipppssoot). Valid values are "
     dup_help += "'both' (keep both), 'preserve' (keep first), 'replace' (keep "
     dup_help += "second), and 'neither' (delete both). Duplicates should only "
-    dup_help += "be an issue if an input table is specified. Default: 'both'"
+    dup_help += "be an issue if an input table is specified. Default: {}"
+    dup_help = dup_help.format(base_defaults['duplicates'])
     dup_args = ['--duplicates']
-    dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 'default': 'both'}
+    dup_kwargs = {'dest': 'duplicates', 'help': dup_help, 
+                  'default': base_defaults['duplicates']}
     args['duplicates'] = (dup_args, dup_kwargs)
     
     template_help = "The file template to match, or the path to search "
     template_help += "and the file template to match within that directory. "
-    template_help += "If the '-p' option is used to specify one or more input "
+    template_help += "If the '--paths' option is used to specify one or more input "
     template_help += "paths, then file file template will be joined to "
     template_help += "each input path."
     template_args = ['template']
@@ -333,7 +343,7 @@ def additional_args():
     return args
 
 
-def parse_args():
+def parse_args(**kwargs):
     """
     Parse command-line arguments.
         
@@ -343,11 +353,12 @@ def parse_args():
         A namespace populated by the command-line arguments.
     """    
     description_str = "Build metadata table from input files."
-    default_output_file = 'dirtemp.log'
+    default_output_file = kwargs.get('default_output_file', 'dirtemp.log')
+    default_input_file = kwargs.get('default_input_file', 'dirirstare.log')
 
-    args = additional_args()
+    args = additional_args(**kwargs)
 
-    res = parse(description_str, default_output_file, args)
+    res = parse(description_str, default_output_file, args, **kwargs)
     
     if res.paths is not None: 
         if "," in res.paths:
@@ -371,7 +382,7 @@ def parse_args():
     return res
 
 
-def main(overrides={}):
+def main(overrides={}, **kwargs):
     """
     Run the process.
     
@@ -387,8 +398,9 @@ def main(overrides={}):
         Note that specific exposure-specific values from data files will still override
         values specified here.
     """
+    kwargs['default_output_file'] = 'dirtemp.log'
 
-    res = parse_args()
+    res = parse_args(**kwargs)
     
     for key in overrides:
         if hasattr(res, key):
@@ -419,4 +431,4 @@ def main(overrides={}):
 
 
 if __name__ == "__main__":
-    main()
+    main(module_name='abscal.wfc3.reduce_grism_coadd')

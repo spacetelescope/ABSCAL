@@ -1,0 +1,271 @@
+Instructions for reducing spectral data with the Bohlin/Lindler IDL codes,
+adapted by RB to the WFC3 IR grisms. 
+
+The following routines are used.
+--------------------------------
+angle.pro - determine the mean angle and rms for the extracted PN spectra
+makeff.pro -  Make a Scanned FF from avg of images offset in X by 4" 2012Jul23
+ Use ibtw01q6q at X-postarg=66 and ibtw01q7q, ibtw01q8q at X-postarg=62 to make
+ FF. Then test on the independent obs ibtw01q9q
+wfc_coadd.pro - Plot and Co-add wfc3 spectra
+wfcdir.pro - to make the .log files
+wfcobs.pro - picks observation subsets from log files
+wfcwlfix.pro - adjust WLs of obs where standard extractions have small errors
+wleval.pro - try to sort out the AXE WL nonsense. See also wlpub.pro
+wlimaz.pro - measure the saturated line (10830A) from the _ima zero-read file
+               in +1st order
+wlmake.pro - makes the disp constants coef in Table 3 and evaluates the results
+	for Tables 4-5 of ISR
+wlmeas.pro -  collect meas of PN em lines for making dispersion relations
+wlpn.pro - Lookat all the ref. PN spectra from susana and tabulate the eff WL of
+	the features
+wlpub.pro - Make figs 3-4 cf. w/ aXe for ISR
+ws.pro - general purpose routine to find px location of a wavelength.
+zoeval.pro - evaluate accuracy and any systematic blue/red asymm of ZOrder
+
+
+To extract spectra from grism images run:
+prewfc.pro, which uses subroutines:
+	calwfc_imagepos.pro*
+	calwfc_spec.pro - to extract wfc3 point source spectrum from a 
+								calibrated image
+	calwfc_spec_wave - to compute wavelength vector and column numbers to 
+		extract
+	calnic_spec_flat - to flat field the data with wavelength depended flats
+	wfc_flatscal.pro - function, returns scaled Flat Field per background of
+	       data image for use in calwfc_spec
+	wfc_process.pro - to run calwfc_spec on list of files in a dir*.log file
+		calls only wfcobs, calwfc_imagepos, & calwfc_spec +TBD co-adding
+	wfc_wavecal.pro - make WFC3 IR Grism wavelength vector from 0-order
+		position
+OUTPUT : spec_ files for stare mode and imag_ files for scanned obs
+
+.r mrgall - to merge allthe prewfc output into 1 file per star.
+
+OPERATION - see also tchang.pro
+---------
+1.  run wfcdir.pro to make dirwfc.log for the data you want to reduce.
+in idl: wfcdir,'directory path'
+- create a new dirtemp.log, then do a tkdiff between the dirtemp.log and the old
+*cf.log file to see if there's anything new
+- Update the new lines & mv temp.log to dirwfc-cf.log, (eg.) or rename the
+dirtemp.log to dirwfc.log (eg.), But do NOT overwrite comments in orig. 
+dirwfc.log !
+- Update wfcdir to add coordinates for any new star w/ significant Proper Motion
+or bad coord.
+
+2. run prewfc.pro to reduce the data
+this program will extract spectra of the two WFC3/IR grisms, selected by
+aperture.
+
+OPTIONS:
+-------
+a. wfcobs,'dirwfc.log',obs,grat,aper,star,'','',' ; use this to extract
+	all the spectra.
+b. wfc_process,star(i),obs(i),/before,direct=dir,dirlog=dirlog	$
+	,/displ,/trace			$ ; helps debugging & understanding
+;	,grism='g141'
+	,flatfile='none'	;,/dirimg ;-for dir img ref, not Z-order
+c. /dirimg uses the direct image and the Kuntschner dispersion constants in program
+calwfc_spec_wave in calwfc_spec.pro file.
+Otherwise, use my new dispersion constants in wfc_wavecal.pro per the logic in
+calwfc_spec.
+
+3a. .r wavoff.pro & update wfcwlfix.pro
+
+3b. .r tchang.pro
+
+3c. .r wfcmrg to make merged spectra
+
+3d. .r sens, if any changes or new obs.
+
+4. run wleval-cont to see repeatability and fix glitches (mostly by editing
+calwfc_spec.pro).
+
+REFERENCES
+----------
+
+Bohlin, R. C., & Deustua, S. E. 2019, AJ, 157, 229
+CALSPEC: WFC3 IR GRISM SPECTROPHOTOMETRY
+
+Enabling Observations of Bright Stars with WFC3 IR Grisms,  Susana Deustua,
+Ralph Bohlin, and John MacKenty 2014, Instrument Science Report, WFC3 2014-15,
+(Baltimore:STScI) 30 June 2014
+
+IR Grism Wavelength Solutions using the Zero Order Image as the Reference Point,
+Bohlin, R. C., Deustua, S. E., & Pirzkal, N. 2015, Instrument Science Report,
+WFC3 2015-10, (Baltimore:STScI)
+
+
+####################################################
+DETAILS
+-------
+wlpub.pro - comparision w/ 'aXe uses files named spec/spec_i*pn.fits for my disp
+constants and spec/spec_i*q.fits (w/o pn) for aXe disp constants.
+
+Example: G141
+ic6906byq  F139M star at  xc,yc=    861.976      955.352 yes, ckd.
+ic6906bzq  g141 zord at ~613,955 ie: Zero Order at: x,y= 612.382  954.914  yes.
+Use "measured" targ posit:       796.15779       955.88742, ie xc,yc adjusted
+	for a 'standard' hidden dither when moving from direct to grism. So add
+	keywords xactual,yactual for dir img actual xc,yc.
+----ACTUALLY, this hidden dither is only for this one (SED) proposal that used
+	the IR ref position, where the ref. pixel is 65px off from the direct
+	image ref. px. BUT this is the ONLY case where this oddity occurs!!!
+
+2015may5-FIX for ic6906bzq:
+wfc_process F139M star at      861.976      955.352
+calwfc_spec Processing file /user/deustua/wavecal/ic6906bzq_flt.fits
+calwfc_spec grsm x,y-dither from dir image at 506,506 in px=      -65.818287
+      0.53500148
+Pred. targ img posit w/grism astr       797.43898       961.91932
+Distort sensitive "measured" posit       796.15779       955.88742
+USE Predicted direct image posit per astrom=       797.43898       961.91932
+-30089.8 19472.7 minmax WLs. Ref. px=       797.43898       961.91932
+WAVELENGTH solution per AXE coef.
+wfc_flatscal: Avg bkg =      41.7519+/-      4.46916 for gwidth=      6.00000
+AXE FF file=/internal/1/wfc3/ref/g141ffcube.fits
+% SXPAR: Warning - keyword WMIN     located more than once in FITS Header
+% SXPAR: Warning - keyword WMAX     located more than once in FITS Header
+2nd Z-ord X-cntroid predict from WL scale =      611
+2nd Z-ord Y-cntroid predict from astr+Petro =      959
+Zero Order at: x,y=      612.382      954.914
+Corr yapprox vector w/ zord found offset=     -4.08600
+calwfc_spec: order, x,y position=      -1      392.000      953.102
+PN em line at       389.000      953.000 for ordr=-1
+: 
+calwfc_spec: order, x,y position=       1      884.000      957.799
+: 
+G141 Angle=     0.557299
+Coef of trace fit=  949.1245    0.0097
+: 
+G141 Corrected for dispersion by factor of      0.97761884
+ ***END *** /user/deustua/wavecal/ic6906bzq_flt.fits
+
+ic6906c6q postargs=42,-50 G141
+calwfc_spec std grsm x,y-dither from dir image at 506,506 in px= -66.360816
+      -848.26062 (corresponds to postarg2 +50 to -50) & is in the balpark.
+      Ck: CRval at 506,506: dir img: 291.11169,9.9076569 
+                              grsm:  291.08395,9.9131896
+			      delta:  -0.02774,0.00553322= -99.8657,19.9196"
+			dist=sqrt(  99.8657^2+   19.9196^2)= 101.833, so there
+	must be some (1.8") compensation for distortion in the postargs!
+Pred. targ img posit w/grism astr       804.19303       137.22463
+Pred. Zord postit per astrom & Petro=     616     134
+Use "measured" targ posit:       795.61526       107.09179
+"measured" means: Use the grism astrometry, the crval1,crval2 (RA, DECL) 
+	of ref px (506,506) from direct image to compute X,Y offsets.
+-28160.1 18852.5 minmax WLs. Ref. px=       795.61526       107.09179
+WAVELENGTH solution per direct image & AXE coef.
+wfc_flatscal: Avg bkg =      42.4039+/-      2.92066 for gwidth=      6.00000
+AXE FF file=/internal/1/wfc3/ref/g141ffcube.fits
+% SXPAR: Warning - keyword WMIN     located more than once in FITS Header
+% SXPAR: Warning - keyword WMAX     located more than once in FITS Header
+2nd Z-ord cntroid from WL scale & avg angle starts at     597     106
+% CNTRD: Unable to compute Y centroid around position 596 117
+Zero Order at: x,y=     -1.00000     -1.00000
+
+I meas z-order at 611-612,130-131, while xapp,yapp=596,117 so that I am off by
+	-16,-24 px. My subimg search box for the max value is at 584:610,93:119,
+	ie 4px short in X and 12px low in Y. So do NOT use the flaky predict of
+	the x,y offsets. Instead, use the pred. x,y of star from grism astrom
+	plus Petro offsets. In other words, the predicted x,y shifts at dir
+	image position must differ from the x,y offsets at 506,506 !!! 
+
+2015may6-FIX of ic6906c6q for aXe disp constants:
+calwfc_spec Processing file /user/deustua/wavecal/ic6906c6q_flt.fits
+calwfc_spec grsm x,y-dither from dir image at 506,506 in px=      -66.360816
+      -848.26062
+Pred. targ img posit w/grism astr       804.19303       137.22463
+Distort sensitive "measur" posit       795.61526       107.09179
+USE Predicted direct image posit per astrom=       804.19303       137.22463
+-28630.1 18480.0 minmax WLs. Ref. px=       804.19303       137.22463
+WAVELENGTH solution per AXE coef.
+wfc_flatscal: Avg bkg =      42.4039+/-      2.92066 for gwidth=      6.00000
+AXE FF file=/internal/1/wfc3/ref/g141ffcube.fits
+% SXPAR: Warning - keyword WMIN     located more than once in FITS Header
+% SXPAR: Warning - keyword WMAX     located more than once in FITS Header
+2nd Z-ord X-cntroid predict from WL scale =      606
+2nd Z-ord Y-cntroid predict from astr+Petro =      135
+Zero Order at: x,y=      609.986      131.782
+Corr yapprox vector w/ zord found offset=     -3.21780
+calwfc_spec: order, x,y position=      -1      378.000      132.794
+PN em line at       376.000      130.000 for ordr=-1
+: 
+calwfc_spec: order, x,y position=       1      895.500      133.848
+: 
+G141 Angle=     0.423982
+Coef of trace fit=  127.2356    0.0074
+: 
+G141 Corrected for dispersion by factor of       1.0274115
+ ***END *** /user/deustua/wavecal/ic6906c6q_flt.fits
+
+
+2015may6-FIX of ic6906c8q for aXe disp constants:
+calwfc_spec Processing file /user/deustua/wavecal/ic6906c8q_flt.fits
+calwfc_spec grsm x,y-dither from dir image at 506,506 in px=      -66.361093
+      -848.26417
+Pred. targ img posit w/grism astr       804.19424       137.22310
+Distort sensitive "measur" posit       795.61498       107.08825
+USE Predicted direct image posit per astrom=       804.19424       137.22310
+-13322.6 11393.0 minmax WLs. Ref. px=       804.19424       137.22310
+WAVELENGTH solution per AXE coef.
+wfc_flatscal: Avg bkg =      16.9215+/-     0.762110 for gwidth=      6.00000
+AXE FF file=/internal/1/wfc3/ref/g102ffcube.fits
+% SXPAR: Warning - keyword WMIN     located more than once in FITS Header
+% SXPAR: Warning - keyword WMAX     located more than once in FITS Header
+2nd Z-ord X-cntroid predict from WL scale =      544
+2nd Z-ord Y-cntroid predict from astr+Petro =      130
+Zero Order at: x,y=      544.017      127.672
+Corr yapprox vector w/ zord found offset=     -2.32761
+calwfc_spec: order, x,y position=      -1      104.000      121.884
+PN em line at       102.000      122.000 for ordr=-1
+: 
+calwfc_spec: order, x,y position=       1      942.000      132.069
+: 
+G102 Angle=     0.687654
+Coef of trace fit=  120.8938    0.0120
+: 
+G102 Corrected for dispersion by factor of       1.0008811
+ ***END *** /user/deustua/wavecal/ic6906c8q_flt.fits
+##########################################################################
+
+My disp constants for ic6906c6q:
+calwfc_spec grsm x,y-dither from dir image at 506,506 in px=      -66.360816
+      -848.26062
+Pred. targ img posit w/grism astr       804.19303       137.22463
+X,Y astrom error=      6.01373      2.21780
+Z-order found by calwfc_spec at      609.986      131.782
+: 
+-28513.3 18699.3 minmax WLs. Ref. zero-order px=      609.986      131.782
+WAVELENTH solution per Bohlin/Deustua ISR & 0-order position=      609.986
+      131.782
+wfc_flatscal: Avg bkg =      42.4039+/-      2.92066 for gwidth=      6.00000
+AXE FF file=/internal/1/wfc3/ref/g141ffcube.fits
+% SXPAR: Warning - keyword WMIN     located more than once in FITS Header
+% SXPAR: Warning - keyword WMAX     located more than once in FITS Header
+2nd Z-ord cntroid predict from WL scale & avg angle =      605     132
+Zero Order at: x,y=      609.986      131.782
+Corr yapprox vector w/ zord found offset=    -0.217804
+calwfc_spec: order, x,y position=      -1      377.000      129.997
+PN em line at       376.000      130.000 for ordr=-1
+: 
+calwfc_spec: order, x,y position=       1      895.000      133.846
+: 
+G141 Angle=     0.424265
+Coef of trace fit=  127.2333    0.0074
+: 
+G141 Corrected for dispersion by factor of      1.02327
+ ***END *** /user/deustua/wavecal/ic6906c6q_flt.fits
+
+Use pointing error to correct astrom predictions in calwfc_spec.
+
+ibmq01 has some bad postargs... 
+ help,sxpar(h,'ra_targ')=        291.09262
+help,sxpar(h,'dec_targ')=        9.8990722
+and ibbu02vjq has the same coord for VY2-2 
+
+2015MAY8-ALL PN run w/ both aXe & my disp constants !!!
+	a small inconsistency is that some aXe extracts are not done, when the
+	there is NO direct image. BUT for the ZOE, all are done, even if the 
+	Z-order is off image. The Astrometry is good enough to find the orders.

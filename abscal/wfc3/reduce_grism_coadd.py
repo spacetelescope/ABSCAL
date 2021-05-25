@@ -55,8 +55,8 @@ regend_p2: default 27000 (G102), 38000 (G141)
 
 import datetime
 import glob
-import json
 import os
+import sys
 import yaml
 
 import matplotlib.pyplot as plt
@@ -77,7 +77,7 @@ from abscal.wfc3.reduce_grism_extract import additional_args as extract_args
 from abscal.wfc3.util_grism_cross_correlate import cross_correlate
 
 
-def coadd(input_table, arg_list, overrides={}):
+def coadd(input_table, overrides={}, **kwargs):
     """
     Co-adds grism data
     
@@ -99,20 +99,28 @@ def coadd(input_table, arg_list, overrides={}):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         The initial table of exposures
-    arg_list : namespace
-        The command-line argument values that might affect behaviour
     overrides : dict
         A dictionary of overrides to the default command-line arguments and to the default 
         co-add parameters.
+    kwargs : dict
+        optional keywords, including command-line arguments.
     
     Returns
     -------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         The updated table of exposures
     """
-    task = "coadd"
-    verbose = arg_list.verbose
-    interactive = arg_list.trace
+    print(kwargs)
+    task = "wfc3: grism: coadd"
+    default_values = get_defaults('abscal.common.args')
+    base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
+    verbose = kwargs.get('verbose', base_defaults['verbose'])
+    show_plots = kwargs.get('plots', base_defaults['plots'])
+    out_file = kwargs.get('out_file', kwargs['default_output_file'])
+    out_dir, out_table = os.path.split(out_file)
+    if out_dir == '':
+        out_dir = os.getcwd()
+    spec_dir = os.path.join(out_dir, kwargs.get('spec_dir', base_defaults['spec_dir']))
 
     if verbose:
         print("{}: Starting WFC3 coadd for GRISM data.".format(task))
@@ -132,9 +140,6 @@ def coadd(input_table, arg_list, overrides={}):
     unique_obs = list(set(input_table['obset']))
 
     extract = False
-    out_dir, out_table = os.path.split(arg_list.out_file)
-    if out_dir == '':
-        out_dir = os.getcwd()
     for row in input_table:
         ext_fname = row['extracted']
         if isinstance(ext_fname, np.ma.core.MaskedConstant) and ext_fname is np.ma.masked:
@@ -146,7 +151,7 @@ def coadd(input_table, arg_list, overrides={}):
     if extract:
         if verbose:
             print("{}: Extracting missing spectra.".format(task))
-        input_table = reduce(input_table, arg_list, overrides)
+        input_table = reduce(input_table, overrides, **kwargs)
         if verbose:
             print("{}: Finished extraction.".format(task))
 
@@ -397,8 +402,8 @@ def coadd(input_table, arg_list, overrides={}):
                             offset, arr = cross_correlate(net1[ib:ie+1],
                                                           neti[ib:ie+1],
                                                           row,
-                                                          arg_list,
-                                                          overrides=overrides)
+                                                          overrides=overrides,
+                                                          **kwargs)
                         except Exception as e:
                             msg = "{}: ERROR in Cross-correlation: {}"
                             print(msg.format(preamble, e))
@@ -416,7 +421,7 @@ def coadd(input_table, arg_list, overrides={}):
                             f1 = os.path.basename(spec_files[igood[i]])
                             print(msg.format(preamble, f0, f1, offset, iord))
 
-                        if abs(offset) > 2.7 and interactive:
+                        if abs(offset) > 2.7 and show_plots:
                             fig = plt.figure()
                             ax = fig.add_subplot(111)
                             plot_title = '{} {} spectra {} and {} for order {} '
@@ -456,7 +461,7 @@ def coadd(input_table, arg_list, overrides={}):
                             raise ValueError("Error in cross-correlation.")
 
                     # Output Plots
-                    if interactive:
+                    if show_plots:
 
                         rb, re = regbeg[ireg], regend[ireg]
 
@@ -555,7 +560,7 @@ def coadd(input_table, arg_list, overrides={}):
                     ind = np.where(wcor[imax,:] > np.max(wave))
                     wave = np.append(wave, wcor[imax,ind])
 
-                if arg_list.double:
+                if kwargs.get('double', False):
                     wave_delta = wave[1:] - wave[:-1]
                     modal_delta = mode(wave_delta, axis=None)[0]
                     dlam = modal_delta/2
@@ -670,18 +675,12 @@ def coadd(input_table, arg_list, overrides={}):
             tmrg = tmrg[sort]
 
             # Write Results
-            prefix = arg_list.prefix
-            if arg_list.prefix is None:
-                prefix = target
-            out_dir, out_table = os.path.split(arg_list.out_file)
-            if out_dir == '':
-                out_dir = os.getcwd()
-            spec_dir = os.path.join(out_dir, arg_list.spec_dir)
+            prefix = kwargs.get('prefix', target)
             Path(spec_dir).mkdir(parents=True, exist_ok=True)
             out_file_name = '{}_{}_{}'.format(prefix, filter, obs)
             out_file = os.path.join(spec_dir, out_file_name)
 
-            if interactive:
+            if show_plots:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
                 spec_title = '{} {} ({}) Co-added Spectra'
@@ -716,7 +715,7 @@ def coadd(input_table, arg_list, overrides={}):
             t.write(out_file+'.tbl', format='ascii.ipac', overwrite=True)
             t.write(out_file+'.fits', format='fits', overwrite=True)
 
-            coadd_file = os.path.join(arg_list.spec_dir, out_file_name+'.fits')
+            coadd_file = os.path.join(spec_dir, out_file_name+'.fits')
             roots = [r for r in filter_table['root']]
             for row in input_table:
                 if row['root'] in roots:
@@ -733,7 +732,7 @@ def coadd(input_table, arg_list, overrides={}):
 
 
 
-def additional_args():
+def additional_args(**kwargs):
     """
     Additional command-line arguments. 
     
@@ -745,6 +744,8 @@ def additional_args():
         Dictionary of tuples in the form (fixed,keyword) that can be passed to an argument 
         parser to create a new command-line option
     """
+    module_name = kwargs.get('module_name', __name__)
+    base_defaults = get_defaults(module_name)
 
     additional_args = {}
 
@@ -753,28 +754,30 @@ def additional_args():
     table_kwargs = {'help': table_help}
     additional_args['table'] = (table_args, table_kwargs)
 
-    double_help = "Subsample output wavelength vector by a factor of 2 (default False)."
+    double_help = "Subsample output wavelength vector by a factor of 2 (default {})."
+    double_help = double_help.format(base_defaults['double'])
     double_args = ["-d", "--double"]
-    double_kwargs = {'help': double_help, 'default': False,
+    double_kwargs = {'help': double_help, 'default': base_defaults['double'],
                      'action': 'store_true', 'dest': 'double'}
     additional_args['double'] = (double_args, double_kwargs)
 
-    prefix_help = "Prefix for co-added spectra"
+    prefix_help = "Prefix for co-added spectra (default is target name)."
     prefix_args = ['--prefix']
-    prefix_kwargs = {'help': prefix_help, 'default': None,
+    prefix_kwargs = {'help': prefix_help, 'default': base_defaults['prefix'],
                      'dest': 'prefix'}
     additional_args['prefix'] = (prefix_args, prefix_kwargs)
 
-    trace_help = "Include result plots while running (default False)."
-    trace_args = ["-t", "--trace"]
-    trace_kwargs = {'dest': 'trace', 'action': 'store_true', 'default': False,
-                    'help': trace_help}
-    additional_args['trace'] = (trace_args, trace_kwargs)
+    plots_help = "Include result plots while running (default {})."
+    plots_help = plots_help.format(base_defaults['plots'])
+    plots_args = ["-p", "--plots"]
+    plots_kwargs = {'dest': 'plots', 'action': 'store_true', 
+                    'default': base_defaults['plots'], 'help': plots_help}
+    additional_args['plots'] = (plots_args, plots_kwargs)
 
     return additional_args
 
 
-def parse_args():
+def parse_args(**kwargs):
     """
     Parse command-line arguments.
     
@@ -787,9 +790,10 @@ def parse_args():
         parsed argument namespace
     """
     description_str = 'Process files from metadata table.'
-    default_output_file = 'dirirstare.log'
+    default_out_file = kwargs.get('default_input_file', 'dirirstare.log')
+    default_in_file = kwargs.get('default_input_file', 'dirirstare.log')
 
-    args = additional_args()
+    args = additional_args(**kwargs)
     # Add in extraction args because coadd can call extraction and thus may
     #   need to supply arguments to it.
     extracted_args = extract_args()
@@ -797,7 +801,7 @@ def parse_args():
         if key not in args:
             args[key] = extracted_args[key]
 
-    res = parse(description_str, default_output_file, args)
+    res = parse(description_str, default_out_file, args, **kwargs)
 
     if res.paths is not None:
         if "," in res.paths:
@@ -816,7 +820,7 @@ def parse_args():
     return res
 
 
-def main(overrides={}):
+def main(overrides={}, **kwargs):
     """
     Run the coadd function.
     
@@ -828,7 +832,8 @@ def main(overrides={}):
     overrides : dict
         Dictionary of parameters to override when running.
     """
-    parsed = parse_args()
+    kwargs['default_output_file'] = 'dirirstare.log'
+    parsed = parse_args(**kwargs)
 
     for key in overrides:
         if hasattr(parsed, key):
@@ -839,11 +844,11 @@ def main(overrides={}):
                                   search_str='',
                                   search_dirs=parsed.paths)
 
-    output_table = coadd(input_table, parsed, overrides)
+    output_table = coadd(input_table, overrides, **vars(parsed), **kwargs)
 
     table_fname = parsed.out_file
     output_table.write_to_file(table_fname, parsed.compat)
 
 
 if __name__ == "__main__":
-    main()
+    main(module_name='abscal.wfc3.reduce_grism_coadd')
