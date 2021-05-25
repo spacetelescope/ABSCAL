@@ -10,6 +10,36 @@ Bohlin's IDL code in python.
 
 *Ensuring that 30 years of calibration software are useful for the next 30 years.*
 
+Installation and Documentation
+------------------------------
+
+Because the ABSCAL documentation is currently only available online in source form, a 
+quick cheat sheet on installing ABSCAL and compiling its documentation is provided below:
+
+1. Clone the ABSCAL source from the `github repository <https://github.com/spacetelescope/ABSCAL>`_::
+
+    git clone https://github.com/spacetelescope/ABSCAL.git
+
+    cd ABSCAL
+
+2. Create and activate a new Conda environment named `abscal`::
+
+    conda env create -f environment.yml
+
+    conda activate abscal
+
+3. Install ABSCAL from the repository using pip::
+   
+    pip install .
+    
+4. Build the HTML documentation::
+
+    cd docs
+    
+    make html
+
+The documentation webpages will now be in `ABSCAL/docs/_build/html`.
+
 License
 -------
 
