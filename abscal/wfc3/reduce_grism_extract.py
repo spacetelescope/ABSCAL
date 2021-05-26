@@ -1033,9 +1033,12 @@ def reduce_stare(row, params, **kwargs):
     verbose = kwargs.get('verbose', base_defaults['verbose'])
     show_plots = kwargs.get('plots', base_defaults['plots'])
     bkg_flat_order = kwargs.get('bkg_flat_order', base_defaults['bkg_flat_order'])
-    out_file = kwargs.get('out_file', kwargs['default_output_file'])
-    out_dir, out_table = os.path.split(out_file)
-    if out_dir == '':
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
     spec_dir = os.path.join(out_dir, spec_name)
@@ -1204,14 +1207,14 @@ def reduce_stare(row, params, **kwargs):
                 else:
                     default = "DAOFind"
 
-                cmd = {"choice": "default"}
+                cmd = {"choice": "default", "submitted": False}
 
                 fig, ax = plt.subplots()
                 fig.subplots_adjust(bottom=0.2)
 
                 targ_str = "{} - {} ({})".format(root, target, filter)
                 ax.set_title('{} Direct Image with Detected Source'.format(targ_str))
-                plt.imshow(np.log10(np.where(image>=0.1,image,0.1)))
+                plt.imshow(np.log10(np.where(image>=0.1,image,0.1)), origin='lower')
                 if x_dao > 0 and y_dao > 0:
                     plt.plot([x_dao, x_dao], [y_dao-8, y_dao-18], color='red',
                              label='1. DAOFind Centroid')
@@ -1379,7 +1382,9 @@ def reduce_stare(row, params, **kwargs):
         fit_slope = True
         if 'slope' in params['set']:
             fit_slope = False
-            angle = np.radians(params['slope'])
+            if params['slope'] is not None:
+                # use provided slope
+                angle = np.radians(params['slope'])
 
         raw_image = deepcopy(image)
 
@@ -1669,8 +1674,10 @@ def reduce_stare(row, params, **kwargs):
             msg = "{}: X and Y found values: {}, {}"
             print(msg.format(preamble, poly_x, poly_y))
             coef = np.polyfit(poly_x, poly_y, 1)
-            fit_angle = np.arctan(coef[0])*180./np.pi
-            print("{}: Found coefficients {} angle {}".format(preamble, coef, fit_angle))
+            angle = np.arctan(coef[0])
+            deg_angle = np.arctan(coef[0])*180./np.pi
+            xfit = deepcopy(x_arr)
+            yfit = coef[1] + coef[0]*x_arr
             if show_plots:
                 fig = plt.figure()
                 ax = fig.add_subplot(111)
@@ -1681,33 +1688,36 @@ def reduce_stare(row, params, **kwargs):
                 plt.ylabel("Y-pixel (px)")
                 ax.scatter(poly_x, poly_y, label="Found Orders")
                 ax.plot(x_arr, yapprox, label="Initial Trace Approximation")
-                y_fit = coef[1] + coef[0]*x_arr
-                ax.plot(x_arr, y_fit, label="Fitted Trace")
-                ax.text(.7, .15, 'angle={:.3f}'.format(fit_angle), transform=t_axes)
+                ax.plot(x_arr, yfit, label="Fitted Trace")
+                ax.text(.7, .15, 'angle={:.3f}'.format(deg_angle), transform=t_axes)
                 ax.legend()
                 plt.show()
                 if verbose:
                     msg = "{}: {}:, angle={}"
-                    print(msg.format(preamble, filter, fit_angle))
+                    print(msg.format(preamble, filter, deg_angle))
         else:
-            # Don't fit slope
-            profile = np.zeros((ywidth,), dtype='float64')
-            yoff = np.arange(ywidth, dtype='float64') - ywidth/2
-            for i in range(ywidth):
-                x_axis = np.arange(fimage.shape[0], dtype='int16')
-                y_axis = np.arange(fimage.shape[1], dtype='int16')
-                interp = interp2d(x_axis, y_axis, fimage, kind='linear')
-                profile = np.sum(interp(x_arr, yapprox+yoff[i]))
-            profile -= np.median(profile)
-            profile -= np.max(profile)/4
-            profile = np.where(profile>0, profile, 0.)
-            ycent = np.sum(profile*yoff)/np.sum(profile)
-            ypos = yapprox + ycent
-            coef = np.polyfit(x, ypos, 1)
-
-        if verbose:
-            print("{}: Coef of trace fit={}".format(preamble, coef))
-        yfit = coef[1] + coef[0]*x_arr
+            # Don't fit slope. Create coefficients based on supplied slope and intercept.
+            # Coefficients are slope, intercept
+            coef = [np.tan(angle), yc]
+            xfit = deepcopy(x_arr-xc)
+            yfit = coef[1] + params['y_offset'] + coef[0]*xfit
+            deg_angle = angle*180./np.pi
+            if show_plots:
+                fig = plt.figure()
+                ax = fig.add_subplot(111)
+                t_axes = ax.transAxes
+                targ_str = "{} - {} ({})".format(root, target, filter)
+                ax.set_title('{}: Fit Plot'.format(targ_str))
+                plt.xlabel("X-pixel (px)")
+                plt.ylabel("Y-pixel (px)")
+                ax.plot(x_arr, yapprox, label="Initial Trace Approximation")
+                ax.plot(x_arr, yfit, label="Fitted Trace")
+                ax.text(.7, .15, 'angle={:.3f}'.format(deg_angle), transform=t_axes)
+                ax.legend()
+                plt.show()
+                if verbose:
+                    msg = "{}: {}:, angle={}"
+                    print(msg.format(preamble, filter, deg_angle))
 
         # Extract Background Spectra
         if verbose:
@@ -1719,7 +1729,7 @@ def reduce_stare(row, params, **kwargs):
         b_upper = np.zeros((nsb,), dtype='float64')
         sky_b_lower = np.zeros((nsb,), dtype='float64')
         sky_b_upper = np.zeros((nsb,), dtype='float64')
-        yfit_b = coef[1] + coef[0]*x_b
+        yfit_b = coef[1] + coef[0]*xfit
 
         half_bwidth = params['bwidth']//2
         for i in range(nsb):
@@ -1911,7 +1921,7 @@ def reduce_stare(row, params, **kwargs):
             ax = fig.add_subplot(111)
             targ_str = "{} - {} ({})".format(root, target, filter)
             ax.set_title('{} Trace Fit on Source'.format(targ_str))
-            plt.imshow(np.log10(np.where(imagt>=0.1,imagt,0.1)))
+            plt.imshow(np.log10(np.where(imagt>=0.1,imagt,0.1)), origin='lower')
             ax.plot(x_arr, ytmp+params['gwidth']//2, color='white', label='Trace')
             ax.plot(x_arr, ytmp-params['gwidth']//2, color='white')
             ax.plot(x_arr, ytmp+params['ubdist']+params['bwidth']//2, color='red', label='Upper Background')
@@ -1930,7 +1940,7 @@ def reduce_stare(row, params, **kwargs):
             ax = fig.add_subplot(111)
             targ_str = "{} - {} ({})".format(root, target, filter)
             ax.set_title('{} Trace Fit on DQ'.format(targ_str))
-            plt.imshow(np.where(imagt.astype(np.uint32) & 24, 1, 0))
+            plt.imshow(np.where(imagt.astype(np.uint32) & 24, 1, 0), origin='lower')
             ax.plot(x_arr, ytmp+params['gwidth']//2, color='white', label='Trace')
             ax.plot(x_arr, ytmp-params['gwidth']//2, color='white')
             ax.plot(x_arr, ytmp+params['ubdist']+params['bwidth']//2, color='red', label='Upper Background')
@@ -2118,7 +2128,7 @@ def reduce_stare(row, params, **kwargs):
     return row
 
 
-def reduce(input_table, overrides={}, **kwargs):
+def reduce(input_table, **kwargs):
     """
     Reduces grism data.
     
@@ -2129,10 +2139,9 @@ def reduce(input_table, overrides={}, **kwargs):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Table of exposures to be extracted.
-    overrides : dict
-        Dictionary of overrides to the default reduction parameters
     kwargs : dict
-        Keyword arguments including command-line options
+        Dictionary of overrides to the default reduction parameters, and command-line 
+        options.
     
     Returns
     -------
@@ -2148,9 +2157,12 @@ def reduce(input_table, overrides={}, **kwargs):
     force = kwargs.get('force', base_defaults['force'])
 
     bkg_flat_order = kwargs.get('bkg_flat_order', base_defaults['bkg_flat_order'])
-    out_file = kwargs.get('out_file', kwargs['default_output_file'])
-    out_dir, out_table = os.path.split(out_file)
-    if out_dir == '':
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
     spec_dir = os.path.join(out_dir, spec_name)
@@ -2209,7 +2221,7 @@ def reduce(input_table, overrides={}, **kwargs):
             defaults['bdist'] = 25 + defaults['bwidth']/2
             defaults['ubdist'] = defaults['bdist']
             defaults['lbdist'] = defaults['bdist']
-            params = set_params(defaults, row, issues, preamble, overrides, verbose)
+            params = set_params(defaults, row, issues, preamble, kwargs, verbose)
             if 'bwidth' in params['set']:
                 if 'bdist' not in params['set']:
                     params['bdist'] = 25 + params['bwidth']/2
@@ -2230,7 +2242,7 @@ def reduce(input_table, overrides={}, **kwargs):
                 # Process the filter image only if its XC and YC haven't been
                 #   set to an actual value yet.
                 if float(ref_row['xc'][0]) < 0 or float(ref_row['yc'][0]) < 0:
-                    res = locate_image(ref_row, verbose, show_plots)
+                    res = locate_image(ref_row, **kwargs)
                     input_table['xc'][input_table['root']==ref] = float(res['xc'][0])
                     input_table['yc'][input_table['root']==ref] = float(res['yc'][0])
                     input_table['xerr'][input_table['root']==ref] = float(res['xerr'][0])
@@ -2250,11 +2262,8 @@ def reduce(input_table, overrides={}, **kwargs):
                 print("{}: Reducing STARE MODE data.".format(task))
                 reduced = reduce_stare(row, params, **kwargs)
 
-            row['extracted'] = reduced['extracted']
-            row['xc'] = reduced['xc']
-            row['yc'] = reduced['yc']
-            row['xerr'] = reduced['xerr']
-            row['yerr'] = reduced['yerr']
+            for item in ['extracted', 'xc', 'yc', 'xerr', 'yerr']:
+                input_table[item][input_table['root']==row['root']] = reduced[item]
 
         elif verbose:
             msg = "{}: Skipping {} because it's been set to don't use "
@@ -2344,7 +2353,7 @@ def parse_args(**kwargs):
     return res
 
 
-def main(overrides={}, **kwargs):
+def main(**kwargs):
     """
     Run the extract function.
     
@@ -2353,22 +2362,22 @@ def main(overrides={}, **kwargs):
     
     Parameters
     ----------
-    overrides : dict
+    kwargs : dict
         Dictionary of parameters to override when running.
     """
     kwargs['default_output_file'] = 'ir_grism_stare_reduced.log'
     parsed = parse_args(**kwargs)
 
-    for key in overrides:
+    for key in kwargs:
         if hasattr(parsed, key):
-            setattr(parsed, key, overrides[key])
+            setattr(parsed, key, kwargs[key])
 
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates=parsed.duplicates,
                                   search_str='',
                                   search_dirs=parsed.paths)
 
-    output_table = reduce(input_table, overrides, **vars(parsed), **kwargs)
+    output_table = reduce(input_table, **vars(parsed), **kwargs)
 
     table_fname = res.out_file
     output_table.write_to_file(table_fname, res.compat)

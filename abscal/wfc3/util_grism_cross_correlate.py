@@ -15,9 +15,9 @@ used by direct import::
 
     from abscal.wfc3.util_grism_cross_correlate import cross_correlate
     
-    offset, correlation_matrix = cross_correlate(spec1, spec2, table_row, args, overrides)
+    offset, correlation_matrix = cross_correlate(spec1, spec2, table_row, args, **kwargs)
 
-The following parameters can be set via the overrides dict:
+The following parameters can be set via the keyword arguments:
 
 ishift: int, default 0
     Approximate initial shift. The correlation search will start here.
@@ -48,7 +48,7 @@ from abscal.common.args import parse
 from abscal.common.utils import get_data_file, get_defaults, set_params
 from abscal.common.exposure_data_table import AbscalDataTable
 
-def cross_correlate(s1, s2, row, arg_list, overrides={}):
+def cross_correlate(s1, s2, row, **kwargs):
     """
     Cross-correlates two spectra.
     
@@ -60,10 +60,8 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
         Second spectrum
     row : astropy.table.Table
         Single-element table with metadata on s1
-    arg_list : namespace
-        Command-line argument namespace
-    overrides : dict
-        Potential overrides to cross-correlation parameters
+    kwargs : dict
+        Potential overrides to cross-correlation parameters and command-line arguments
         
     Returns
     -------
@@ -72,8 +70,7 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
     corr : np.ndarray
         Correlation matrix
     """
-    verbose = arg_list.verbose
-    show_plots = arg_list.plots
+    verbose = kwargs.get('verbose', False)
     task = "cross_correlate"
     preamble = "{}: {}".format(task, row['root'][0])
 
@@ -88,7 +85,7 @@ def cross_correlate(s1, s2, row, arg_list, overrides={}):
 
     defaults = get_defaults("abscal.wfc3.util_grism_cross_correlate")
     defaults['i2'] = len(s1) - 1
-    params = set_params(defaults, row, issues, preamble, overrides, verbose)
+    params = set_params(defaults, row, issues, preamble, kwargs, verbose)
     approx = int(round(params['ishift']))
 
     # extract template from spectrum 2 (s2)

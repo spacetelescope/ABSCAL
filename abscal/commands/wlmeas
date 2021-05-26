@@ -17,11 +17,11 @@ This file is intended to be run from the command line::
 from wfc3_wave_find_lines import main as do_wl_process
 
 
-def main(overrides={}):
+def main(**kwargs):
 
-    overrides['compat'] = True
+    kwargs['compat'] = True
 
-    do_wl_process(overrides=overrides, do_measure=False, do_make=True)
+    do_wl_process(do_measure=False, do_make=True, **kwargs)
 
 
 if __name__ == "__main__":

@@ -93,18 +93,15 @@ def main():
     exposure_table.write_to_file("dirirstare_grism.log", res.compat)
 
     # Extract and co-add the spectra    
-    coadd_table = coadd(exposure_table, overrides={}, 
-                        default_output_file="dirirstare_coadd.log", **vars(res))
+    coadd_table = coadd(exposure_table, **vars(res))
     coadd_table.write_to_file("dirirstare_coadd.log", res.compat)
     
     # Fit wavelengths of planetary nebulae
-    wave_fit_table = wlmeas(coadd_table, overrides={}, 
-                            default_output_file="dirirstare_coadd.log", **vars(res))
+    wave_fit_table = wlmeas(coadd_table, **vars(res))
     wave_fit_table.write("wlmeas.log", format='ascii.ipac', overwrite=True)
     
     # Derive wavelength solution
-    wave_solution_table = wlmake(coadd_table, wave_fit_table, overrides={},
-                                default_output_file="dirirstare_coadd.log", **vars(res))
+    wave_solution_table = wlmake(coadd_table, wave_fit_table, **vars(res))
     wave_solution_table.write("wlmeas_solution.log", format='ascii.ipac', overwrite=True)
 
 

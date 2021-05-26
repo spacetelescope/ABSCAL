@@ -77,7 +77,7 @@ from abscal.wfc3.reduce_grism_extract import additional_args as extract_args
 from abscal.wfc3.util_grism_cross_correlate import cross_correlate
 
 
-def coadd(input_table, overrides={}, **kwargs):
+def coadd(input_table, **kwargs):
     """
     Co-adds grism data
     
@@ -99,11 +99,9 @@ def coadd(input_table, overrides={}, **kwargs):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         The initial table of exposures
-    overrides : dict
+    kwargs : dict
         A dictionary of overrides to the default command-line arguments and to the default 
         co-add parameters.
-    kwargs : dict
-        optional keywords, including command-line arguments.
     
     Returns
     -------
@@ -116,11 +114,15 @@ def coadd(input_table, overrides={}, **kwargs):
     base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
     verbose = kwargs.get('verbose', base_defaults['verbose'])
     show_plots = kwargs.get('plots', base_defaults['plots'])
-    out_file = kwargs.get('out_file', kwargs['default_output_file'])
-    out_dir, out_table = os.path.split(out_file)
-    if out_dir == '':
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
         out_dir = os.getcwd()
-    spec_dir = os.path.join(out_dir, kwargs.get('spec_dir', base_defaults['spec_dir']))
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
 
     if verbose:
         print("{}: Starting WFC3 coadd for GRISM data.".format(task))
@@ -137,23 +139,12 @@ def coadd(input_table, overrides={}, **kwargs):
         with open(exposure_parameter_file, 'r') as inf:
             issues = yaml.safe_load(inf)
 
-    unique_obs = list(set(input_table['obset']))
-
-    extract = False
-    for row in input_table:
-        ext_fname = row['extracted']
-        if isinstance(ext_fname, np.ma.core.MaskedConstant) and ext_fname is np.ma.masked:
-            extract = True
-        else:
-            ext_file = os.path.join(out_dir, ext_fname)
-            if not os.path.isfile(ext_file):
-                extract = True
-    if extract:
-        if verbose:
-            print("{}: Extracting missing spectra.".format(task))
-        input_table = reduce(input_table, overrides, **kwargs)
-        if verbose:
-            print("{}: Finished extraction.".format(task))
+    unique_obs = sorted(list(set(input_table['obset'])))
+    
+    if verbose:
+        print("{}: Found {} unique obsets: {}".format(task, len(unique_obs), unique_obs))
+    
+    output_table = deepcopy(input_table)
 
     for obs in unique_obs:
         obs_mask = [r == obs for r in input_table['obset']]
@@ -171,6 +162,29 @@ def coadd(input_table, overrides={}, **kwargs):
             if len(filter_table) == 0:
                 continue
             n_obs = len(filter_table)
+            
+            if os.path.isfile(os.path.join(out_dir, filter_table[0]['coadded'])):
+                if verbose:
+                    coadded_file = filter_table[0]['coadded']
+                    msg = "{}: {} co-added file {} found. Skipping."
+                    print(msg.format(task, obs, coadded_file))
+                continue
+            else:
+                # Manually check for file name
+                prefix = kwargs.get('prefix', target)
+                if prefix is None:
+                    prefix = target
+                out_file_name = '{}_{}_{}.fits'.format(prefix, filter, obs)
+                out_file = os.path.join(spec_dir, out_file_name)
+                
+                if os.path.isfile(out_file):
+                    if verbose:
+                        msg = "{}: {} co-added file {} found. Skipping."
+                        print(msg.format(task, obs, out_file_name))
+                        out_mask = (output_table['obset'] == obs) & \
+                                   (output_table['filter'] == filter)
+                    output_table["coadded"][out_mask] = out_file
+                    continue
 
             if verbose:
                 print("{}: Co-adding {}".format(task, obs))
@@ -191,14 +205,39 @@ def coadd(input_table, overrides={}, **kwargs):
 
             for row in filter_table:
                 roots.append(row['root'])
+                root_filter = output_table['root']==row['root']
                 defaults = get_defaults("abscal.wfc3.reduce_grism_coadd", filter.lower())
-                params = set_params(defaults, row, issues, preamble, overrides, verbose)
+                params = set_params(defaults, row, issues, preamble, kwargs, verbose)
 
                 spec_file = os.path.join(row['path'], row['extracted'])
                 if not os.path.isfile(spec_file):
-                    msg = "{}: Unable to find extracted spectrum {}"
-                    print(msg.format(preamble, row['extracted']))
-                    continue
+                    # look for default extracted file
+                    extracted_name = "{}_{}_x1d.fits".format(row['root'], row['target'])
+                    extracted_dest = os.path.join(spec_dir, extracted_name)
+                    
+                    if os.path.isfile(extracted_dest):
+                        spec_file = extracted_dest
+                        extracted_value = os.path.join(spec_name, extracted_name)
+                        output_table['extracted'][root_filter] = extracted_value
+                        row['extracted'] = extracted_value
+                    else:
+                        msg = "{}: Unable to find extracted spectrum '{}'. Extracting."
+                        print(msg.format(preamble, row['extracted']))
+                        extract_table = input_table[input_table['root']==row['root']]
+                        output_row = reduce(extract_table, **kwargs)
+                        print("Extraction Output is:")
+                        print(output_row)
+                        for item in ['path', 'extracted', 'xc', 'yc', 'xerr', 'yerr']:
+                            output_table[item][root_filter] = output_row[item][0]
+                            row[item] = output_row[item][0]
+                        spec_file = os.path.join(output_row['path'][0], 
+                                                 output_row['extracted'][0])
+                        if not os.path.isfile(spec_file):
+                            msg = "{}: {}: ERROR: EXTRACTION FAILED. SKIPPING ROW"
+                            print(msg.format(preamble, row['root']))
+                            continue
+                # END search for the 1d extracted spectrum.
+                
                 spec_files.append(spec_file)
 
                 if row['scan_rate'] > 0:
@@ -390,19 +429,15 @@ def coadd(input_table, overrides={}, **kwargs):
                             print(msg.format(preamble, wbcm, wecm, iord))
 
                         # Cross-correlate
-                        path, fname = os.path.split(spec_files[igood[i]])
-                        fpath, specpath = os.path.split(path)
-                        spec_file = os.path.join(specpath, fname)
-                        spec_mask = [r['extracted'] == spec_file for r in input_table]
-                        spec_mask = np.ma.masked_array(spec_mask).astype(np.bool_)
-                        row = input_table[spec_mask.filled(fill_value=False)]
-                        if 'width' not in overrides:
-                            overrides['width'] = params['width']
+                        # 
+                        # Get data row for spectrum to cross-correlate
+                        row = input_table[input_table['root']==roots[igood[i]]]
+                        if 'width' not in kwargs:
+                            kwargs['width'] = params['width']
                         try:
                             offset, arr = cross_correlate(net1[ib:ie+1],
                                                           neti[ib:ie+1],
                                                           row,
-                                                          overrides=overrides,
                                                           **kwargs)
                         except Exception as e:
                             msg = "{}: ERROR in Cross-correlation: {}"
@@ -676,6 +711,8 @@ def coadd(input_table, overrides={}, **kwargs):
 
             # Write Results
             prefix = kwargs.get('prefix', target)
+            if prefix is None:
+                prefix = target
             Path(spec_dir).mkdir(parents=True, exist_ok=True)
             out_file_name = '{}_{}_{}'.format(prefix, filter, obs)
             out_file = os.path.join(spec_dir, out_file_name)
@@ -715,11 +752,14 @@ def coadd(input_table, overrides={}, **kwargs):
             t.write(out_file+'.tbl', format='ascii.ipac', overwrite=True)
             t.write(out_file+'.fits', format='fits', overwrite=True)
 
-            coadd_file = os.path.join(spec_dir, out_file_name+'.fits')
+            coadd_file_name = out_file_name+'.fits'
+            coadd_file = os.path.join(spec_dir, coadd_file_name)
+            coadd_col = os.path.join(spec_name, coadd_file_name)
             roots = [r for r in filter_table['root']]
-            for row in input_table:
+            for row in output_table:
                 if row['root'] in roots:
                     row['coadded'] = coadd_file
+                    output_table['coadded'][output_table['root']==row['root']] = coadd_col
 
             if verbose:
                 print("{}: Finished filter.".format(preamble))
@@ -728,7 +768,7 @@ def coadd(input_table, overrides={}, **kwargs):
     if verbose:
         print("{}: finished co-add".format(task))
 
-    return input_table
+    return output_table
 
 
 
@@ -820,7 +860,7 @@ def parse_args(**kwargs):
     return res
 
 
-def main(overrides={}, **kwargs):
+def main(**kwargs):
     """
     Run the coadd function.
     
@@ -829,22 +869,22 @@ def main(overrides={}, **kwargs):
     
     Parameters
     ----------
-    overrides : dict
+    kwargs : dict
         Dictionary of parameters to override when running.
     """
     kwargs['default_output_file'] = 'dirirstare.log'
     parsed = parse_args(**kwargs)
 
-    for key in overrides:
+    for key in kwargs:
         if hasattr(parsed, key):
-            setattr(parsed, key, overrides[key])
+            setattr(parsed, key, kwargs[key])
 
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates='both',
                                   search_str='',
                                   search_dirs=parsed.paths)
 
-    output_table = coadd(input_table, overrides, **vars(parsed), **kwargs)
+    output_table = coadd(input_table, **vars(parsed), **kwargs)
 
     table_fname = parsed.out_file
     output_table.write_to_file(table_fname, parsed.compat)

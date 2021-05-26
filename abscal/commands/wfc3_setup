@@ -16,9 +16,9 @@ This module is intended to be run from the command line::
 from abscal.wfc3.preprocess_table_create import main as do_create
 
 
-def main(overrides={}):
+def main(**kwargs):
 
-    do_create(overrides=overrides)
+    do_create(**kwargs)
 
 
 if __name__ == "__main__":

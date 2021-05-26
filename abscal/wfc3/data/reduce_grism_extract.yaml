@@ -25,7 +25,20 @@ width:
     param_value: 26
     source: wfc_coadd.pro
     reason: unknown
-
+slope:
+  - column: root
+    value: ich902chq
+    param_value: null # use default slope from zeroth-order fit
+    source: Found during reduction 2021-05-26
+    reason: Weird flux in columns ~650-850. Left to itself, fits a negative slope that 
+      ends up missing a lot of the trace.
+y_offset:
+  - column: root
+    value: ich902chq
+    param_value: -10
+    source: Found during reduction 2021-05-26
+    reason: Weird flux in columns ~650-850. An offset is needed to properly centre on the
+      zero-order image.
 ix_shift:
     - column: root
       param_value: 188

@@ -16,11 +16,11 @@ This file is intended to be run from the command line::
 
 from wfc3_coadd import main as extract_function
 
-def main(overrides={}):
+def main(**kwargs):
 
-    overrides['compat'] = True
+    kwargs['compat'] = True
 
-    extract_function(overrides=overrides)
+    extract_function(**kwargs)
 
 
 if __name__ == "__main__":

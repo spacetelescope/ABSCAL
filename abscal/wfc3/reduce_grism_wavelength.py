@@ -69,6 +69,7 @@ from abscal.common.standard_stars import find_star_by_name
 from abscal.common.utils import air2vac, get_data_file, get_defaults, linecen
 from abscal.common.utils import smooth_model, tabinv
 from abscal.common.exposure_data_table import AbscalDataTable
+from abscal.wfc3.reduce_grism_extract import reduce
 
 def wlimaz(root, y_arr, wave_arr, directory, verbose):
     """
@@ -169,7 +170,7 @@ def wlimaz(root, y_arr, wave_arr, directory, verbose):
         return star_x, star_y
 
 
-def wlmeas(input_table, overrides={}, **kwargs):
+def wlmeas(input_table, **kwargs):
     """
     Measure planetary nebula emission line locations.
     
@@ -183,10 +184,9 @@ def wlmeas(input_table, overrides={}, **kwargs):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Table of exposures with emission lines to fit.
-    overrides : dict
-        Dictionary of overrides to the default reduction parameters
     kwargs : dict
-        Dictionary of (e.g.) command-line option choices
+        Dictionary of overrides to the default reduction parameters, and command-line 
+        option selections.
     
     Returns
     -------
@@ -198,6 +198,15 @@ def wlmeas(input_table, overrides={}, **kwargs):
     base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
     verbose = kwargs.get('verbose', base_defaults['verbose'])
     show_plots = kwargs.get('plots', base_defaults['plots'])
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
+        out_dir = os.getcwd()
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
 
     issues = {}
     exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
@@ -240,8 +249,6 @@ def wlmeas(input_table, overrides={}, **kwargs):
     if verbose:
         msg = "{}: Starting WFC3 wavelength measurement for GRISM data."
         print(msg.format(task))
-        print("{}: Input table is:".format(task))
-        print(input_table)
 
     roots = []
     stars = []
@@ -255,14 +262,54 @@ def wlmeas(input_table, overrides={}, **kwargs):
     for row in input_table:
         root = row["root"]
         path = row["path"]
+        root_filter = input_table["root"]==row["root"]
+        # Imaging files shouldn't be processed
+        if row["filter"][0] == 'F':
+            continue
         # Files without spectra (i.e. have no "extracted" entry) shouldn't be processed.
         if hasattr(row["extracted"], "mask") and row["extracted"].mask:
             continue
-        file = os.path.join(row["path"], row["extracted"])
+
+        spec_file = os.path.join(row['path'], row['extracted'])
+        if not os.path.isfile(spec_file):
+            # look for default extracted file
+            extracted_name = "{}_{}_x1d.fits".format(row['root'], row['target'])
+            print("Extracted Name: {}".format(extracted_name))
+            extracted_dest = os.path.join(spec_dir, extracted_name)
+            print("Extracted File: {}".format(extracted_dest))
+            
+            if os.path.isfile(extracted_dest):
+                spec_file = extracted_dest
+                extracted_value = os.path.join(spec_name, extracted_name)
+                input_table['extracted'][root_filter] = extracted_value
+                row['extracted'] = extracted_value
+            else:
+                msg = "{}: Unable to find extracted spectrum '{}'. Extracting."
+                print(msg.format(task, row['extracted']))
+                extract_table = input_table[input_table['root']==row['root']]
+                output_row = reduce(extract_table, **kwargs)
+                for item in ['path', 'extracted', 'xc', 'yc', 'xerr', 'yerr']:
+                    input_table[item][root_filter] = output_row[item][0]
+                    row[item] = output_row[item][0]
+                spec_file = os.path.join(output_row['path'][0], 
+                                         output_row['extracted'][0])
+                if not os.path.isfile(spec_file):
+                    msg = "{}: {}: ERROR: EXTRACTION FAILED. SKIPPING ROW"
+                    print(msg.format(task, row['root']))
+                    continue
+        # END search for the 1d extracted spectrum.
+
+        if verbose:
+            print("{}: reducing {}".format(task, root))
+            print("\tpath is {}".format(path))
+            print("\textracted is {}".format(row["extracted"]))
+            print("\tfile is {}".format(spec_file))
+            print("\trow: ")
+            print(row)
         star = row["target"]
         grat = row["filter"]
         preamble = "wlmeas: {} ({}) ({})".format(root, grat, star)
-        with fits.open(file) as inf:
+        with fits.open(spec_file) as inf:
             wl = inf[1].data['wavelength']
             net = inf[1].data['net']
             dq = inf[1].data['eps'].astype(np.uint32)
@@ -542,7 +589,7 @@ def wlmeas(input_table, overrides={}, **kwargs):
     return output_table
 
 
-def wlmake(input_table, wl_table, overrides={}, **kwargs):
+def wlmake(input_table, wl_table, **kwargs):
     """
     Derives a grism wavelength fit.
     
@@ -561,10 +608,9 @@ def wlmake(input_table, wl_table, overrides={}, **kwargs):
         Table of exposures to be fit.
     wl_table : astropy.table.Table
         Output of wlmeas.
-    overrides : dict
-        Dictionary of overrides to the default reduction parameters
     kwargs : dict
-        Dictionary of (e.g.) command-line parameters.
+        Dictionary of overrides to the default reduction parameters, and command-line 
+        option selections.
     
     Returns
     -------
@@ -576,6 +622,15 @@ def wlmake(input_table, wl_table, overrides={}, **kwargs):
     base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
     verbose = kwargs.get('verbose', base_defaults['verbose'])
     show_plots = kwargs.get('plots', base_defaults['plots'])
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
+        out_dir = os.getcwd()
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
     
     if verbose:
         print("Starting {}\nInput data:\n{}".format(task, wl_table))
@@ -780,47 +835,52 @@ def wlmake(input_table, wl_table, overrides={}, **kwargs):
                     full_row = input_table[input_table['root']==row['root']]
                     full_file = os.path.join(full_row["path"].data[0], 
                                              full_row["extracted"].data[0])
-                    star = find_star_by_name(row['star'])
-                    rvc = star['radial_velocity']/consts.c.to('km/s').value
-                    with fits.open(full_file) as inf:
-                        wl = inf[1].data['wavelength']
-                        net = inf[1].data['net']
-                        angle = inf[0].header["angle"]
+                    if not os.path.isfile(full_file):
+                        full_name = "{}_{}_x1d.fits".format(row['root'], 
+                                                            full_row['target'].data[0])
+                        full_file = os.path.join(spec_dir, full_name)
+                    if os.path.isfile(full_file):
+                        star = find_star_by_name(row['star'])
+                        rvc = star['radial_velocity']/consts.c.to('km/s').value
+                        with fits.open(full_file) as inf:
+                            wl = inf[1].data['wavelength']
+                            net = inf[1].data['net']
+                            angle = inf[0].header["angle"]
                 
-                    fig, ax = plt.subplots()
-                    title_str = "{} {} order={} Fitted vs. Measured Line Positions"
-                    ax.set_title(title_str.format(row['root'], grism, iord))
+                        fig, ax = plt.subplots()
+                        title_str = "{} {} order={} Fitted vs. Measured Line Positions"
+                        ax.set_title(title_str.format(row['root'], grism, iord))
 
-                    bval = b_const + b_x*dozx[igd] + b_y*dozy[igd]
-                    mval = m_const + m_x*dozx[igd] + m_y*dozy[igd]
-                    wnew = bval + mval*(xpx - dozx[igd])
-                    plt.plot(wl/iord, net, 'b', label='Initial Wavelength Estimate')
-                    plt.plot(wnew/iord, net, 'g', label='Fitted Wavelength')
-                    for i in range(len(wl_vac[:,wl_index])):
-                        plt.plot([wl_vac[i,wl_index], wl_vac[i,wl_index]*(1+rvc)],
-                                 [0., 1.e5], 'r', linestyle='dashed')
-                    msg = "Zero-order at ({:.2f},{:.2f})"
-                    plt.figtext(0.2,0.2,msg.format(dozx[igd], dozy[igd]))
-                    plt.legend()
-                    # Figure out X and Y limits
-                    if grism == "G102":
-                        wave_low, wave_high = 9000, 11000
-                    elif grism == "G141":
-                        wave_low, wave_high = 10500, 17500
-                    plt.xlim(wave_low, wave_high)
-                    ind_low = np.searchsorted(wnew/iord, wave_low, side='left')
-                    ind_high = np.searchsorted(wnew/iord, wave_high, side='right')
-                    net_region = net[ind_low:ind_high]
-                    plt.ylim(0, np.max(net_region)*1.1)
-                    plt.show()
+                        bval = b_const + b_x*dozx[igd] + b_y*dozy[igd]
+                        mval = m_const + m_x*dozx[igd] + m_y*dozy[igd]
+                        wnew = bval + mval*(xpx - dozx[igd])
+                        plt.plot(wl/iord, net, 'b', label='Initial Wavelength Estimate')
+                        plt.plot(wnew/iord, net, 'g', label='Fitted Wavelength')
+                        for i in range(len(wl_vac[:,wl_index])):
+                            plt.plot([wl_vac[i,wl_index], wl_vac[i,wl_index]*(1+rvc)],
+                                     [0., 1.e5], 'r', linestyle='dashed')
+                        msg = "Zero-order at ({:.2f},{:.2f})"
+                        plt.figtext(0.2,0.2,msg.format(dozx[igd], dozy[igd]))
+                        plt.legend()
+                        # Figure out X and Y limits
+                        if grism == "G102":
+                            wave_low, wave_high = 9000, 11000
+                        elif grism == "G141":
+                            wave_low, wave_high = 10500, 17500
+                        plt.xlim(wave_low, wave_high)
+                        ind_low = np.searchsorted(wnew/iord, wave_low, side='left')
+                        ind_high = np.searchsorted(wnew/iord, wave_high, side='right')
+                        net_region = net[ind_low:ind_high]
+                        plt.ylim(0, np.max(net_region)*1.1)
+                        plt.show()
                 
-                    if verbose:
-                        print("{}: {}: {}: {}".format(task, grism, iord, row['root']))
-                        print("b={}, m={}".format(bval, mval))
-                        print("Measured Dispersion = {}".format(dmeas[igd]))
-                        print("Measured b={}".format(bmeas[igd]))
-                        print("b,m errors={}, {}".format(bval-bmeas[igd], mval-dmeas[igd]))
-                        print("Angle={}".format(angle))
+                        if verbose:
+                            print("{}: {}: {}: {}".format(task, grism, iord, row['root']))
+                            print("b={}, m={}".format(bval, mval))
+                            print("Measured Dispersion = {}".format(dmeas[igd]))
+                            print("Measured b={}".format(bmeas[igd]))
+                            print("b,m errors={}, {}".format(bval-bmeas[igd], mval-dmeas[igd]))
+                            print("Angle={}".format(angle))
             # done interactive plot
         # DONE ORDER LOOP
     # DONE GRISM LOOP
@@ -838,7 +898,7 @@ def wlmake(input_table, wl_table, overrides={}, **kwargs):
     return output_table
 
 
-def wl_offset(input_table, overrides={}, **kwargs):
+def wl_offset(input_table, **kwargs):
     """
     Derives wavelength offsets for white dwarf exposures.
     
@@ -849,10 +909,9 @@ def wl_offset(input_table, overrides={}, **kwargs):
     ----------
     input_table : abscal.common.exposure_data_table.AbscalDataTable
         Table of exposures to have offsets generated.
-    overrides : dict
-        Dictionary of overrides to the default reduction parameters
     kwargs : dict
-        Dictionary of (e.g.) command-line parameters
+        Dictionary of overrides to the default reduction parameters, and command-line 
+        option selections.
     
     Returns
     -------
@@ -864,6 +923,15 @@ def wl_offset(input_table, overrides={}, **kwargs):
     base_defaults = default_values | get_defaults(kwargs.get('module_name', __name__))
     verbose = kwargs.get('verbose', base_defaults['verbose'])
     show_plots = kwargs.get('plots', base_defaults['plots'])
+    if 'out_file' in kwargs:
+        out_file = kwargs['out_file']
+        out_dir, out_table = os.path.split(out_file)
+        if out_dir == '':
+            out_dir = os.getcwd()
+    else:
+        out_dir = os.getcwd()
+    spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
+    spec_dir = os.path.join(out_dir, spec_name)
     
     return input_table
 
@@ -937,7 +1005,7 @@ def parse_args(**kwargs):
     return res
 
 
-def main(overrides={}, do_measure=True, do_make=True, **kwargs):
+def main(do_measure=True, do_make=True, **kwargs):
     """
     Run the wavelength fitting function(s).
     
@@ -946,19 +1014,19 @@ def main(overrides={}, do_measure=True, do_make=True, **kwargs):
     
     Parameters
     ----------
-    overrides : dict
-        Dictionary of parameters to override when running.
     do_measure : bool, default True
         Run wlmeas function
     do_make : bool, default, True
         Run wlmake function
+    kwargs : dict
+        Dictionary of parameters to override when running.
     """
     kwargs['default_output_file'] = 'wlmeastmp.log'
     parsed = parse_args(**kwargs)
 
-    for key in overrides:
+    for key in kwargs:
         if hasattr(parsed, key):
-            setattr(parsed, key, overrides[key])
+            setattr(parsed, key, kwargs[key])
 
     input_table = AbscalDataTable(table=parsed.table,
                                   duplicates='both',
@@ -967,18 +1035,18 @@ def main(overrides={}, do_measure=True, do_make=True, **kwargs):
 
     measure_fname = parsed.out_file
     if do_measure:
-        wl_calib_table = wlmeas(input_table, overrides, **vars(parsed), **kwargs)
+        wl_calib_table = wlmeas(input_table, **vars(parsed), **kwargs)
         wl_calib_table.write(measure_fname, format='ascii.ipac', overwrite=True)
     else:
         wl_calib_table = Table.read(measure_fname, format='ascii.ipac')
     
     if do_make:
-        final_wave_table = wlmake(input_table, wl_calib_table, overrides, **vars(parsed),
-                                  **kwargs)
+        final_wave_table = wlmake(input_table, wl_calib_table, **vars(parsed), **kwargs)
         (table_file, table_ext) = os.path.splitext(parsed.out_file)
         final_fname = table_file + "_final" + table_ext
         final_wave_table.write(final_fname, format='ascii.ipac', overwrite=True)
     # Done.
+
 
 if __name__ == "__main__":
     main(module_name='abscal.wfc3.reduce_grism_wavelength')

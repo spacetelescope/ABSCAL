@@ -17,11 +17,11 @@ This file is intended to be run from the command line::
 from wfc3_setup import main as do_create
 
 
-def main(overrides={}):
+def main(**kwargs):
 
-    overrides['compat'] = True
+    kwargs['compat'] = True
 
-    do_create(overrides=overrides)
+    do_create(**kwargs)
 
 
 if __name__ == "__main__":

@@ -17,7 +17,7 @@ used by direct import::
 
     from abscal.wfc3.util_filter_locate_image import locate_image
     
-    output_table = locate_image(input_table, verbose, show_plots)
+    output_table = locate_image(input_table, **kwargs)
 
 The function takes a table of exposure data, loops through the rows, and finds a source 
 location in each image that is within 30 pixels of the location pointed to by the target 
@@ -54,7 +54,7 @@ from abscal.common.utils import get_data_file, set_param
 from abscal.common.exposure_data_table import AbscalDataTable
 
 
-def locate_image(input_table, verbose=False, show_plots=False, overrides={}):
+def locate_image(input_table, **kwargs):
     """
     Locate the target image in a table of exposures
     
@@ -78,8 +78,12 @@ def locate_image(input_table, verbose=False, show_plots=False, overrides={}):
         Print diagnostic output
     show_plots : bool (default False)
         Display plot of calculated target location.
+    kwargs : dict
+        Optional parameters, including the "verbose" and "show plots" optional flags
     """
     task = "locate_image"
+    verbose = kwargs.get('verbose', False)
+    show_plots = kwargs.get('show_plots', False)
     if verbose:
         msg = "{}: Starting WFC3 image location check for FILTER data."
         print(msg.format(task))
@@ -103,8 +107,8 @@ def locate_image(input_table, verbose=False, show_plots=False, overrides={}):
             crval1 = row['crval1']
             crval2 = row['crval2']
             
-            xstar = set_param("xstar", 0, row, issues, preamble, overrides, verbose)
-            ystar = set_param("ystar", 0, row, issues, preamble, overrides, verbose)            
+            xstar = set_param("xstar", 0, row, issues, preamble, kwargs, verbose)
+            ystar = set_param("ystar", 0, row, issues, preamble, kwargs, verbose)            
             
             with fits.open(input_file) as inf:
                 data = inf['SCI'].data
@@ -134,7 +138,7 @@ def locate_image(input_table, verbose=False, show_plots=False, overrides={}):
                     targ_str = "{} - {} ({})".format(root, target, filter)
                     title_str = "{}: Direct Image with Predicted Source"
                     ax.set_title(title_str.format(targ_str))
-                    plt.imshow(np.log10(np.where(data>=0.1, data, 0.1)))
+                    plt.imshow(np.log10(np.where(data>=0.1, data, 0.1)), origin='lower')
                     plt.plot([xastr, xastr], [yastr-8, yastr-18], color='white')
                     plt.plot([xastr, xastr], [yastr+8, yastr+18], color='white')
                     plt.plot([xastr-8, xastr-18], [yastr, yastr], color='white')

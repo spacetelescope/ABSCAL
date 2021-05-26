@@ -17,9 +17,9 @@ This module is intended to be run from the command line::
 from abscal.wfc3.reduce_grism_wavelength import main as do_wl_process
 
 
-def main(overrides={}):
+def main(**kwargs):
 
-    do_wl_process(overrides=overrides, do_measure=False, do_make=True)
+    do_wl_process(do_measure=False, do_make=True, **kwargs)
 
 
 if __name__ == "__main__":

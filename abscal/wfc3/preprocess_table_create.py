@@ -107,7 +107,7 @@ def get_target_name(header):
     return targname
 
 
-def populate_table(data_table=None, overrides={}, **kwargs):
+def populate_table(data_table=None, **kwargs):
     """
     Search a directory and produce a table of exposures.
     
@@ -120,8 +120,6 @@ def populate_table(data_table=None, overrides={}, **kwargs):
     data_table : abscal.common.exposure_data_table.AbscalDataTable, default None
         The table (which may contain existing data) to which the new data should
         be added.
-    overrides : dict
-        A dictionary of overrides to keyword default values
     kwargs : dict
         A dictionary of optional keywords. Currently checked keywords are:
         
@@ -130,6 +128,9 @@ def populate_table(data_table=None, overrides={}, **kwargs):
             informative text whilst running.
         compat : bool
             Whether to operate in strict IDL compatibility mode
+        
+        In addition to these keywords, any default parameters may be set through passing 
+        a keyword argument.
         
     If data_table is None, a new table will be created in the function. In that case, the 
     kwargs dict will be passed to that table, so any table-creation keywords will be sent 
@@ -382,7 +383,7 @@ def parse_args(**kwargs):
     return res
 
 
-def main(overrides={}, **kwargs):
+def main(**kwargs):
     """
     Run the process.
     
@@ -392,7 +393,7 @@ def main(overrides={}, **kwargs):
     
     Parameters
     ----------
-    overrides : dict
+    kwargs : dict
         Contains keys named after keyword parameters (whether command-line arguments or 
         parameters used by table creation) that will override whatever value is set there.
         Note that specific exposure-specific values from data files will still override
@@ -402,9 +403,9 @@ def main(overrides={}, **kwargs):
 
     res = parse_args(**kwargs)
     
-    for key in overrides:
+    for key in kwargs:
         if hasattr(res, key):
-            setattr(res, key, overrides[key])
+            setattr(res, key, kwargs[key])
     
     table = AbscalDataTable(search_str=res.template,
                             search_dirs=res.paths,
@@ -412,8 +413,8 @@ def main(overrides={}, **kwargs):
                             idl_mode=res.compat,
                             duplicates=res.duplicates)
     
-    table = populate_table(data_table=table, verbose=res.verbose, compat=res.compat,
-                           overrides=overrides)
+    table = populate_table(data_table=table, verbose=res.verbose, compat=res.compat, 
+                           **kwargs)
     
     base_file, file_ext = os.path.splitext(res.out_file)
     
