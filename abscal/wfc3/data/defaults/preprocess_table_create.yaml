@@ -17,4 +17,5 @@
 
 all:
     # Defaults for command-line arguments
-    duplicates: 'both'      # what to do with duplicate input table entries
+    duplicates: 'both'                  # what to do with duplicate input table entries
+    default_output_file: 'dirtemp.log'  # name of default output file

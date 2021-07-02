@@ -1038,6 +1038,8 @@ def reduce_stare(row, params, **kwargs):
         out_dir, out_table = os.path.split(out_file)
         if out_dir == '':
             out_dir = os.getcwd()
+    elif 'out_dir' in kwargs:
+        out_dir = kwargs['out_dir']
     else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])

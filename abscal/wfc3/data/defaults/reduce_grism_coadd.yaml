@@ -22,6 +22,7 @@ all:
     plots: false            # display plots while running
 
     width: 22.0             # float. cross-correlation width
+    default_output_file: 'dirirstare.log'  # name of default output file
 g102:
     all:
         wbeg: 7500.0        # float. start of valid wavelength range

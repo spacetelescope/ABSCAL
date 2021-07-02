@@ -36,9 +36,9 @@ dependencies:
     # Major modules
     - numpy
     - astropy
+    - astroquery
     - matplotlib
     - scipy
-    - jupyter
     - photutils
     - ipykernel
     - rebin
@@ -48,6 +48,7 @@ dependencies:
     - stsci_rtd_theme
     - sphinx_autoapi
     - pyyaml
+    - ipympl
 
 #variables:
 #  WFC3_REF: "NEEDS TO BE A RELATIVE PATH"

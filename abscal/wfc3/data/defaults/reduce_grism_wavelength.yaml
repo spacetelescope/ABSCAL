@@ -23,6 +23,11 @@ all:
     plots: false            # display plots while running
 
     width: 22.0             # float. cross-correlation width
+    
+    wlmeas:
+        default_output_file: 'wlmeas.log'
+    wlmake:
+        default_output_file: 'wlmeas_solution.log'
 g102:
     all:
         wbeg: 7500.0        # float. start of valid wavelength range

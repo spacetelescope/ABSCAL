@@ -18,6 +18,7 @@ all:
     # Command-line Keywords
     bkg_flat_order: flat_first
     plots: False
+    default_output_file: 'dirirstare.log'  # name of default output file
 
     # Extraction Keywords
     xc: -1.0                    # float. pre-supplied zeroth image x co-ordinate

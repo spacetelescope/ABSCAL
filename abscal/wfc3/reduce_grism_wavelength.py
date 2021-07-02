@@ -203,10 +203,13 @@ def wlmeas(input_table, **kwargs):
         out_dir, out_table = os.path.split(out_file)
         if out_dir == '':
             out_dir = os.getcwd()
+    elif 'out_dir' in kwargs:
+        out_dir = kwargs['out_dir']
     else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
     spec_dir = os.path.join(out_dir, spec_name)
+    in_notebook = kwargs.get('notebook', False)
 
     issues = {}
     exposure_parameter_file = get_data_file("abscal.wfc3", os.path.basename(__file__))
@@ -528,6 +531,8 @@ def wlmeas(input_table, **kwargs):
                                 submit(text_box.text)
 
                         fig.canvas.mpl_connect('close_event', handle_close)
+                        if in_notebook:
+                            cmd["finished"] = True
                         plt.show()
                 # end if showing the plot.
 
@@ -627,6 +632,8 @@ def wlmake(input_table, wl_table, **kwargs):
         out_dir, out_table = os.path.split(out_file)
         if out_dir == '':
             out_dir = os.getcwd()
+    elif 'out_dir' in kwargs:
+        out_dir = kwargs['out_dir']
     else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
@@ -928,6 +935,8 @@ def wl_offset(input_table, **kwargs):
         out_dir, out_table = os.path.split(out_file)
         if out_dir == '':
             out_dir = os.getcwd()
+    elif 'out_dir' in kwargs:
+        out_dir = kwargs['out_dir']
     else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])

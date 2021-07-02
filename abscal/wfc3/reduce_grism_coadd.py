@@ -119,6 +119,8 @@ def coadd(input_table, **kwargs):
         out_dir, out_table = os.path.split(out_file)
         if out_dir == '':
             out_dir = os.getcwd()
+    elif 'out_dir' in kwargs:
+        out_dir = kwargs['out_dir']
     else:
         out_dir = os.getcwd()
     spec_name = kwargs.get('spec_dir', base_defaults['spec_dir'])
@@ -829,9 +831,10 @@ def parse_args(**kwargs):
     res : namespace
         parsed argument namespace
     """
+    module_name = kwargs.get('module_name', __name__)
+    base_defaults = get_defaults(module_name)
     description_str = 'Process files from metadata table.'
-    default_out_file = kwargs.get('default_input_file', 'dirirstare.log')
-    default_in_file = kwargs.get('default_input_file', 'dirirstare.log')
+    default_out_file = kwargs.get('default_output_file', base_defaults['default_output_file'])
 
     args = additional_args(**kwargs)
     # Add in extraction args because coadd can call extraction and thus may
@@ -872,7 +875,6 @@ def main(**kwargs):
     kwargs : dict
         Dictionary of parameters to override when running.
     """
-    kwargs['default_output_file'] = 'dirirstare.log'
     parsed = parse_args(**kwargs)
 
     for key in kwargs:
