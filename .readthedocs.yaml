@@ -13,6 +13,9 @@ sphinx:
 #formats:
 #   - pdf
 
+conda:
+  environment: environment.yml
+
 build:
   image: testing
 
