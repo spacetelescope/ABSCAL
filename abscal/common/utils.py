@@ -156,6 +156,10 @@ def get_data_file(module, fname, defaults=False):
             # Fall back to the local version
             return data_file.replace(current_loc, local_loc)
     
+    msg = "ERROR: File {}.{} not found at {} or {}"
+    msg = msg.format(module, fname, data_file, data_file.replace(current_loc, local_loc))
+    raise FileNotFoundError(msg)
+    
     # If nothing was found, return None
     return None
     
