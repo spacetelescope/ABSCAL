@@ -1,10 +1,7 @@
 stsci_rtd_theme
-numpy
-matplotlib
 sphinx_autoapi
 nbsphinx
 jupyter
 IPython
 ipykernel
 astroquery
-rebin
