@@ -22,6 +22,8 @@ setup(
                         "scipy", 
                         "astropy>=3", 
                         "photutils",
+                        "matplotlib",
+                        "rebin"
                        ],
     version = version_str,
     scripts=glob.glob("abscal/commands/*"),
