@@ -84,7 +84,7 @@ def get_base_data_dir():
             return os.environ["abscal_data"]
     
     # Fall back to internal
-    return os.path.dirname(os.path.abspath(__file__))
+    return os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def get_data_file(module, fname, defaults=False):
@@ -123,7 +123,7 @@ def get_data_file(module, fname, defaults=False):
     module = module.replace("abscal.", "")
     
     # Replace '.' with path separator
-    module_path = module.replace(".", os.pathsep)
+    module_path = module.replace(".", "/")
 
     data_path = os.path.join(current_loc, module_path, "data")
     if defaults:
