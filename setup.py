@@ -25,6 +25,9 @@ setup(
                        ],
     version = version_str,
     scripts=glob.glob("abscal/commands/*"),
-    package_data = {"": ["*.yml", "*.yaml", "*.txt", "*.dat", "*.fit", "*.pdf"]},
+    package_data =  {
+                        "": ["data/*", "data/defaults/*"],
+                        "wfc3": ["data/pnref/*"]
+                    },
     include_package_data=True
     )
