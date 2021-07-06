@@ -6,3 +6,4 @@ nbsphinx
 jupyter
 IPython
 ipykernel
+astroquery
