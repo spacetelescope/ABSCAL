@@ -50,6 +50,7 @@ dependencies:
     - nbsphinx
     - pyyaml
     - ipympl
+    - -e .
 
 #variables:
 #  WFC3_REF: "NEEDS TO BE A RELATIVE PATH"
