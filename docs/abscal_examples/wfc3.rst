@@ -1,15 +1,8 @@
-ABSCAL Examples
-===============
-.. note::
+ABSCAL WFC3 Examples
+====================
 
-    These examples assume that ABSCAL is installed in the directory $HOME/ABSCAL, and
-    each one requires a particular set of data files from MAST_. The example starts after
-    you have downloaded any required files, extracted them into a directory, opened
-    that directory in your terminal program of choice, and activated the abscal conda
-    environment.
-
-Extracting WFC3 GRISM spectra for a single program
---------------------------------------------------
+Extracting WFC3 IR GRISM spectra for a single program
+-----------------------------------------------------
 
 This example uses WFC3 program 15587, consisting of observations of GD153, and available 
 from the following 
@@ -47,8 +40,8 @@ the new output table should look like :download:`this <example_files/ex1/dirirst
 
 This completes the example.
 
-Using Planetary Nebulae to generate a WFC3 GRISM wavelength fit
----------------------------------------------------------------
+Using Planetary Nebulae to generate a WFC3 IR GRISM wavelength fit
+------------------------------------------------------------------
 
 This example uses WFC3 program 13582, consisting of observations of IC5117, and available
 from the following
