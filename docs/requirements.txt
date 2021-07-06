@@ -1,4 +1,4 @@
 stsci_rtd_theme
 numpy
 matplotlib
-autoapi
+sphinx_autoapi
