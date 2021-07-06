@@ -14,7 +14,7 @@ needed::
     from abscal.common.utils import absdate
 """
 
-import os, yaml
+import glob, os, yaml
 
 import numpy as np
 
@@ -156,8 +156,15 @@ def get_data_file(module, fname, defaults=False):
             # Fall back to the local version
             return data_file.replace(current_loc, local_loc)
     
-    msg = "ERROR: File {}.{} not found at {} or {}"
+    msg = "ERROR: File {}.{} not found at {} or {}.\n"
     msg = msg.format(module, fname, data_file, data_file.replace(current_loc, local_loc))
+    while True:
+        data_file = os.path.dirname(data_file)
+        search_str = os.path.join(data_file, "*")
+        try:
+            msg += "Directory {} contains: {}".format(data_file, glob.glob(search_str))
+        except Exception as e:
+            break
     raise FileNotFoundError(msg)
     
     # If nothing was found, return None
