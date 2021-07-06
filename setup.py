@@ -25,6 +25,6 @@ setup(
                        ],
     version = version_str,
     scripts=glob.glob("abscal/commands/*"),
-    package_data = {"": ["*.yml", "*.yaml", "*.txt", "*.dat", "*.fit", "*.pdf"]}
+    package_data = {"": ["*.yml", "*.yaml", "*.txt", "*.dat", "*.fit", "*.pdf"]},
     include_package_data=True
     )
