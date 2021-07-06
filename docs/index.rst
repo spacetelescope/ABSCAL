@@ -18,7 +18,7 @@ described in `WFC3 ISR 2015-10 <https://www.stsci.edu/files/live/sites/www/files
   abscal_handbook
   abscal_idl_code
   abscal_testing
-  examples
+  abscal_examples
   autoapi/index
 
 Indices and tables

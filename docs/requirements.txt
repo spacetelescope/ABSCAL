@@ -2,3 +2,4 @@ stsci_rtd_theme
 numpy
 matplotlib
 sphinx_autoapi
+nbsphinx
