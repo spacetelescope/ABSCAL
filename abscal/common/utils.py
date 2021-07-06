@@ -162,7 +162,7 @@ def get_data_file(module, fname, defaults=False):
         data_file = os.path.dirname(data_file)
         search_str = os.path.join(data_file, "*")
         try:
-            msg += "Directory {} contains: {}".format(data_file, glob.glob(search_str))
+            msg += "Directory {} contains: {}\n".format(data_file, glob.glob(search_str))
         except Exception as e:
             break
     raise FileNotFoundError(msg)
