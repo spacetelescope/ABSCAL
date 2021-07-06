@@ -158,7 +158,7 @@ def get_data_file(module, fname, defaults=False):
     
     msg = "ERROR: File {}.{} not found at {} or {}.\n"
     msg = msg.format(module, fname, data_file, data_file.replace(current_loc, local_loc))
-    while True:
+    for i in range(5):
         data_file = os.path.dirname(data_file)
         search_str = os.path.join(data_file, "*")
         try:
