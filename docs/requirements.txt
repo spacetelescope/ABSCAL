@@ -1,7 +1,0 @@
-stsci_rtd_theme
-sphinx_autoapi
-nbsphinx
-jupyter
-IPython
-ipykernel
-astroquery
