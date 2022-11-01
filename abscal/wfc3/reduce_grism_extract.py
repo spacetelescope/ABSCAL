@@ -2312,7 +2312,7 @@ def additional_args(**kwargs):
     plots_help = "Include result plots while running (default False)."
     plots_args = ["-p", "--plots"]
     plots_kwargs = {'dest': 'plots', 'action': 'store_true', 
-                    'default': base_defaults['plots'], 'help': trace_help}
+                    'default': base_defaults['plots'], 'help': plots_help}
     additional_args['plots'] = (plots_args, plots_kwargs)
 
     return additional_args
