@@ -61,6 +61,7 @@ import yaml
 
 import matplotlib.pyplot as plt
 import numpy as np
+from numpy.ma import is_masked
 
 from astropy.io import ascii, fits
 from astropy.table import Table, Column
@@ -165,7 +166,8 @@ def coadd(input_table, **kwargs):
                 continue
             n_obs = len(filter_table)
             
-            if os.path.isfile(os.path.join(out_dir, filter_table[0]['coadded'])):
+            coadded_file = filter_table[0]['coadded']
+            if (not is_masked(coadded_file)) and (os.path.isfile(os.path.join(out_dir, coadded_file))):
                 if verbose:
                     coadded_file = filter_table[0]['coadded']
                     msg = "{}: {} co-added file {} found. Skipping."
