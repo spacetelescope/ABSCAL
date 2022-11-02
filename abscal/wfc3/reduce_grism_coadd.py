@@ -213,8 +213,8 @@ def coadd(input_table, **kwargs):
                 defaults = get_defaults("abscal.wfc3.reduce_grism_coadd", filter.lower())
                 params = set_params(defaults, row, issues, preamble, kwargs, verbose)
 
-                spec_file = os.path.join(row['path'], row['extracted'])
-                if not os.path.isfile(spec_file):
+                spec_file = row['extracted']
+                if is_masked(spec_file) or not os.path.isfile(os.path.join(row['path'], spec_file)):
                     # look for default extracted file
                     extracted_name = "{}_{}_x1d.fits".format(row['root'], row['target'])
                     extracted_dest = os.path.join(spec_dir, extracted_name)
