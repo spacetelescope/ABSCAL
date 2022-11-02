@@ -90,8 +90,8 @@ generates an approximate wavelength fit, and extracts the spectrum. It then grou
 extracted spectra by proposal, visit, and grism, and co-adds together all such spectra 
 into a single spectrum. The idl name is :code:`prewfc`. Its help text and options are::
 
-    usage: wfc3_coadd [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f]
-                      [-v] [-d] [--prefix PREFIX] [-t] [-b BKG_FLAT_ORDER]
+    usage: wfc3_coadd [-h] [--paths PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] 
+                      [-f] [-v] [-d] [--prefix PREFIX] [-p] [-b BKG_FLAT_ORDER]
                       table
     
     Process files from metadata table.
@@ -101,7 +101,7 @@ into a single spectrum. The idl name is :code:`prewfc`. Its help text and option
     
     optional arguments:
       -h, --help            show this help message and exit
-      -p PATHS, --paths PATHS
+      --paths PATHS
                             A comma-separated list of input paths.
       -i IN_FILE, --input IN_FILE
                             Optional additional input table file. If provided, the program
@@ -124,7 +124,7 @@ into a single spectrum. The idl name is :code:`prewfc`. Its help text and option
       -d, --double          Subsample output wavelength vector by a factor of 2 (default
                             False).
       --prefix PREFIX       Prefix for co-added spectra
-      -t, --trace           Include result plots while running (default False).
+      -p, --plots           Include result plots while running (default False).
       -b BKG_FLAT_ORDER, --bkg_flat_order BKG_FLAT_ORDER
                             Whether to subtract background before or after applying flatfield.
                             Default is 'flat_first'. Available options are 'flat_first',
@@ -171,8 +171,8 @@ automatic and manual line fitting to determine the pixel position of the centre 
 of six emission lines found in the spectral orders. Its help text and options are as 
 follows::
 
-    usage: wfc3_wave_find_lines [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c]
-                                [-f] [-v] [-t]
+    usage: wfc3_wave_find_lines [-h] [--paths PATHS] [-i IN_FILE] [-o OUT_FILE] 
+                                [-s SPEC_DIR] [-c] [-f] [-v] [-p]
                                 table
     
     Process files from metadata table.
@@ -182,7 +182,7 @@ follows::
     
     optional arguments:
       -h, --help            show this help message and exit
-      -p PATHS, --paths PATHS
+      --paths PATHS
                             A comma-separated list of input paths.
       -i IN_FILE, --input IN_FILE
                             Optional additional input table file. If provided, the program
@@ -202,7 +202,7 @@ follows::
                             indistinguishable from the IDL code. (default False)
       -f, --force           Force steps to run even if output already exists.
       -v, --verbose         Print diagnostic information while running.
-      -t, --trace           Include result plots while running.
+      -p, --plots           Include result plots while running.
 
 The wfc3_wave_find_lines script takes as input the output table created by the 
 :code:`wfc3_coadd` script. It then filters out all image exposures, as well as all 
@@ -243,8 +243,8 @@ The wfc3_wave_solve script takes the output of the :code:`wfc3_wave_find_lines` 
 uses it to generate a 2D wavelength fit over the entire grism. Its help text and options 
 are as follows::
 
-    usage: wfc3_wave_solve [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f]
-                           [-v] [-t]
+    usage: wfc3_wave_solve [-h] [--paths PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] 
+                           [-c] [-f] [-v] [-p]
                            table
     
     Process files from metadata table.
@@ -254,7 +254,7 @@ are as follows::
     
     optional arguments:
       -h, --help            show this help message and exit
-      -p PATHS, --paths PATHS
+      --paths PATHS
                             A comma-separated list of input paths.
       -i IN_FILE, --input IN_FILE
                             Optional additional input table file. If provided, the program
@@ -274,7 +274,7 @@ are as follows::
                             indistinguishable from the IDL code. (default False)
       -f, --force           Force steps to run even if output already exists.
       -v, --verbose         Print diagnostic information while running.
-      -t, --trace           Include result plots while running.
+      -p, --plots           Include result plots while running.
 
 The wfc3_wave_solve script takes the output of the :code:`wfc3_wave_find_lines` script, 
 and loops over the rows filtering by grism and then by order. For each order, it selects 
@@ -308,8 +308,8 @@ The wfc3_all script takes the same input as :code:`wfc3_setup`, and then runs
 :code:`wfc3_wave_solve` sequentially, using the output of each command as the input to the 
 next. Its help text is as follows::
 
-    usage: wfc3_all [-h] [-p PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] [-f] [-v]
-                    [--duplicates DUPLICATES] [-d] [--prefix PREFIX] [-t]
+    usage: wfc3_all [-h] [--paths PATHS] [-i IN_FILE] [-o OUT_FILE] [-s SPEC_DIR] [-c] 
+                    [-f] [-v] [--duplicates DUPLICATES] [-d] [--prefix PREFIX] [-p]
                     template
     
     Run all WFC3 Scripts.
@@ -322,7 +322,7 @@ next. Its help text is as follows::
     
     optional arguments:
       -h, --help            show this help message and exit
-      -p PATHS, --paths PATHS
+      --paths PATHS
                             A comma-separated list of input paths.
       -i IN_FILE, --input IN_FILE
                             Optional additional input table file. If provided, the program
@@ -351,7 +351,7 @@ next. Its help text is as follows::
       -d, --double          Subsample output wavelength vector by a factor of 2 (default
                             False).
       --prefix PREFIX       Prefix for co-added spectra
-      -t, --trace           Include result plots while running (default False).
+      -p, --plots           Include result plots while running (default False).
 
 The wfc3_all script simply runs all of the above WFC3 scripts in sequence.
 
