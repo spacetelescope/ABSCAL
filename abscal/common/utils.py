@@ -393,28 +393,29 @@ def set_image(images, row, issues, pre, overrides={}, verbose=False):
         found = False
         if issue["column"] in row:
             if isinstance(issue["column"], str):
-                issue_len = len(issue["value"])
-                if issue["value"] == row[issue["column"]][:issue_len]:
+                issue_len = len(issue["key"])
+                if issue["key"] == row[issue["column"]][:issue_len]:
                     found = True
             else:
-                if issue["value"] == row[issue["column"]]:
+                if issue["key"] == row[issue["column"]]:
                     found = True
         if found:
-            if len(issue["x"]) > 1:
-                x1, x2 = issue["x"][0], issue["x"][1]
-            else:
-                x1, x2 = issue["x"][0], issue["x"][0]+1
-            if len(issue["y"]) > 1:
-                y1, y2 = issue["y"][0], issue["y"][1]
-            else:
-                y1, y2 = issue["y"][0], issue["y"][0]+1
-            images[issue["ext"]][y1:y2,x1:x2] = issue["value"]
-            if verbose:
-                reason = issue["reason"]
-                source = issue["source"]
-                value = issue["value"]
-                msg = "{}: changed ({}:{},{}:{}) to {} because {} from {}"
-                print(msg.format(pre, y1, y2, x1, x2, value, reason, source))
+            for item in issue["changes"]:
+                if len(item["x"]) > 1:
+                    x1, x2 = item["x"][0], item["x"][1]+1
+                else:
+                    x1, x2 = item["x"][0], item["x"][0]+1
+                if len(item["y"]) > 1:
+                    y1, y2 = item["y"][0], item["y"][1]+1
+                else:
+                    y1, y2 = item["y"][0], item["y"][0]+1
+                images[item["ext"]][y1:y2,x1:x2] = item["value"]
+                if verbose:
+                    reason = issue["reason"]
+                    source = issue["source"]
+                    value = issue["value"]
+                    msg = "{}: changed ({}:{},{}:{}) to {} because {} from {}"
+                    print(msg.format(pre, y1, y2, x1, x2, value, reason, source))
 
 
     return images

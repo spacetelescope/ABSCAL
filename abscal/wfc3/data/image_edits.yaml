@@ -1,501 +1,534 @@
 reduce:
 - column: root
+  key: ibwi08mkq
   ext: sci
   reason: G141 WD1657+343
-  source: calwfc_spec.pro
-  value: 8.2
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:863
+  changes:
+    - value: 8.2
+      x: 
+      - 548
+      y: 
+      - 555
 - column: root
+  key: ibwib6mbq
   ext: sci
   reason: G102 P330E
-  source: calwfc_spec.pro
-  value: 220.0
-  x:
-  - 940
-  - 941
-  y:
-  - 557
+  source: calwfc_spec.pro:864-865
+  changes:
+    - value: 220.0
+      x:
+      - 940
+      - 941
+      y:
+      - 557
+    - value: 1010.0
+      x:
+      - 940
+      - 941
+      y:
+      - 558
 - column: root
-  ext: sci
-  reason: G102 P330E
-  source: calwfc_spec.pro
-  value: 1010.0
-  x:
-  - 940
-  - 941
-  y:
-  - 558
-- column: root
+  key: idpo02pjq
   ext: sci
   reason: G141 GD153
-  source: calwfc_spec.pro
-  value: 110.0
-  x:
-  - 431
-  y:
-  - 712
+  source: calwfc_spec.pro:866-867
+  changes:
+    - value: 110.0
+      x:
+      - 431
+      y:
+      - 712
+    - value: 122.0
+      x:
+      - 433
+      y:
+      - 713
 - column: root
-  ext: sci
-  reason: G141 GD153
-  source: calwfc_spec.pro
-  value: 122.0
-  x:
-  - 433
-  y:
-  - 713
-- column: root
+  key: ic5z03grq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 310.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:868
+  changes:
+    - value: 310.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z03gsq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 10.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:869
+  changes:
+    - value: 10.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibll92fqq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 68.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:870
+  changes:
+    - value: 68.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc05awq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 53.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:871
+  changes:
+    - value: 53.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc15acq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 131.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:872
+  changes:
+    - value: 131.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc15adq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 23.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:873
+  changes:
+    - value: 23.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc22h6q
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 10.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:874
+  changes:
+    - value: 10.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc54skq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 93.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:875
+  changes:
+    - value: 93.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc42lsq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 321.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:876
+  changes:
+    - value: 321.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibuc45eiq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 234.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:877
+  changes:
+    - value: 234.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z03grq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 311.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:878
+  changes:
+    - value: 311.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z04bvq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 99.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:879
+  changes:
+    - value: 99.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z05ilq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 7.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:880
+  changes:
+    - value: 7.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z07doq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 9.5
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:881
+  changes:
+    - value: 9.5
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z07dpq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 6.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:882
+  changes:
+    - value: 6.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z08itq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 45.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:883
+  changes:
+    - value: 45.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z10ofq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 8.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:884-885
+  changes:
+    - value: 8.0
+      x:
+      - 548
+      y:
+      - 555
+    - value: 321.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
-  ext: sci
-  reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 321.0
-  x:
-  - 548
-  y:
-  - 555
-- column: root
+  key: ibwl81xhq
   ext: sci
   reason: G141 1757132 deadpx
-  source: calwfc_spec.pro
-  value: 1900.0
-  x:
-  - 334
-  y:
-  - 290
+  source: calwfc_spec.pro:886
+  changes:
+    - value: 1900.0
+      x:
+      - 334
+      y:
+      - 290
 - column: root
+  key: ibll72npq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 208.0
-  x:
-  - 605
-  y:
-  - 557
+  source: calwfc_spec.pro:887-888
+  changes:
+    - value: 208.0
+      x:
+      - 605
+      y:
+      - 557
+    - value: 280.0
+      x:
+      - 605
+      y:
+      - 558
 - column: root
+  key: ibll72npq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 280.0
-  x:
-  - 605
-  y:
-  - 558
+  source: calwfc_spec.pro:889
+  changes:
+    - value: 75.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ic5z09hkq
   ext: sci
   reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 75.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:890
+  changes:
+    - value: 49.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
-  ext: sci
-  reason: G102 GRW deadpx
-  source: calwfc_spec.pro
-  value: 49.0
-  x:
-  - 548
-  y:
-  - 555
-- column: root
+  key: ich319oeq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 683.0
-  x:
-  - 534
-  y:
-  - 562
+  source: calwfc_spec.pro:891
+  changes:
+    - value: 683.0
+      x:
+      - 534
+      y:
+      - 562
 - column: root
+  key: ibll92fpq
   ext: sci
   reason: G141 GRW deadpx
-  source: calwfc_spec.pro
-  value: 45.0
-  x:
-  - 548
-  y:
-  - 555
+  source: calwfc_spec.pro:892
+  changes:
+    - value: 45.0
+      x:
+      - 548
+      y:
+      - 555
 - column: root
+  key: ibbt03f6q
   ext: sci
   reason: G102 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 178.0
-  x:
-  - 502
-  - 503
-  y:
-  - 168
+  source: calwfc_spec.pro:893-895
+  changes:
+    - value: 178.0
+      x:
+      - 502
+      - 503
+      y:
+      - 168
+    - value: 150.0
+      x:
+      - 502
+      - 503
+      y:
+      - 169
+    - value: 27.0
+      x:
+      - 501
+      - 503
+      y:
+      - 170
 - column: root
-  ext: sci
-  reason: G102 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 150.0
-  x:
-  - 502
-  - 503
-  y:
-  - 169
-- column: root
-  ext: sci
-  reason: G102 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 27.0
-  x:
-  - 501
-  - 503
-  y:
-  - 170
-- column: root
+  key: ibbt04hwq
   ext: sci
   reason: G141 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 35.0
-  x:
-  - 501
-  - 503
-  y:
-  - 169
+  source: calwfc_spec.pro:896-899
+  changes:
+    - value: 35.0
+      x:
+      - 501
+      - 503
+      y:
+      - 169
+    - value: 115.0
+      x:
+      - 501
+      - 503
+      y:
+      - 170
+    - value: 52.0
+      x:
+      - 501
+      - 503
+      y:
+      - 171
+    - value: 20.0
+      x:
+      - 501
+      - 503
+      y:
+      - 172
 - column: root
-  ext: sci
-  reason: G141 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 115.0
-  x:
-  - 501
-  - 503
-  y:
-  - 170
-- column: root
-  ext: sci
-  reason: G141 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 52.0
-  x:
-  - 501
-  - 503
-  y:
-  - 171
-- column: root
-  ext: sci
-  reason: G141 gd71 deadpx
-  source: calwfc_spec.pro
-  value: 20
-  x:
-  - 501
-  - 503
-  y:
-  - 172
-- column: root
+  key: ibwq1bldq
   ext: sci
   reason: G141 gd153 deadpx
-  source: calwfc_spec.pro
-  value: 45.0
-  x:
-  - 111
-  y:
-  - 816
+  source: calwfc_spec.pro:900-902
+  changes:
+    - value: 45.0
+      x:
+      - 111
+      y:
+      - 816
+    - value: 82.0
+      x:
+      - 95
+      - 96
+      y:
+      - 818
+    - value: 15.0
+      x:
+      - 95
+      - 97
+      y:
+      - 819
 - column: root
-  ext: sci
-  reason: G141 gd153 deadpx
-  source: calwfc_spec.pro
-  value: 82.0
-  x:
-  - 95
-  - 96
-  y:
-  - 818
-- column: root
-  ext: sci
-  reason: G141 gd153 deadpx
-  source: calwfc_spec.pro
-  value: 15.0
-  x:
-  - 95
-  - 97
-  y:
-  - 819
-- column: root
+  key: ibwq1aszq
   ext: sci
   reason: G102 gd153 deadpx
-  source: calwfc_spec.pro
-  value: 94.0
-  x:
-  - 453
-  - 454
-  y:
-  - 182
+  source: calwfc_spec.pro:903
+  changes:
+    - value: 94.0
+      x:
+      - 453
+      - 454
+      y:
+      - 182
 - column: root
+  key: ibwib6m8q
   ext: sci
   reason: G102 p330e deadpx
-  source: calwfc_spec.pro
-  value: 830.0
-  x:
-  - 924
-  - 925
-  y:
-  - 183
+  source: calwfc_spec.pro:904-907
+  changes:
+    - value: 830.0
+      x:
+      - 924
+      - 925
+      y:
+      - 183
+    - value: 160.0
+      x:
+      - 922
+      - 925
+      y:
+      - 184
+    - value: 625.0
+      x:
+      - 980
+      y:
+      - 184
+    - value: 250.0
+      x:
+      - 878
+      y:
+      - 182
 - column: root
-  ext: sci
-  reason: G102 p330e deadpx
-  source: calwfc_spec.pro
-  value: 160.0
-  x:
-  - 922
-  - 925
-  y:
-  - 184
-- column: root
-  ext: sci
-  reason: G102 p330e deadpx
-  source: calwfc_spec.pro
-  value: 625.0
-  x:
-  - 980
-  y:
-  - 184
-- column: root
-  ext: sci
-  reason: G102 p330e deadpx
-  source: calwfc_spec.pro
-  value: 250.0
-  x:
-  - 878
-  y:
-  - 182
-- column: root
+  key: ic6903y8q
   ext: sci
   reason: G102 g191 deadpx
-  source: calwfc_spec.pro
-  value: 334.0
-  x:
-  - 927
-  y:
-  - 136
+  source: calwfc_spec.pro:908-909
+  changes:
+    - value: 334.0
+      x:
+      - 927
+      y:
+      - 136
+    - value: 63.0
+      x:
+      - 929
+      y:
+      - 137
 - column: root
-  ext: sci
-  reason: G102 g191 deadpx
-  source: calwfc_spec.pro
-  value: 63.0
-  x:
-  - 929
-  y:
-  - 137
-- column: root
+  key: ic6901x2q
   ext: sci
   reason: G141 g191 deadpx
-  source: calwfc_spec.pro
-  value: 250.0
-  x:
-  - 877
-  y:
-  - 960
+  source: calwfc_spec.pro:910-911
+  changes:
+    - value: 250.0
+      x:
+      - 877
+      y:
+      - 960
+    - value: 728.0
+      x:
+      - 877
+      y:
+      - 961
 - column: root
-  ext: sci
-  reason: G141 g191 hotpx
-  source: calwfc_spec.pro
-  value: 728.0
-  x:
-  - 877
-  y:
-  - 961
-- column: root
+  key: icqw01b5q
   ext: sci
   reason: G102gd71 deadpx dq=8
-  source: calwfc_spec.pro
-  value: 168.0
-  x:
-  - 185
-  y:
-  - 119
+  source: calwfc_spec.pro:912
+  changes:
+    - value: 168.0
+      x:
+      - 185
+      y:
+      - 119
 - column: root
+  key: icrw12l9q
   ext: sci
   reason: G141VB8 deadpx dq=32
-  source: calwfc_spec.pro
-  value: 1910.0
-  x:
-  - 372
-  y:
-  - 260
+  source: calwfc_spec.pro:913
+  changes:
+    - value: 1910.0
+      x:
+      - 372
+      y:
+      - 260
 - column: root
+  key: ibwi08mkq
   ext: sci
   reason: G141wd1657 hotpx dq=0
-  source: calwfc_spec.pro
-  value: 1.0
-  x:
-  - 606
-  y:
-  - 557
+  source: calwfc_spec.pro:914-916
+  changes:
+    - value: 1.0
+      x:
+      - 606
+      y:
+      - 557
+    - value: 2.0
+      x:
+      - 607
+      y:
+      - 554
+    - value: 3.1
+      x:
+      - 625
+      y:
+      - 556
 - column: root
+  key: iebo2au8q
   ext: sci
-  reason: G141wd1657 hotpx dq=0
-  source: calwfc_spec.pro
-  value: 2.0
-  x:
-  - 607
-  y:
-  - 554
+  reason: Fix Glitches
+  source: calwfc_spec.pro:488-489
+  changes:
+    - value: 145.
+      x:
+      - 402
+      y:
+      - 265
 - column: root
+  key: ie3f07lyq
   ext: sci
-  reason: G141wd1657 hotpx dq=0
-  source: calwfc_spec.pro
-  value: 3.1
-  x:
-  - 625
-  y:
-  - 556
+  reason: G141Gaia7024 hotpx dq=0
+  source: calwfc_spec.pro:917
+  changes:
+    - value: 208000.
+      x:
+      - 88
+      y:
+      - 91
+- column: root
+  key: ie3f07lzq
+  ext: sci
+  reason: G141Gaia7024 hotpx dq=0
+  source: calwfc_spec.pro:918
+  changes:
+    - value: 192000.
+      x:
+      - 88
+      y:
+      - 91

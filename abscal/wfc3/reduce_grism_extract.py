@@ -1162,6 +1162,10 @@ def reduce_stare(row, params, **kwargs):
             xb, xe = max(xbeg-20, 0), min(xbeg+20, image.shape[1])
             yb, ye = max(ybeg-20, 0), min(ybeg+20, image.shape[0])
             sbimg = image[yb:ye,xb:xe]
+            
+            # Fix for spike hit in iebobafnq by setting first column (in general)  to 0.
+            # See calwfc_spec.pro 781-782
+            sbimg[:,0] = 0.
 
             ywidth = params['ywidth']
             ns = 31
@@ -1590,6 +1594,13 @@ def reduce_stare(row, params, **kwargs):
                         else:
                             iterate = False
 
+                    # Tailored fix for weak WDJ175318.65 w/ confusion above -1 order:
+                    # BY NOTE: Removed interactivity.
+                    if iord == -1 and (maxpos <= 2 or maxpos > 8):
+                        yfound[iord] = -999
+                        if verbose:
+                            print("{}: Omitting bad -1 order position.".format(preamble))
+
                     # Standard continuum technique (above) fails for planetary
                     #   nebula emission lines and faint -1 order. So, instead,
                     #   try the brightest pixel in the range.
@@ -1742,7 +1753,7 @@ def reduce_stare(row, params, **kwargs):
             sky_b_lower[i] = np.median(sky_image[y1:y2,x_b[i]])
 
             ypos = int(round(yfit_b[i] + params['ubdist']))
-            y1 = max((ypos - half_bwidth), 0)
+            y1 = min(max((ypos - half_bwidth), 0), image.shape[1])
             y2 = min((ypos + half_bwidth + 1), image.shape[0])
             b_upper[i] = np.median(image[y1:y2,x_b[i]])
             sky_b_upper[i] = np.median(sky_image[y1:y2,x_b[i]])
@@ -1780,13 +1791,16 @@ def reduce_stare(row, params, **kwargs):
         # Do a two-pass iteration
 
         # First pass
-        lo_res = np.polyfit(x_b_f, s_back_lo, 3, full=True)
+        #
+        # Updated polynomial fit order from 3 to 6 to follow wiggles @ .2*6=~1unit
+        # for faint Appleton targets, eg.WDJ175318.65. (gwidth=6)
+        lo_res = np.polyfit(x_b_f, s_back_lo, 6, full=True)
         lo_coef = lo_res[0]
         lo_error = np.sqrt(lo_res[1]/(len(x_b_f)-2))[0]
         p = np.poly1d(lo_coef)
         lo_fit = p(x_b_f)
 
-        up_res = np.polyfit(x_b_f, s_back_up, 3, full=True)
+        up_res = np.polyfit(x_b_f, s_back_up, 6, full=True)
         up_coef = up_res[0]
         up_error = np.sqrt(up_res[1]/(len(x_b_f)-2))[0]
         p = np.poly1d(up_coef)
@@ -1803,7 +1817,7 @@ def reduce_stare(row, params, **kwargs):
         if verbose:
             msg = "{}: {} of {} low bkg points have residual < standard error."
             print(msg.format(preamble, n_good_lo, len(lo_fit)))
-        lo_res = np.polyfit(x_b_f[good_lo], s_back_lo[good_lo], 3, full=True)
+        lo_res = np.polyfit(x_b_f[good_lo], s_back_lo[good_lo], 6, full=True)
         lo_coef = lo_res[0]
         lo_error = np.sqrt(lo_res[1]/(n_good_lo-2))[0]
         if verbose:
@@ -1819,7 +1833,7 @@ def reduce_stare(row, params, **kwargs):
         if verbose:
             msg = "{}: {} of {} high bkg points have residual < standard error."
             print(msg.format(preamble, n_good_up, len(up_fit)))
-        up_res = np.polyfit(x_b_f[good_up], s_back_up[good_up], 3, full=True)
+        up_res = np.polyfit(x_b_f[good_up], s_back_up[good_up], 6, full=True)
         up_coef = up_res[0]
         up_error = np.sqrt(up_res[1]/(n_good_up-2))[0]
         if verbose:
@@ -1884,8 +1898,8 @@ def reduce_stare(row, params, **kwargs):
 
         if (len(good_lo[0]) < nsb/5) and (len(good_up[0]) < nsb/5):
             raise ValueError("Not enough good points to fit.")
-        if abs(np.mean(s_back)) > 3:
-            raise ValueError("Average absolute fit is greater than 3(?)")
+        if abs(np.mean(s_back)) > 5:
+            raise ValueError("Warning: High background {}".format(np.mean(s_back)))
 
         # Full image subtraction
         for i in range(nsb):
@@ -2058,7 +2072,7 @@ def reduce_stare(row, params, **kwargs):
         gross = flux + s_back + sky_back
 
 # if strpos(file,'icqw01') ge 0 then begin ;GD71 G102 contam by another star.
-# 	bad=where(wave gt 11450 and wave lt 15400)
+# 	bad=where(wave gt 11000 and wave lt 15400)
 # 	spec_time(bad)=0.
 # 	endif
 # if strpos(file,'icqw02') ge 0 then begin ;GD71 G141 contam by another star.

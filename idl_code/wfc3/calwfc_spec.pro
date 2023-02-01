@@ -3,6 +3,7 @@
 ;
 ; Routine to extract wfc3 point source spectrum from a calibrated image
 ; file.
+; To edit bad px in images, search for 'glitches'
 ;
 ; CALLING SEQUENCE:
 ;	calwfc_spec,file,xco,yco,xerr,yerr,wave,flux,errf,epsf
@@ -53,7 +54,7 @@
 ;	/TRACE - display spectra image with the extraction regions overplotted
 ; 	flatfile - name of the text file containing the flat field files
 ;		versus wavelength.  (The reference files are located in
-;		directory indicated by environment variable WFC3_REF)
+;		directory indicated by environment variable WFCREF)
 ;		default = 'g1*ffcube.fits'
 ;	/before - if set, flat fielding is done before background
 ;		subtraction
@@ -107,12 +108,13 @@
 ;	    Modified output GROSS and BACK to be extractions from the raw image.
 ;	06aug18 - DJL - modified to flat field sky image with sky flat and
 ;		extract the flat fielded sky background which is included
-;		in the output background arrays.  Gross is now just the
+;		in the output background arrays.  Gross is now just the 
 ;		extracted net flux plus the smoothed background
 ;	07Jun08 - DJL - moved flat fielding before spectral location.
 ;	12Feb - RCB mod of calnic_spec for WFC3 IR & multiply by PAM--
 ;		NO! remove PAM. No doc & makes a worse variation around FOV.
 ;	12Feb28-Add scaling of net,bkg, & gross for dispersion corr to center
+;		Rm scaling for stare mode in 2018. See doc.scan for scanned.
 ;	2012June - add scanned spectral image reduction
 ;	2013April - Add my WL solution when 0-order is on the images. Otherwise,
 ;		retain the AXE direct image WLs
@@ -131,20 +133,20 @@
 ;		to do coord corr. & replace that func in wfcdir for multiple
 ;		targets on an image.
 ;	2020feb4 - switch from cntrd to gcntrd for Z-ord fit
+;	2020oct7 - Update wfcwlfix calls to include target+filter
+;	2021Jan - Update scanned case to rm disp corr & add Y FF corr.
+;	2021may - Add gaia names to output files
 ;========================================================  CALWFC_SPEC_WAVE
-
-; ##### 2020feb4 - If ever have 2 spectra on same img that need this AXE code,
-;	then need to add targname to WFCWLFIX.PRO ###########
 
 ;
 ; Routine to compute wavelength vector and column numbers to extract
 ;
 pro calwfc_spec_wave,h,xcin,ycin,x,wave,angle,wav1st,noprnt=noprnt
 ; USE FOR AXE SOLUTION ONLY. Z-ORD SOLUTION USES WFC_WAVECAL
-;
-; INPUTS:
+; 
+; INPUTS: 
 ;	h - header
-;	xcin,ycin - as above for xco,yco
+;	xcin,ycin - as above for xco,yco, ie x,y of ref star in dir image
 ;	noprint - optional keyword to avoid writing to header and printing.
 ; OUTPUTS:
 ;	x    - indgen(1014)
@@ -157,7 +159,8 @@ if not keyword_set(noprnt) then					$
 	sxaddpar,h,'xc',xcin(0),'Dir img ref X position used for AXE WLs'
 if not keyword_set(noprnt) then					$
 	sxaddpar,h,'yc',ycin(0),'Dir img ref Y position used for AXE WLs'
-filter = strtrim(sxpar(h,'filter'))
+filter=strtrim(sxpar(h,'filter'),2)
+targ=strtrim(sxpar(h,'targname'),2)
 x=indgen(1014)				; indices of image x size
 xc=xcin  &  yc=ycin
 ; if subarr, put input position onto 1014x1014 grid;
@@ -170,7 +173,7 @@ if ns lt 1014 then begin
 	endif
 
 	case filter of
-	 'G102': begin
+	 'G102': begin					
 ; WFC3 ISR 2016-15 - AXE
 ; +1st order:
 		b=0.20143085d  &  c=0.080213136d
@@ -196,8 +199,15 @@ if ns lt 1014 then begin
 		indx=where(wave lt 300,npts)
 		if npts gt 0 then begin
 		 wave(indx)=-(a0+a1*(indx-xc))
-; ck monotonicity:
-		 if wave(indx(-1)) le wave(indx(-1)-1) then stop
+; enforce monotonicity: fixed 2020dec31
+		  ibreak=max(indx)
+		  bad=where(wave(ibreak+1:1013) lt wave(ibreak),npts)
+		  if npts gt 0 then begin
+			   delwl=(wave(ibreak+1+npts)-wave(ibreak))/(npts+1)
+			   wave(ibreak:ibreak+npts)=wave(ibreak)+	$
+					delwl*indgen(npts+1)
+			   endif
+
 		 if not keyword_set(noprnt) then begin
 		  sxaddpar,h,'a0-1st',a0,'Constant Term of the -1st order disp.'
 		  sxaddpar,h,'a1-1st',a1,'Linear Term of the -1st order disp.'
@@ -219,7 +229,7 @@ if ns lt 1014 then begin
 		  ibreak=min(indx)
 		  bad=where(wave(0:ibreak-1) gt wave(ibreak),npts)
 		  	if npts gt 0 then begin
-			   delwl=((wave(ibreak)-wave(ibreak-1-npts))>1)/(npts+1)
+			   delwl=(wave(ibreak)-wave(ibreak-1-npts))/(npts+1)
 			   wave(ibreak-npts:ibreak)=wave(ibreak-npts)+	$
 					delwl*indgen(npts+1)
 			   wav1st(ibreak-npts:ibreak)=wave(ibreak-npts:ibreak)/2
@@ -241,10 +251,10 @@ if ns lt 1014 then begin
 ;		  sxaddpar,h,'a0+3rd',a0,'Constant Term of the +3rd order disp.'
 ;		  sxaddpar,h,'a1+3rd',a1,'Linear Term of the +3rd order disp.'
 ;		  endif
-
+		  
 	       angle=0.66			; 2018may10-see angle.pro
 	       end
-	 'G141': begin
+	 'G141': begin					
 ; WFC3 ISR 2009-17
 ; +1st order:
 		b=0.08044033d  &  c=-0.00927970d
@@ -273,9 +283,10 @@ if ns lt 1014 then begin
 		  ibreak=max(indx)
 		  bad=where(wave(ibreak+1:1013) lt wave(ibreak),npts)
 		  if npts gt 0 then begin
-			   delwl=((wave(ibreak+1+npts)-wave(ibreak))>1)/(npts+1)
+			   delwl=(wave(ibreak+1+npts)-wave(ibreak))/(npts+1)
 			   wave(ibreak:ibreak+npts)=wave(ibreak)+	$
 					delwl*indgen(npts+1)
+;if ycin eq 812 then stop		;debug fixed 2020dec30
 			   endif
 		 if not keyword_set(noprnt) then begin
 		  sxaddpar,h,'a0-1st',a0,'Constant Term of the -1st order disp.'
@@ -313,13 +324,13 @@ if ns lt 1014 then begin
 ;		  sxaddpar,h,'a0+3rd',a0,'Constant Term of the +3rd order disp.'
 ;		  sxaddpar,h,'a1+3rd',a1,'Linear Term of the +3rd order disp.'
 ;		  endif
-
+		  
 	       angle=0.44			; 2018may10-see angle.pro
 	       end				; G141
 	endcase
 ; 2018jun23 - try moving wfcwlfix here instead of at bottom.
-root=strtrim(sxpar(h,'rootname'),2)
-offset=wfcwlfix(root)				; offset in Ang
+root=strtrim(sxpar(h,'rootname',/silent),2)
+offset=wfcwlfix(root,targ+filter)				; offset in Ang
 wave=wave+offset
 wav1st=wav1st+offset
 
@@ -340,7 +351,7 @@ end
 ;
 pro calwfc_spec_flat,h,image,err,dq,xindex,wave,flatfile
 ; where wave is the FIRST order WLs * all parameters are input, except flatfile
-;	in the case of using orig AXE default. New SED default flatfil is INPUT.
+;	in the case of using orig AXE default. New SED must be INPUT for best FF
 ; Not used in this pro are: err,dq,xindex
 ; Output is FF'd image and flatfile=name of FF file of coef.
 ;-
@@ -350,35 +361,25 @@ pro calwfc_spec_flat,h,image,err,dq,xindex,wave,flatfile
 
 filt=strtrim(sxpar(h,'filter'),2)
 
-; add here code to use default FF when flatfile=''
-
+; code to use default FF when flatfile=''. SED & Ryan FF have "both" in name.
 coef3=fltarr(1014,1014)				;for quadrat. fits of SED & Ryan
 if strpos(flatfile,'both') lt 0 then begin	; BOTH-g102&141 pkgd. together
 ; Current default:
 	if filt eq 'G102' then 						$
-		flatfile=find_with_def('g102ffcube.fits','WFC3_REF') else $
-		flatfile=find_with_def('g141ffcube.fits','WFC3_REF')
+		flatfile=find_with_def('g102ffcube.fits','WFCREF') else $
+		flatfile=find_with_def('g141ffcube.fits','WFCREF')
 	fits_read,flatfile,coef3,hdr,exten=3		;only case w/ cubic fits
-endif else begin
-    flatfile=find_with_def(flatfile,'WFC3_REF')
-endelse
+	endif
 print,'FF file=',flatfile
-sedoff=0			;Susana has hdr in exten=0, coef0 in exten=1 etc
-if strpos(flatfile,'sed') ge 0 then sedoff=1
-; WMIN and WMAX are actually in the zeroth header.
-;	We *can* use Ralph's custom fits_read file here, which will get
-;	coefficients regardless of extension through some black magic, or
-;	we can just read in the primary header and get them there, then proceed.
-;
-;	I'm doing the latter.
-fits_read,flatfile,ignore,hdr,exten=0
-wmin = float(sxpar(hdr,'wmin'))
-wmax = float(sxpar(hdr,'wmax'))
+sxaddpar,h,'flatfile',flatfile
 
+sedoff=0			;Susana has hdr in exten=0, coef0 in exten=1 etc
+if strpos(flatfile,'sed') ge 0 then sedoff=1 
 fits_read,flatfile,coef0,hdr,exten=0+sedoff
 fits_read,flatfile,coef1,hdr,exten=1+sedoff
 fits_read,flatfile,coef2,hdr,exten=2+sedoff
-
+wmin=float(sxpar(hdr,'wmin'))
+wmax=float(sxpar(hdr,'wmax'))
 ; 1st ord WLs defined for 1014 px, but for subarr: wave(0) is for 1st subarr px
 abswl=abs(wave)
 x=(abswl-wmin)/(wmax-wmin)		; normalized 1st order wavelengths
@@ -406,10 +407,9 @@ for i=0,nl-1 do begin			; Fill row-by-row:
 	ff(good,i)=coef0(xpx,ypx)+coef1(xpx,ypx)*xgood+		$
 				coef2(xpx,ypx)*xgood^2+coef3(xpx,ypx)*xgood^3
 	endfor
-if ns lt 1014 then print,'subarray w/ ltv1,ltv2=',ltv1,ltv2
+if ns lt 1014 then print,'subarray w/ ltv1,ltv2=',ltv1,ltv2 
 ff(where(ff le 0.5))=1			; fix AXE glitches (96px le 0)
 image=image/ff
-sxaddpar,h,'flatfile',flatfile
 print,'CALWFC_SPEC_FLAT for number of wave points=',ns
 ;tvscl,ff>.9<1.1  &  stop
 end
@@ -434,7 +434,7 @@ if n_params(0) eq 0 then begin
 	print,'calwfc_spec,file,xco,yco,xerr,yerr,wave,flux,errf,epsf'
 	print,'KEYWORD INPUTS: ywidth, gwidth, bwidth, bdist'
 	print,'                bmedian, bmean1, bmean2, imagefile'
-	print,'                /display, /trace, subdir'
+	print,'                /display, /trace, subdir
 	print,'                star, /before, /slope'
 	print,'		       slope, Ubdist, Lbdist, crval1, crval2'
 	return
@@ -445,7 +445,7 @@ if n_params(0) eq 0 then begin
 if n_elements(yoffset) eq 0 then yoffset = 0
 if n_elements(gwidth) eq 0 then gwidth = 6.		; Nicmos: 4.0
 if n_elements(bwidth) eq 0 then bwidth = 13
-if n_elements(bdist) eq 0 then bdist =25+bwidth/2	;2018may-add bwidth/2+3
+if n_elements(bdist) eq 0 then bdist =25+bwidth/2
 if n_elements(Ubdist) eq 0 then ubdist = bdist
 if n_elements(Lbdist) eq 0 then lbdist = bdist
 if n_elements(bmedian) eq 0 then bmedian = 7
@@ -460,7 +460,11 @@ if n_elements(star) eq 0 then star=''
 ; automatically via wfc_process, so that xco,yco are input here, rather than
 ; output.
 if imagefile ne '' then stop		;ck del below. WFC3 no-op
-
+gaiapos=strpos(file,'gaia')
+if gaiapos gt 0 then begin		; save gaianam & strip it from file
+	star=strmid(file,gaiapos,12)
+	file=strmid(file,0,gaiapos)+'_flt.fits
+	endif
 pos=strpos(file,'.fits')
 sptfil=file
 strput,sptfil,'spt',pos-3
@@ -481,6 +485,9 @@ if n_elements(ywidth) eq 0 then $
 ;fits_read,file,image,h, extname='SCI'
 wfcread,file,target,image,h, extname='SCI'
 
+; 2021aug9 - Fix gliches:
+if strpos(file,'iebo2au8q') ge 0 then image(402,265)=145
+
 filter = strtrim(sxpar(h,'filter'))
 print,'calwfc_spec Processing file '+filter+' '+file
 siz=size(image)
@@ -496,6 +503,8 @@ if scnrat gt 0 then begin		; trim crapola for scanned data
 	dq=dq(5:1018,5:1018)
 ; Clean false dq for 2048-signal in 0-read & 8192-CR detected:
 	dq=dq-(dq and (2048+8192))
+	sxaddpar,h,'naxis1',1014	; 2020dec29
+	sxaddpar,h,'naxis2',1014	; 2020dec29
 	endif
 ; dq(119,95) = "777			;mask NICMOS hot pixel
 if strtrim(sxpar(h,'imagetyp'),2) eq 'FLAT' then begin	; 05nov15 rcb
@@ -522,12 +531,12 @@ if n_elements(crval1) gt 0 then begin
 		    		'info in the image '+file
 		retall
 		endif
-; crval1,crval2 are input RA, DECL of ref px from direct image
+; crval1,crval2 are input RA, DECL of ref px from direct image 
 ;							where xco,yco are found.
 	ad2xy,crval1,crval2,astr,x1,y1   ;center position of targ acq
 						 ;image in the current image
 ; xydither must be the built in offset for a grism, as I ckd the direct img
-;	ic6906byq astrom, which gives 506,506 for x1,y1, while the ff G141
+;	ic6906byq astrom, which gives 506,506 for x1,y1, while the ff G141 
 ;	ic6906bzq has x1=440.18, y1=506.54 !
 ; REFERENCE PIXEL 2018may1
 	refpx1=sxpar(h,'crpix1')-1	; minus 1 for IDL
@@ -546,69 +555,96 @@ if keyword_set(slope) then begin			;06jun28-rcb
 	if slope ne 1 then angle = slope	; specified slope=slope
 	endif
 ; ################################SCANNED################################
-;
+; 
 ;SCANNED SPECTRA have no direct image. Read SPT file, get scan rate & est.xc,yc
+; 2021jan7 - see doc.scan
 ;
 if scnrat gt 0 then begin		; start trailed processing
 	sxaddpar,h,'scan_rat',scnrat,'Trail scan rate'
 	xpostarg=sxpar(h,'postarg1')
-;find zero order @ y=559. SCANNED ONLY, as locates Z-order in 1-D (X) only.
-	ycmean=559  &  ytop=926		;G141 means from scnoffset.pro
-	xzappr=303.6+ 7.336*xpostarg  ;G141 scnoffset 0-ord pos @y=558.8
-	if filter eq 'G102' then xzappr=000	; 2020jan zx-->xz
-	bn=rebin(image(*,559-20:559+20),1014,1)	; binned spectrum @y=559
+;find 0-order near Y-centr. More data
+;2020dec31 - G102 done for 1st time w/ 105 stare obs at y~551
+; orig	ycmean=559  &  ytop=926		;G141 means from scnoffset.pro
+; orig	xzappr=303.6+7.336*xpostarg	;G141 scnoffset 0-ord pos @y=558.8
+	ycmean=553.  &  ytop=926	;G141 means from scnoffset.pro
+	xzappr=302.4+ 7.21*xpostarg	;G141 scnoffset 0-ord pos @y=553
+	if filter eq 'G102' then begin		; 2020dec31
+		ycmean=551.  &  ytop=917	; G102 means from scnoffset.pro
+		xzappr=237.4+7.242*xpostarg
+; 2020dec31-Oddball case:
+		if strpos(file,'ibtw04') gt 0 then xzappr=xzappr+130	; G102
+		endif
+	bn=rebin(image(*,ycmean-20:ycmean+20),1014,1)  ;binned spectrum @ ycmean
+	!xtitle='Column'
+	!ytitle='0-order signal @ '+string(ycmean,'(f5.1)')
+	!mtitle=filter+' Dash-Approx X, Solid-Found X positions'
 	plot,bn,xr=[xzappr-60,xzappr+60]
 	oplot,[xzappr,xzappr],[0,1e4],line=2
 	xind=dindgen(1014)
 	mx=where(bn(xzappr-50:xzappr+50) eq 			$
 			max(bn(xzappr-50:xzappr+50),mxpos))
 	mxpos=fix(mxpos+xzappr-50+.5)
-	good=where(bn(mxpos-50:mxpos+50) gt 0.5*bn(mxpos))+mxpos-50
+	good=where(bn(mxpos-25:mxpos+25) gt 0.5*bn(mxpos))+mxpos-25
 	xzfound=total(xind(good)*bn(good))/total(bn(good))
-	oplot,[xzfound,xzfound],[0,1e4]
-	xyouts,.15,.2,'Xfound,at y-posn='+			$
+	oplot,[xzfound,xzfound],[0,1e4]			;z-ord X posit near cent
+	xyouts,.15,.2,'Xfound,y-posn='+			$
 			string([xzfound,ycmean],'(f6.1,i4)'),/norm
-;	read,st
+; ###change for new data:
+	read,st
 ;find zero order @ y=926 (G141)
 	bn=rebin(image(*,ytop-20:ytop+20),1014,1) ;binned spectrum @ytop
 	xzfix=fix(xzfound+.5)
+	!ytitle='0-order signal @ Y-top'
+	!mtitle=filter+' Dash-posn at ycmean, Solid-Found X at y-top'
 	plot,bn,xr=[xzfix-60,xzfix+60]
-	oplot,[xzfix,xzfix],[0,1e4],line=2
+	oplot,[xzfound,xzfound],[0,1e4],line=2
 	mx=where(bn(xzfix-50:xzfix+50) eq 			$
 			max(bn(xzfix-50:xzfix+50),mxpos))
 	mxpos=mxpos+xzfix-50
-	good=where(bn(xzfix-50:xzfix+50) gt 0.5*bn(mxpos))+xzfix-50
+	good=where(bn(xzfix-25:xzfix+25) gt 0.5*bn(mxpos))+xzfix-25
 	xztop=total(xind(good)*bn(good))/total(bn(good))
 	oplot,[xztop,xztop],[0,1e4]
 ;help,xzfix,mxpos,xztop  &	stop
-	xyouts,.15,.2,'Xztop,at y-posn='+			$
+	xyouts,.15,.2,'Xztop,y-posn='+			$
 			string([xztop,ytop],'(f6.1,i4)'),/norm
 	z0coef0=xzfound			   ;coef-0 for 0-ord xz vs yz
-	z0coef1=(xztop-xzfound)/(ytop-559) ;coef-1 for del-y, ie (y-559)
+	z0coef1=(xztop-xzfound)/(ytop-ycmean) ;coef-1 for del-x/del-y
 	print,'coef for 0-order vs (Y-yzcent)',z0coef0,z0coef1
+; ###change for new data:
 ;	read,st
-;amount to add to found x of 0-order for G141 at ycmean=559 from scnoffset.pro
-	delx=187.63 + 0.0121233*xpostarg
-	xc=xzfound+delx
+;amount to add to found x of 0-order for G141 at ycmean from scnoffset.pro
+;2020dec31 - the ff does not reproduce in rerun, as new data uses subarr for
+;	direct images w/ wrong xc for found posit. Use approx for G102 &
+;	convert from using calwfc_spec_wave AXE WLs to my wfc_wavecal SOON!!
+	delx=187.63 + 0.0121233*xpostarg	; 2012 result G141
+	xc=xzfound+delx				;dir image X posit near cent
 	yc=ycmean				;avg y for center
 	if filter eq 'G102' then begin
-		xc=0	; run scnoffset.pro
-		stop
+		xc=xzfound+253			; approx from scnoffset plot
 		endif
 ; x is range of spec
 	calwfc_spec_wave,h,xc,yc,x,wave,angle,wav1st	;master WLs wfc_wavecal?
-
-; Differences btwn 0-order X znd xc posit of ref * from scnoffset.pro:
-	delxbot=191.91+0.0096832*xpostarg	;G141 @ y=184
-	delxtop=183.71+0.0134596*xpostarg	;G141 @ y=926
-	yzord=[184.,559,926]
-	xdelx=[delxbot,delx,delxtop]
+		
+; Differences btwn 0-order X and xc posit of ref * from scnoffset.pro:
+	delxbot=191.91+0.0096832*xpostarg	;G141 @ y=184 2012 result
+	delxtop=183.71+0.0134596*xpostarg	;G141 @ y=926 2012 result
+	yzord=[184.,ycmean,ytop]		; 2012 result
+	if filter eq 'G102' then begin		; 2021jan2
+stop ; no good solution from scnoffset, because of subarr coord for dir image.
+;			GO TO A wfc_wavecal.pro approach!
+;		delxbot=*xpostarg	;G102 @ y=184
+;		delxtop=*xpostarg	;G102 @ y=926
+;		yzord=[.,ycmean,ytop]
+		endif
+	xdelx=[delxbot,delx,delxtop]			; xc-xz
+	
 ; make wlimg for use in flat fielding
 	wlimg=image*0.
 	for i=0,1013 do begin
 		xz=z0coef0+z0coef1*(i-ycmean)		; 0-ord x-posn
+; del is x at i
 		del=interpol(xdelx,yzord,i)		; do all rows
-		xref=xz+del				; ref * posn
+		xref=xz+del			       ;xc ref * posn in dir img
 ; WLs @ y=i
 		calwfc_spec_wave,h,xref,i,x,wli,dum,wl1st,/noprnt
 		wlimg(*,i)=wl1st			;1-ord WL for FF
@@ -622,29 +658,32 @@ if scnrat gt 0 then begin		; start trailed processing
 	recter=rectim  &  rectdq=rectim
 	for i=0,1013 do begin
 		xz=z0coef0+z0coef1*(i-ycmean)		; 0-ord x-posn
-		yfit=i+(x-xz)*sin(angle/!radeg)		;trace @ row=i
+		yfit=i+(x-xz)*sin(angle/!radeg)		;trace @ new row=i
 		yfit=round(yfit)		       ;nearest neighbor
 		yfit=yfit>0<1013
 		del=interpol(xdelx,yzord,i)		; do all rows
 		xref=xz+del				; ref * posn
 		calwfc_spec_wave,h,xref,i,x,wli,/noprnt	; full WLs @ y=i
-; use disp of -1st order for corr; but the +1st change w/ Y is the same to <0.1%
-		indx=where(wli ge -12000,npts)
-		indx=indx(0)
-		dsprow=wli(indx+1)-wli(indx)
-; Accomodate slope of spectra to get a few more good rows at lowest good Y
-		rowspc=image(x,yfit)*disp/dsprow      ;corr to +1st disp
+; no help		indx=where(wli ge -12000,npts)
+; no help		indx=indx(0)
+; no help		dsprow=wli(indx+1)-wli(indx)		;constant vs. WL
+; no help		rowspc=image(x,yfit)*disp/dsprow      ;corr to +1st disp
+; 2021jan5 - see doc.scan for FF corrections:
+		if filter eq 'G102' then rowcor=1		; Must update
+		if filter eq 'G141' then rowcor=1.-6.1017e-05*(i-400)
+		rowspc=image(x,yfit)*rowcor
 ; row on master WL scale:
 		linterp,wli,rowspc,wave,spcterp,missing=0
 		rectim(*,i)=spcterp
-	if i eq 511 then stop
-		rowerr=err(x,yfit)*disp/dsprow
+; no help	rowerr=err(x,yfit)*disp/dsprow
+		rowerr=err(x,yfit)*rowcor
 		linterp,wli,rowerr,wave,errterp,missing=0
 		recter(*,i)=errterp
 		rowdq=dq(x,yfit)
 ; Expand dq to near neighbors & use dq=2 for missing, ie fill data:
 		linterp,wli,rowdq,wave,dqnotrp,missing=2,/nointerp
 		linterp,wli,rowdq,wave,dqterp,missing=2
+;if strpos(file,'ibtw01qjq') gt 0 and i ge 295 then stop
 		bad=where(dqterp ne 0,nbad)
 		if nbad gt 0 then for ibad=0,nbad-1 do begin
 			indx=bad(ibad)
@@ -652,14 +691,17 @@ if scnrat gt 0 then begin		; start trailed processing
 			endfor
 		rectdq(*,i)=dqterp
 		endfor
-; 2018may -see above now	fdecomp,file,disk,dir,root
-;	root = gettok(root,'_')
-
+	fdecomp,file,disk,dir,root
+	root = gettok(root,'_')
 	sxaddhist,'Written by IDL calwfc_spec.pro '+!stime,h
-	exptim=sxpar(h,'exptime')
-	rectim=rectim*exptim*scnrat/0.13	;Texp=plate-scale/scnrat
-	recter=recter*exptim*scnrat/0.13
-	ext='fits'
+; 2020dec31 - Remove exptim from scaling. See doc.scan
+;	exptim=sxpar(h,'exptime')
+;	rectim=rectim*exptim*scnrat/0.13	;Texp=plate-scale/scnrat
+;	recter=recter*exptim*scnrat/0.13
+	exptim=0.129*2.4/scnrat			; adjust 2021Jan4:
+	rectim=rectim/exptim			; WFC ISR2014-15, Eq. on p.3
+	recter=recter/exptim	  		;	PSF FWHM=2.4px
+	ext='.fits'
 	if strupcase(flatfile) eq 'NONE' then begin
 		ext='_noff.fits
 		sxaddhist,'z.scimage NOT flat-fielded.',h
@@ -684,13 +726,13 @@ if xco eq 0 and yco eq 0 and keyword_set(dirimg) then begin
 
 tra=sxpar(h,'ra_targ')		; corrected for PM per wfcdir.pro
 tdec=sxpar(h,'dec_targ')
-targ=sxpar(h,'targname')
+targ=strtrim(sxpar(h,'targname'),2)
 
 extast,h,astr,status	;get astrometry information
 if status eq -1 then begin
 	print,'CALWFC_SPEC: Error - Invalid astrometry info in the image '+file
 	retall
-	endif
+	endif	
 ad2xy,tra,tdec,astr,ix,iy
 print,'Pred. targ img posit w/grism astr',ix,iy
 ix=ix+xerr  &  iy=iy+yerr
@@ -705,7 +747,7 @@ if filter eq 'G102' then begin
 ;	xc=ix-252  &  yc=iy-4  &  ENDIF		; Petro
 ;	xc=ix-252  &  yc=iy-6  &  ENDIF	; for ic6906c0q
 	xc=ix-252  &  yc=iy-2  &  ENDIF	;2015may8 for icqv01aoq
-xastr=xc  &  yastr=yc		; save astrom est
+xastr=xc  &  yastr=yc		; save astrom est 
 
 ; if keyword_set(dirimg) then begin NG=150-300A errors.
 ;	Best to use meas Dir-image & axe disp. when ZO is off image,
@@ -724,8 +766,7 @@ if xc lt 4 or xc gt 998 or keyword_set(dirimg) then begin
 	print,'WAVELENGTH solution per AXE coef. No Z-order.'
 	sxaddhist,'WAVELENGTH solution per AXE coef. No Z-order.',h
 	axeflg=1		; est position. Do NOT fit, if have 2nd order
-; GOOD Z-order:
-     end else begin
+     end else begin		; GOOD Z-order:
 	xbeg=round(xc)  &  ybeg=round(yc)
 ; 2018may3 - try reducing 16 to 4 for iblf01deq w/ Z-ord at xc=9
 	if xbeg le 4 or xbeg ge 997 then goto,nozord	; Z-ord off img
@@ -737,6 +778,8 @@ if xc lt 4 or xc gt 998 or keyword_set(dirimg) then begin
 	ns=iend-ibeg+1
 	nl=31
 	sbimg=image(ibeg:iend,ybeg-nl/2:ybeg+nl/2)
+; 2021sep23 - set 1st col=0 to fix spike hit at 0,2 in iebobafnq:
+	sbimg(0,*)=0
 	indmx=where(sbimg eq max(sbimg))
 	xpos = indmx mod ns
 	ypos = indmx/ns
@@ -755,7 +798,7 @@ if xc lt 4 or xc gt 998 or keyword_set(dirimg) then begin
 	print,'Zero-ord centroid at',xc,yc,ns,nl,' search area'
 ;if strpos(file,'ibcf61xnq') ge 0 then stop
 nozord:							; Z-ord off image
-	if round(xc) le 4 or round(xc) ge 997 then 			$
+	if round(xc) le 4 or round(xc) ge 997 then 			$	
 		print,'Z-order off image at',xc,yc else		$
 ; Good Z-order;
 		print,'Z-order found by calwfc_spec at',xc,yc
@@ -789,20 +832,21 @@ if keyword_set(display) then begin
 ;
 raw_image = image 	;save for gross and back extractions
 ;
-; subtract a scaled Flat field (for pt-source spectrum) & div by AXe FF.
-;	x index vector set to x-size of subarray.
+; subtract a sky Flat field (for pt-source spectrum), i.e. scaled non-WL
+;	dependent AXe FF. & return the unscaled flat for corr the raw_image.
+;	image has 0 background. Flat is norm to unity.
+;	x index vector set to xsize of subarray.
+
 image=image-wfc_flatscal(h,image,x,yfit,filter,gwidth,flat)
 if n_elements(flat) le 1 then stop		; idiot ck. as never true
 if n_elements(flat) gt 1 then begin
 	sky_image = raw_image/(flat>0.001)	;properly flat field sky
      end else sky_image = raw_image*0		;non hi-bkg obs
 ;
-; flat field using the wavelength dependent flat, for wav1st=1st order WLs
-;
-;normal case here. (*NOT* case far below)
-;
+;normal case here. (*NOT* case far below);
 if keyword_set(before) then 						$
 	if strupcase(flatfile) ne 'NONE' then 	$
+; flat field using the wavelength dependent flat, for wav1st=1st order WLs:
 		calwfc_spec_flat,h,image,err,dq,x,wav1st,flatfile
 ;
 ; compute approximate location of the spectrum.
@@ -870,8 +914,10 @@ if root eq 'icrw12l9q' then image(372,260)=1910  	;G141VB8 deadpx dq=32
 if root eq 'ibwi08mkq' then image(606,557)=1      	;G141wd1657 hotpx dq=0
 if root eq 'ibwi08mkq' then image(607,554)=2     	;G141wd1657 hotpx dq=0
 if root eq 'ibwi08mkq' then image(625,556)=3.1  	;G141wd1657 hotpx dq=0
+if root eq 'ie3f07lyq' then image(88,91)=208000.	;G141Gaia7024 hotpx dq=0
+if root eq 'ie3f07lzq' then image(88,91)=192000.	;G141Gaia7024 hotpx dq=0
 
-;if root eq 'idpo02pjq' then stop
+;if root eq 'ie3f07lzq' then stop
 
 
 fimage = image
@@ -959,6 +1005,12 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 				print,'Iterating w/ ysearch=',y1,y2
 				goto,iter
 				endif
+; 2022sep6 - Tailored for weak WDJ175318.65 w/ confusion above -1 order:
+			if iord eq -1 and (maxpos le 2 or maxpos ge 8)then begin
+help,maxpos,iter,ny,pmax,total(profile(maxpos-1:maxpos+1))
+			     yfound(nbins)=-999
+			     print,'omit BAD -1 order posit. If OK, hit <cr>?'
+			     endif
 ; std above continuum technique fails for PN em line and faint -1 order, SO,
 ;		try the brightest px in the range:
 			if iord eq -1 and star eq 'PN' then begin
@@ -1014,7 +1066,7 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 	if ngood ge 3 and axeflg then begin
 		print,'PROFILE yfound for AXE case=',yfound
 		good=where(yfound gt 0)			; elim axe est. of Z-ord
-	     end else yfound=abs(yfound)			; rm axe Z-ord flag.
+	     end else yfound=abs(yfound)			; rm axe Z-ord flag.	
 ;if root eq 'icwg01geq' then stop
 
 	coef = poly_fit(xfound(good),yfound(good),1,fit)
@@ -1027,10 +1079,11 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 		plot,xfound(good),yfound(good),psym=-4,symsiz=2
 		oplot,xfound(good),fit,th=2
 		oplot,x,yapprox,line=2,th=2
+		angavg=!radeg*asin((yapprox(-1)-yapprox(0))/(x(-1)-x(0)))
 		xyouts,.7,.15,'Angle ='+string(angle,'(f5.2)'),chars=2,/norm
 		xyouts,.18,.85,'Dash is approx location of orders',/norm
 		xyouts,.18,.75,filter,chars=2.2,/norm
-		print,filter,' Meas. Angle=',angle
+		print,filter,' Meas,Avg Angle=',angle,angavg
 		endif
 ;
 ; find y-center with a fixed slope. Default is to fit slope above.
@@ -1046,7 +1099,7 @@ iter:		; iterate 1st order posit, if max is at an end of search range
 		ypos = yapprox + ycent
 		coef = poly_fit(x,ypos,1,fit)
 	endelse					; end specified slope option.
-
+	
 print,'Coef of trace fit='+string(coef,'(2f10.4)')
 yfit = coef(0) + coef(1)*x
 sxaddpar,h,'extc0',coef(0),'Extraction Position: Constant Term'
@@ -1058,21 +1111,26 @@ sxaddpar,h,'dirimage',dirimnam,'Direct Image',before='end'
 ; Extract background spectra
 ;
 ns=n_elements(x)
-nsb=ns  &  xb=x			;bgk # points and index array x(0) is normally 0
+nsb=ns  &  xb=x		;bgk # points & indarr x(0) is normally 0 to # x-pixels
 blower = fltarr(nsb)
 bupper = fltarr(nsb)
 sky_blower = fltarr(nsb)
 sky_bupper = fltarr(nsb)
 yfitb = coef(0) + coef(1)*xb
-					; simplify?
-for i=0,nsb-1 do begin
-	ypos = round(yfitb(i) - Lbdist)
+
+; sky_image is raw_image/flat, flat is the non-wl dependent one.
+; image is sky subtracted & has 0 background in the absence of contam. & is
+;	used to get final results. yfitb is the spectral Y(x) position
+print,'avg Y spectral posit,bwidth,low & upper bkg dist=',avg(yfitb),	$
+							bwidth,Lbdist,Ubdist
+for i=0,nsb-1 do begin				; nsb=# x-pixels
+	ypos = round(yfitb(i) - Lbdist)		;lower bkg
 	y1 = (ypos - bwidth/2)>0
-	y2 = (ypos + bwidth/2)<(ysiz-1)
+	y2 = (ypos + bwidth/2)<(ysiz-1)>0	; 2021may8
 	blower(i) = median(image(xb(i),y1:y2))
 	sky_blower(i) = median(sky_image(xb(i),y1:y2))
-	ypos = round(yfitb(i) + Ubdist)
-	y1 = (ypos - bwidth/2)>0
+	ypos = round(yfitb(i) + Ubdist)		;upper bkg
+	y1 = (ypos - bwidth/2)>0<(xsiz-1)	; 2021may8
 	y2 = (ypos + bwidth/2)<(xsiz-1)
 	bupper(i) = median(image(xb(i),y1:y2))
 	sky_bupper(i) = median(sky_image(xb(i),y1:y2))
@@ -1088,7 +1146,8 @@ if bmean1 gt 1 then sky_back = smooth(sky_back,bmean1)
 if bmean2 gt 1 then sky_back = smooth(sky_back,bmean2)
 
 back = (blower + bupper)/2.0
-;2018may-upgrade the sback that is subtr from image. sky_back only affects gross.
+;2018may-upgrade the sback that is calc. from raw_image-sky & is used for result
+;	sky bkg=sback only affects gross
 ;if bmedian gt 1 then sback = median(back,bmedian) else sback = back
 ;if bmean1 gt 1 then sback = smooth(sback,bmean1)
 ;if bmean2 gt 1 then sback = smooth(sback,bmean2)
@@ -1096,60 +1155,66 @@ back = (blower + bupper)/2.0
 sbacklo=median(blower,bmedian)
 sbackup=median(bupper,bmedian)
 xbf=double(xb)
-locoef=poly_fit(xbf,sbacklo,3,yfit=lofit,yerror=loerr)	; cubic fit to bkg
-upcoef=poly_fit(xbf,sbackup,3,yfit=upfit,yerror=uperr)	; cubic fit to bkg
-; iterate once
+; 2022sep6-try upping the polynom from 3 to 6 to follow wiggles @ .2*6=~1unit
+;	for faint Appleton targets, eg.WDJ175318.65. (gwidth=6)
+;locoef=poly_fit(xbf,sbacklo,3,yfit=lofit,yerror=loerr)	; cubic fit to bkg
+;upcoef=poly_fit(xbf,sbackup,3,yfit=upfit,yerror=uperr)	; cubic fit to bkg
+locoef=poly_fit(xbf,sbacklo,6,yfit=lofit,yerror=loerr)	; cubic fit to bkg
+upcoef=poly_fit(xbf,sbackup,6,yfit=upfit,yerror=uperr)	; cubic fit to bkg
+
+; iterate once:
 sigless=loerr<uperr
 
-goodlo=where(abs(sbacklo-lofit) lt sigless,nlo)
-locoef=poly_fit(xbf(goodlo),sbacklo(goodlo),3,yerror=loerr)
-print,"Lower fit coefficients: ",locoef
-lofit=locoef(0)+locoef(1)*xbf+locoef(2)*xbf^2+locoef(3)*xbf^3
-
-; 2018may-fancy bkg. Might do better @ 0.5 DN level for some -1,+2 ord, if I
+; TRY to remove contam in sback used for final spectrum:
+; 2018may-fancy bkg might do better @ 0.5 DN level for some -1,+2 ord, if I 
 ;      took the lowest fit in sections of crossings of the 2 fits, eg some P330E
+;refit:
+goodlo=where(abs(sbacklo-lofit) lt sigless,nlo)
+;locoef=poly_fit(xbf(goodlo),sbacklo(goodlo),3,yerror=loerr)
+;lofit=locoef(0)+locoef(1)*xbf+locoef(2)*xbf^2+locoef(3)*xbf^3
+locoef=poly_fit(xbf(goodlo),sbacklo(goodlo),6,yerror=loerr)
+lofit=locoef(0)+locoef(1)*xbf+locoef(2)*xbf^2+locoef(3)*xbf^3+		$
+	locoef(4)*xbf^4+locoef(5)*xbf^5+locoef(6)*xbf^6
+
 goodup=where(abs(sbackup-upfit) lt sigless,nup)
-upcoef=poly_fit(xbf(goodup),sbackup(goodup),3,yerror=uperr)
-print,"Upper fit coefficients: ",upcoef
-upfit=upcoef(0)+upcoef(1)*xbf+upcoef(2)*xbf^2+upcoef(3)*xbf^3
-loslp=locoef(1)+2*locoef(2)*xbf+3*locoef(3)*xbf^2
-upslp=upcoef(1)+2*upcoef(2)*xbf+3*upcoef(3)*xbf^2
-sback=lofit
-print,"Initial fit set to lower fit"
-if avg(upfit) lt avg(lofit) then begin
-    sback=upfit
-    print,"Initial fit set to upper fit"
-end
+;upcoef=poly_fit(xbf(goodup),sbackup(goodup),3,yerror=uperr)
+;upfit=upcoef(0)+upcoef(1)*xbf+upcoef(2)*xbf^2+upcoef(3)*xbf^3
+upcoef=poly_fit(xbf(goodup),sbackup(goodup),6,yerror=uperr)
+upfit=upcoef(0)+upcoef(1)*xbf+upcoef(2)*xbf^2+upcoef(3)*xbf^3+		$
+	upcoef(4)*xbf^4+upcoef(5)*xbf^5+upcoef(6)*xbf^6
+
+;loslp=locoef(1)+2*locoef(2)*xbf+3*locoef(3)*xbf^2
+;upslp=upcoef(1)+2*upcoef(2)*xbf+3*upcoef(3)*xbf^2
 ; NG if avg(abs(upslp)) lt avg(abs(loslp)) then sback=upfit
-bettr=where(abs(upfit)-abs(sback) gt 3*sigless and upfit lt lofit,nbet)
-if nbet gt 0 then begin
-    sback(bettr)=upfit(bettr)
-    print,nbet," points set to upper fit."
-end
-bettr=where(abs(lofit)-abs(sback) gt 3*sigless and lofit lt upfit,nbet)
-if nbet gt 0 then begin
-    sback(bettr)=lofit(bettr)
-    print,nbet," points set to lower fit"
-end
-if nlo lt nsb/5 then begin
-    sback=upfit
-    print,"Final fit set to upper fit"
-end
-if nup lt nsb/5 then begin
-    sback=lofit
-    print,"Final fit set to lower fit"
-end
+
+sback=lofit
+
+; 2022sep6 - ABS wrong in ff? Simplify:
+;if avg(upfit) lt avg(lofit) then sback=upfit
+;bettr=where(abs(upfit)-abs(sback) gt 3*sigless and upfit lt lofit,nbet)
+;if nbet gt 0 then sback(bettr)=upfit(bettr)
+;bettr=where(abs(lofit)-abs(sback) gt 3*sigless and lofit lt upfit,nbet)
+;if nbet gt 0 then sback(bettr)=lofit(bettr)
+
+bettr=where(upfit lt lofit,nbet)
+if nbet gt 0 then sback(bettr)=upfit(bettr)
+if nlo lt nsb/5 then sback=upfit			; Sparse lower points
+if nup lt nsb/5 then sback=lofit			; Sparse upper points
 
 if keyword_set(trace) then begin
 	window,0
 	!ytitle='Background'
-	plot,xbf(goodlo),sbacklo(goodlo),psym=-4,yr=[-1,1]
+; 2021aug18-generalize limits from [-1,1] to [mn,mx] for iebo5* heavy saturation
+	mn=min(sbacklo(goodlo))-.1
+	mx=max(sbacklo(goodlo))+.1
+	plot,xbf(goodlo),sbacklo(goodlo),psym=-4,yr=[mn,mx]	;diam lo bkg
 	oplot,lofit
-	oplot,xbf(goodup),sbackup(goodup),lin=1,psym=-6
-	oplot,upfit,lin=2
+	oplot,xbf(goodup),sbackup(goodup),lin=1,psym=-6		;square upper 
+	oplot,upfit,lin=1
 	oplot,sback,th=4
 	xyouts,.15,.15,targ+' '+filter+' '+root,/norm
-	help,nlo,nup,loerr,uperr,goodlo,goodup
+	xyouts,.15,.85,'diam+solid-low bkg,sq+dots-upper',/norm
+	help,nlo,nup,nsb,loerr,uperr,goodlo,goodup
 
 ; 2020jan
 	if loerr gt 0.5 or uperr gt 0.5 then begin
@@ -1167,8 +1232,7 @@ if keyword_set(trace) then begin
 	if nlo lt nsb/5 and nup lt nsb/5 then stop	;not enough points tofit
 	read,st
 	endif
-;if abs(avg(sback)) gt 3 then begin			;2020feb4 - was 2
-if avg(sback) gt 3 then begin			;2020feb4-neg. Bkg is OK
+if avg(sback) gt 5 then begin			;2021aug18 - was 3. 5 for iebo5*
 	print,'WARNING: High Bkg=',avg(sback)
 	if keyword_set(trace) then  stop
 	endif
@@ -1177,7 +1241,7 @@ if avg(sback) gt 3 then begin			;2020feb4-neg. Bkg is OK
 ;
 ; subtract background
 ;
-; ff line creates non-zero fluxes where image may have been zeroed.
+; ff line creates non-zero fluxes where image may have been zeroed. 
 ;		sback can be <0
 for i=0,nsb-1 do image(xb(i),*) = image(xb(i),*)-sback(i)	; full img subtr
 
@@ -1187,7 +1251,7 @@ for i=0,nsb-1 do image(xb(i),*) = image(xb(i),*)-sback(i)	; full img subtr
 ;sky_back = sky_back(5:n_elements(sky_back)-6) * gwidth
 ;back = back(5:n_elements(back)-6) * gwidth
 ;raw_sky_back = raw_sky_back(5:n_elements(raw_sky_back)-6) * gwidth
-sback=sback*gwidth
+sback=sback*gwidth						; Norm to gwidth
 sky_back=sky_back*gwidth
 back=back*gwidth
 raw_sky_back=raw_sky_back*gwidth
@@ -1211,12 +1275,12 @@ fdecomp,file,disk,dir,name
 if keyword_set(trace) then begin
 	window,4,xs=xsiz,ys=ysiz
 	imagt=image  &  ytmp=yfit
-	if max(yfit) gt 700 then begin
-		window,4,xs=1014,ys=514
-		imagt=image(*,500:1013)
-		ytmp=yfit-500
-		endif
-	tvscl,alog10(imagt>0.1)
+;	if max(yfit) gt 700 then begin --- old small laptop screen:
+;		window,4,xs=1014,ys=514
+;		imagt=image(*,500:1013)
+;		ytmp=yfit-500
+;		endif
+	tvscl,alog10(imagt>0.00001)
 	plots,x,ytmp+gwidth/2,/dev
 	plots,x,ytmp-gwidth/2,/dev
 	plots,x,ytmp+ubdist-bwidth/2,/dev
@@ -1254,35 +1318,34 @@ for i=0,ns-1 do begin				; col by col, whole img
 ; 16=hot px and do not fix endpoints. Hope adjacent hot px are not important.
 ;	ie interpolate over hot px in wl direction.
 ; 2018jul19-try also dq=8, unstable:
-		    if ((dq(i,irow) and 16) eq 16 or (dq(i,irow) and 8)	eq 8) and x(i) ne 0 and	x(i) ne (ns-1) then 	$
-			    image(i,irow)=(image(i-1,irow)+image(i+1,irow))/2
-		endfor
+		    if ((dq(i,irow) and 16) eq 16 or (dq(i,irow) and 8)	$
+		    	eq 8) and x(i) ne 0 and	x(i) ne (ns-1) then 	$
+			image(i,irow)=(image(i-1,irow)+image(i+1,irow))/2
+		    endfor
 		frac1 = 0.5 + iy1-y1  		;frac of pixel i1y
 		frac2 = 0.5 + y2-iy2  		;frac of pixel iy2
 		ifull1 = iy1+1  	      	;range of full pixels to extract
 		ifull2 = iy2-1
-		print,"i=",i,"extraction=",ifull1,", ",frac1," -> ",ifull2,", ",frac2
 		if ifull2 ge ifull1 then begin
 			tot = total(image(x(i),ifull1:ifull2))
 			var = total(err(x(i),ifull1:ifull2)^2)
-			tot_time = total(time(x(i),ifull1:ifull2)*(image(x(i),ifull1:ifull2)>0))
+			tot_time = total(time(x(i),ifull1:ifull2)* $
+					(image(x(i),ifull1:ifull2)>0))
 			time_weight = total(image(x(i),ifull1:ifull2)>0)
-		end else begin
-		    tot = 0.0
+		    end else begin
+		    	tot = 0.0
 			var = 0.0
 			time_weight = 0.0
 			tot_time = 0.0
 		end
   		tot = tot + frac1*image(x(i),iy1)+frac2*image(x(i),iy2)
   		var = var + frac1*err(x(i),iy1)^2 +frac2*err(x(i),iy2)^2
-		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)+frac2*time(x(i),iy2)*(image(x(i),iy2)>0)
-		time_weight = time_weight + frac1*(image(x(i),iy1)>0) + frac2*(image(x(i),iy2)>0)
-		if time_weight gt 0 then begin
-		    ave_time = tot_time/time_weight
-		end else begin
-		    ave_time = max(time(x(i),iy1:iy2))
-		    print,"X=",i,", extraction range=(",ifull1,",",ifull2,") time_weight=0, time set to ",ave_time
-		end
+		tot_time = tot_time + frac1*time(x(i),iy1)*(image(x(i),iy1)>0)+$
+				frac2*time(x(i),iy2)*(image(x(i),iy2)>0)
+		time_weight = time_weight + frac1*(image(x(i),iy1)>0)	+ $
+			frac2*(image(x(i),iy2)>0)
+		if time_weight gt 0 then ave_time = tot_time/time_weight $
+			else ave_time = max(time(x(i),iy1:iy2))
 		e = 0
 		for j=iy1,iy2 do e = e or dq(x(i),j)		; data qual
 
@@ -1303,31 +1366,32 @@ sxaddpar,h,'bmedian',bmedian
 sxaddpar,h,'bmean1',bmean1
 sxaddpar,h,'bmean2',bmean2
 
-targwlfix='
+targwlfix=''
 if strpos(targ,'GAIA') ge 0 then targwlfix=targ
-offset=wfcwlfix(root+targwlfix)				; offset in Ang
+offset=wfcwlfix(root+targwlfix,targ+filter,/silent)    ;Ang. Silent as not added
 sxaddpar,h,'wloffset',offset
 ;2018jun23 -  move to top & put in wfc_wavecal.pro	wave=wave+offset
 sxaddpar,h,'Angle',angle,'Found angle of spectrum wrt X-axis'
 sxaddhist,'Written by calwfc_spec.pro '+!stime,h
-;
-; corr. response to +1st order disperion at y-center. RCB 12Feb28
-;
-indx=where(wave ge 10900,npts)
-indx=indx(0)
+
+;indx=where(wave ge 10900,npts)
+;indx=indx(0)
 ; no (G102) +1st order,eg. ic6902puq,etc w/ xpostarg=+62
 ; no +1st order, use -1 order
-if npts le 10 then begin
-	indx=where(wave le -12000,npts)
-	indx=indx(-2)					; WL closest to -12000A
-	endif
-disp=wave(indx+1)-wave(indx)
-dcorr=24.5/disp					; G102
-if filter eq 'G141' then dcorr=46.5/disp
+;2020sep29 - try comment this, as Lennon ie9103bdq is 256x256 & has min WL=4750
+;if npts le 10 then begin
+;	indx=where(wave le -12000,npts)
+;	indx=indx(-2)					; WL closest to -12000A
+;	endif
+;disp=wave(indx+1)-wave(indx)
+;
+; corr. response to +1st order disperion at y-center. RCB 12Feb28
+;	NOPE! Rm 2018.
+;dcorr=24.5/disp					; G102
+;if filter eq 'G141' then dcorr=46.5/disp
 
 dcorr=1.		; 2018jun19 BIG improvement
 
-print,' ***END *** ',file
 flux=flux*dcorr					; net=flux
 sback=sback*dcorr
 sky_back=sky_back*dcorr
@@ -1338,10 +1402,12 @@ blower=blower*dcorr
 bupper=bupper*dcorr
 sky_blower=sky_blower*dcorr
 sky_bupper=sky_bupper*dcorr
-gross = flux + sback + sky_back		;sky_back is for subtracted wfc_flatscal
+; ONLY use of sky_back is to compute a gross. sback=0 in absence of contam. 
+gross = flux + sback + sky_back		;sky_back is from raw_image/flat 
 
 if strpos(file,'icqw01') ge 0 then begin ;GD71 G102 contam by another star.
-	bad=where(wave gt 11450 and wave lt 15400)
+; 2020Oct20	bad=where(wave gt 11450 and wave lt 15400)
+	bad=where(wave gt 11000 and wave lt 15400)
 	spec_time(bad)=0.
 	endif
 if strpos(file,'icqw02') ge 0 then begin ;GD71 G141 contam by another star.
@@ -1351,18 +1417,21 @@ if strpos(file,'icqw02') ge 0 then begin ;GD71 G141 contam by another star.
 if keyword_set(trace) then begin		; plot result
 	window,2
 	!xtitle='Wavelength'
-	!ytitle='Net, Bkg:thick dash, Sky:thick dots'
-	plot,wave,flux
-	oplot,wave,gross,lin=1
-	oplot,wave,sback,th=4,lin=2
-	oplot,wave,sky_back,th=2,lin=1
+	!ytitle='Net, (gt 2% Bkg: dash)'
+	plot,wave,flux,yr=[0,max(flux)]
+;	oplot,wave,gross,lin=1		silly, not used for final spectrum.
+	if max(abs(sback))/max(flux) gt 0.02 then			$
+		oplot,wave,sback,th=2,lin=2	; really sback*gwidth
+;	oplot,wave,sky_back,th=2+5*(!d.name eq 'PS') silly to plot
 	read,st
 	endif
+print,' ***END *** ',file
 ;
 ; write results
 ;
 name = gettok(name,'_')
 if keyword_set(dirimg) ne 1 or star ne 'PN' then name=name+strlowcase(star)
+
 mwrfits,{x:x,y:yfit,wave:wave,net:flux,gross:gross, $ ;12feb28-flux->net
 		back:sback+sky_back, $
 		eps:epsf,err:errf,xback:xb, $
