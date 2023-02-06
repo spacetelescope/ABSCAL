@@ -401,3 +401,87 @@
   pm_ra: 0.0
   ra: 291.09266258
   radial_velocity: -71.0
+- name: HR7018
+  names:
+  - HR7018
+  - HR-7018
+  - HR 7018
+  - HD172728
+  - HD-172728
+  - HD 172728
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 279.38965592
+  pm_ra: -8.985
+  dec: 62.52657583
+  pm_dec: 49.578
+  planetary_nebula: false
+  radial_velocity: -10.5
+- name: HD27836
+  names:
+  - HD27836
+  - HD-27836
+  - HD 27836
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 66.05196288
+  pm_ra: 110.226
+  dec: 14.75821250
+  pm_dec: -12.402
+  planetary_nebula: false
+  radial_velocity: 41.24
+- name: HD159222
+  names:
+  - HD159222
+  - HD-159222
+  - HD 159222
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 263.00413350
+  pm_ra: -240.516
+  dec: 34.27114806
+  pm_dec: 63.524
+  planetary_nebula: false
+  radial_velocity: -51.603
+- name: HD159222
+  names:
+  - HD159222
+  - HD-159222
+  - HD 159222
+  - LTT-15209
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 263.00413350
+  pm_ra: -240.516
+  dec: 34.27114806
+  pm_dec: 63.524
+  planetary_nebula: false
+  radial_velocity: -51.603
+- name: HD106252
+  names:
+  - HD106252
+  - HD-106252
+  - HD 106252
+  - LTT-13402
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 183.37295642
+  pm_ra: 23.315
+  dec: 10.04163528
+  pm_dec: -279.896
+  planetary_nebula: false
+  radial_velocity: 15.533
+- name: HD172167
+  names:
+  - HD172167
+  - HD-172167
+  - HD 172167
+  - V-ALF-LYR
+  coord_epoch: J2000
+  coord_type: icrs
+  ra: 279.23473479
+  pm_ra: 200.94
+  dec: 38.78368889
+  pm_dec: 286.23
+  planetary_nebula: false
+  radial_velocity: -20.60

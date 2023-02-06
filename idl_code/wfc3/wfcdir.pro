@@ -22,7 +22,8 @@ pro wfcdir,dir,filespec
 ; 2018apr12-Policy for fetching IR grism data from MAST, for ea star:
 ;	- get all g102 & g141 Filters (un-ck dark, tungsten, etc.) and
 ;	   filter=f0*,f1* (un-ck dark, tungsten, etc.)-->Lots of excess photom
-;	(- NG: get aper=IR*,g102*,g141* to be sure of getting all direct images,
+;	(- NG: get aper=IR* & GRISM* &
+;	g102*,g141* to be sure of getting all direct images,
 ;		as there are a few grism* apers, eg for GD153,GD71.)
 ;	Mod this pro to output only dir img photom for output
 ; 2018apr19 - Correct targ coord for Proper Motion
@@ -31,6 +32,8 @@ pro wfcdir,dir,filespec
 ; DOC:
 ;There is no flag that tells you the data is trailed. you need to look in the 
 ;spt headers for keywords SCAN_RAT, SCAN_LEN, ANG_SIDE,SCAN_WID
+;Gaia secondary * coord. are in wfcread for use by calwfc_imagepos & calwfc_spec
+; Simbad coord below are for older fixes.
 ;-
 ;--------------------------------------------------------------------------
 
@@ -64,8 +67,9 @@ printf,unit,'  ROOT	  MODE	      APER     TYPE '+			$
 ;
 ; loop on files
 ;
+; ###change
 for i=0,n-1 do begin
-;for i=0,500 do begin				; test
+;for i=4336,n-1 do begin				; test
 	fdecomp,lst(i),disk,dir,root,ext     ;disk is always '' in Unix
 	root = strmid(root+'          ',0,9)
 ;
@@ -106,6 +110,12 @@ for i=0,n-1 do begin
         if strpos(targname,'EGGR-102') ge 0 then targname= 'GRW_70D5824 '
         if strpos(targname,'70D5824') ge 0 then targname=  'GRW_70D5824 '
         if strpos(targname,'GSC-02581-02323') ge 0 then targname='P330E       '
+        if strpos(targname,'HR-7018') ge 0 then targname=        'HR7018      '
+        if strpos(targname,'HD-27836') ge 0 then targname=       'HD27836     '
+        if strpos(targname,'LTT-15209') ge 0 then targname=      'HD159222    '
+        if strpos(targname,'LTT-13402') ge 0 then targname=      'HD106252    '
+        if strpos(targname,'V-ALF-LYR') ge 0 then targname=      'HD172167    '
+
         if strpos(targname,'J17583798+6646522') ge 0 		$
 					then targname='KF06T2      '
         if strpos(targname,'KF06T2') ge 0 		$
@@ -206,7 +216,7 @@ target=strmid(strout,41,12)
 targsort=target(sort(target))				; sort targets for uniq
 star=uniq(targsort)					; indices for uniq stars
 nstar=n_elements(star)
-for istr=0,nstar-1 do begin
+for istr=0,nstar-1 do begin				;write log by star clump
 	targ=strtrim(targsort(star(istr)),2)
 	indstr=where(strpos(strout,targ) ge 0)			; same star
 	strsort=strout(indstr)					;subset per star
@@ -279,17 +289,24 @@ skipgrat:
 	    deldec=fracyr*decpm(indx)/1000.d
 ;	    print,'PM corr for '+targ+' at',tra,tdec,fracyr,delra,deldec, $
 ;	    	    '	  for '+fils(ifil),form='(a,2f11.6,3f8.2/a)'
-	    tra=tra+delra/3600.d		    ;degree coord of ref. px
+;degree coord of ref. px:
 	    tdec=tdec+deldec/3600.d
+	    tra=tra+delra/(3600.d*cos(!pi*tdec/180))
 	    fxhmodify,fils(ifil),'RA_TARG',tra(0),		    $
 	    		    'PM included by wfcdir.pro-rcb'
+; 2022Apr21 - OOOps, Below is wrong. Cos(dec) added above.
+; Corr for Acq pointing err in RA for GRW obs iele03*. See wfc3/doc coord.error
+;	    if strpos(root(ifil),'iele03') ge 0 then begin
+;	    	fxhmodify,fils(ifil),'RA_TARG',tra(0)-.00485,		    $
+;	    		    'Corr for RA pointing err=.00485-rcb'
+;		endif
 	    fxhmodify,fils(ifil),'DEC_TARG',tdec(0),		    $
 	    		    'PM included by wfcdir.pro-rcb'
 nopm:
 	    fxhmodify,fils(ifil),'pstrtime',pstrtime,		    $
 	    		    'Added by wfcdir.pro-rcb'
 	    endfor						; coord update
-nograt:								; no grat in obs
+nograt:								; # grat in obs
 	endfor							; ea star
 		
 free_lun,unit

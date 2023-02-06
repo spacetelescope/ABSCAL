@@ -48,7 +48,7 @@ pro wfc_process,target,subobs,directory=directory,			      $
 ;	/TRACE - display spectra image with the extraction regions overplotted
 ; 	flatfile - name of the text file containing the flat field files
 ;		versus wavelength.  (The reference files are located in
-;		directory indicated by environment variable WFC3_REF)
+;		directory indicated by environment variable WFCREF)
 ;		If set to '' or to 'NONE' then no spectral flatfielding is done.
 ;		(see calwfc_spec for default)
 ;	subdir - output subdirectory for the results (default = 'spec')
@@ -97,10 +97,9 @@ pro wfc_process,target,subobs,directory=directory,			      $
 ;2013Mar flag for em line obj
 	if strpos(target,'PN') ge 0 or strpos(target,'VY2-2') ge 0 or	$
 					target eq 'IC-5117' then star='PN'
-	if not keyword_set(subdir) then subdir = 'spec'
-	logfil = 'dirwfc.log'
-	if keyword_set(dirlog) then logfil = dirlog
-	
+	if n_elements(subdir) eq 0 then subdir = 'spec'
+	logfil='dirwfc.log'
+	if keyword_set(dirlog) then logfil=dirlog
 	if keyword_set(directory) then begin
 		if strpos(logfil, '/') lt 0 then logfil = directory + '/' + dirlog
 		if strpos(subdir, '/') lt 0 then subdir = directory + '/' + subdir
@@ -152,20 +151,21 @@ pro wfc_process,target,subobs,directory=directory,			      $
 		obs = obs(sub)
 		filter = filter(sub)
 		endif
-	file = obs+'_flt.fits'
+	file = obs+'_flt.fits'			; includes Gaia name
 	lst = directory+'/'+file
 
-; none yet for WFC3  nic_coadd_dither,lst,filter;co-adds @ same dither position
 	print,'WFC_process reducing ',file
 	xc=0.  &  yc=0.  &  dirimnam='NONE'
 	xerr=0.  &  yerr=0.
 	for i = 0,n_elements(lst)-1 do begin
 	    if strmid(filter(i),0,1) ne 'G' then begin	; ref. images
 	    	if filter(i) ne 'Blank' then begin	; skip scan mode darks
-	    	     calwfc_imagepos,lst(i),xc,yc,crval1,crval2,xerr,	$
+		     obsi=strmid(obs(i),0,9)
+		     listi=directory+obsi+'_flt.fits'
+	    	     calwfc_imagepos,listi,xc,yc,crval1,crval2,xerr,	$
 		     		yerr,display=display,xstar=xstar,	$
-					ystar=ystar,target=target
-		     dirimnam=obs(i)
+				ystar=ystar,target=target
+		     dirimnam=obsi
 		     endif
 	      end else begin					; grism obs
 	        print,target
@@ -179,8 +179,4 @@ pro wfc_process,target,subobs,directory=directory,			      $
 			dirimg=dirimg,dirimnam=dirimnam,target=target
 	      endelse
 	endfor						; end of lst
-;
-; clean up coadded dithers
-;
-; not needed yet, see above	spawn,'/bin/rm *_dither_tempfile.fits'
 end
