@@ -1410,34 +1410,64 @@ def reduce_stare(row, params, **kwargs):
             msg = "{}: wfc_flatscl: Using flatfield {}"
             print(msg.format(preamble, flat_file_name))
 
+        issues = {}
+        flatscal_omit_file = get_data_file("abscal.wfc3", "image_edits.yaml")
+        if os.path.isfile(flatscal_omit_file):
+            with open(flatscal_omit_file, 'r') as inf:
+                issues = yaml.safe_load(inf)
         with fits.open(flat_file) as in_flat:
             flat = in_flat[0].data
-        ns, nl = image.shape[0], image.shape[1]
-        flat = flat[int(ltv1):int(ltv1)+ns,int(ltv2):int(ltv2)+nl]
-        xpos = np.arange(ns, dtype='int32')
-        sclfac = nl/1014.
-        sc_low, sc_high = int(round(100*sclfac)), int(round(900*sclfac))+1
-        xmin, xmax = min(xpos), max(xpos)+1
 
-        # Collapse and average along x axis
-        imav = np.mean(image[:,xmin:xmax], axis=1)
-        bkav = np.mean(flat[:,xmin:xmax], axis=1)
-        # Remove spikes
-        smimav = ndimage.median_filter(imav, size=61, mode='nearest')
-        smimav[:30] = imav[:30]
-        smimav[-30:] = imav[-30:]
-        smbkav = ndimage.median_filter(bkav, size=21, mode='nearest')
-        smbkav[:20] = bkav[:20]
-        smbkav[-20:] = bkav[-20:]
-        rat = smimav/smbkav
-        avrat = np.mean(rat[sc_low:sc_high])
-        sigma = np.std(rat[sc_low:sc_high])
-        avgbkg = np.mean(smimav[sc_low:sc_high])*params['gwidth']
-        if verbose:
-            msg = "{}: wfc_flatscl: Avg bkg = {} +/- {} for gwidth={}"
-            print(msg.format(preamble, avgbkg, sigma, params['gwidth']))
-            msg = "{}: wfc_flatscl: Flatfield Scale Ratio = {}"
-            print(msg.format(preamble, avrat))
+        avrat = set_param("avrat", None, row, issues, preamble, verbose=verbose)
+        if avrat is None:
+            ns, nl = image.shape[0], image.shape[1]
+            flat = flat[int(ltv1):int(ltv1)+ns,int(ltv2):int(ltv2)+nl]
+            xpos = np.arange(ns, dtype='int32')
+            sclfac = nl/1014.
+            sc_low, sc_high = int(round(100*sclfac)), int(round(900*sclfac))+1
+            xmin, xmax = min(xpos), max(xpos)+1
+
+            # Collapse and average along x axis
+            imav = np.mean(image[:,xmin:xmax], axis=1)
+            bkav = np.mean(flat[:,xmin:xmax], axis=1)
+            # Remove spikes
+            smimav = ndimage.median_filter(imav, size=61, mode='nearest')
+            smimav[:30] = imav[:30]
+            smimav[-30:] = imav[-30:]
+            smbkav = ndimage.median_filter(bkav, size=21, mode='nearest')
+            smbkav[:20] = bkav[:20]
+            smbkav[-20:] = bkav[-20:]
+            rat = smimav/smbkav
+            avrat = np.mean(rat[sc_low:sc_high])
+            sigma = np.std(rat[sc_low:sc_high])
+            avgbkg = np.mean(smimav[sc_low:sc_high])*params['gwidth']
+            if verbose:
+                msg = "{}: wfc_flatscl: Avg bkg = {} +/- {} for gwidth={}"
+                print(msg.format(preamble, avgbkg, sigma, params['gwidth']))
+                msg = "{}: wfc_flatscl: Flatfield Scale Ratio = {}"
+                print(msg.format(preamble, avrat))
+            
+            if avrat > 3.:
+                if show_plots:
+                    done = False
+                    while not done:
+                        msg = "{}: Average background calculated at {} (>3). Press enter "
+                        msg += "to proceed or enter a new value to override."
+                        value = input(msg.format(preamble, avrat))
+                        if value == "":
+                            done = True
+                        else:
+                            try:
+                                avrat = float(value)
+                            except ValueError as e:
+                                print("ERROR: {}".format(e))
+                                msg = "Press enter to accept the current value, or enter "
+                                msg += "a new value as a floating point number."
+                                print(msg)
+        else:
+            if verbose:
+                print("{}: Set flat to 0 by override.".format(preamble))
+
         flat *= avrat
         if verbose:
             print("{}: Finished flatfield".format(preamble))

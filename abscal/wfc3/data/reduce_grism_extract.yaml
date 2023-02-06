@@ -1215,3 +1215,9 @@ yshift:
       reason: Fudge
       source: calwfc_spec.pro
       value: iab90
+avrat:
+  - column: obset
+    value: iebo5
+    param_value: 0.
+    source: wfc_flatscal.pro
+    reason: "Flatscal routine returns garbage for super-saturated iebo5*, so set to 0."
