@@ -1,8 +1,9 @@
 ;+
 ;			wfc_coadd
 ;
-; Plot and Co-add wfc3 spectra
-;
+; Plot and Co-add wfc3 spectra for checking alignment & bad px. NOT used by main
+;	line of processing, ie scanck for scanned obs & _ima files or mrgall.pro
+;	for stare obs & *q.fits files.
 ; CALLING SEQUENCE:
 ;	wfc_coadd,target,root
 ;
@@ -60,8 +61,6 @@
 pro wfc_coadd_write,filename,target,star,obs,h, 			$
 			filter,wave,gross,back,net,sigma, 		$
 			stat_error,error_mean,npts,time
-
-
 		close,1 & openw,1, filename
 		printf,1,'Gross and Back columns have Flat Field applied'
 		printf,1,'Written by prewfc/wfc_COADD.pro '+!stime
@@ -103,6 +102,8 @@ st=''
 	if keyword_set(dirlog) then logfil=dirlog
 ;	flags=(4+8+16+32+64+128+256+512); add 4, 8, & 16-RCB 2012apr13
 	flags=(4+8+16+64+128+256)	;512 & 32 OK per icqv02i3q RCB 2015may26
+; 2020dec30- Workaround for Vega data where Sat 1st orders will not Xcorrelate:
+	flags=(4+8+16+64+128)		;256=sat OK per Vega 1st order 2020dec30
 	filters = ['G102','G141']
 	for ifilt=0,1 do begin
 		wfcobs,logfil,allobs,allfilt,aper,starname,		$
@@ -120,8 +121,7 @@ st=''
 		if good(0) eq -1 then goto,next_ifilt
 ; ck if PN wavecal data:
 		obs=obs(good)  &  filter = filter(good)
-		pnposs=findfile(subdir+'/*'+obs(0)+'*')
-		print,"pnposs",pnposs
+		pnposs=findfile('spec/*'+obs(0)+'*')
 		good=where(strpos(pnposs,'pn.fits') gt 0,npn)
 		if npn gt 0 then star='pn'		
 
@@ -157,7 +157,7 @@ st=''
 			w(0,nout) = a.wave
 ; *****************************************************************************
 ; CHECK for SCAN or STARE obs:
-			if ckscan eq '' then begin
+			if ckscan eq '' then begin		; scanned obs
 ; SCANNED DATA: Sum up all the good lines for ea spectrum
 ; for now assume rows 500-950 are good and that bkg=0 & statistical err~0
 			   img=a.scimage
@@ -168,7 +168,8 @@ st=''
 			   tim=gross
 			   timcon=tim+0.13/sxpar(h,'scan_rat')	; exptime/row
 			   for iy=ybeg,yend do begin
-			   	mask=(dq(*,iy) and flags) eq 0	;mask of good px
+;mask of good px:
+			   	mask=(fix(dq(*,iy)) and flags) eq 0
 				gross=gross+img(*,iy)*mask	;tot good signal
 			   	tim=tim+timcon*mask		;total good time
 				endfor
@@ -194,7 +195,6 @@ st=''
 nexti:
 		end				;i loop to read & store all data
 
-
 ; CO-ADDING SECTION **********************************************************
 		if nout eq 0 then begin
 			print,'ERROR: Spectra not found for '+filters(ifilt)+ $
@@ -208,8 +208,6 @@ nexti:
 			ns=max([ns,ngd])
 print,file_list(ick),ns,ngd
 ;if ns gt ngd then stop
-;bad=where(w(*,ick) gt 11450 and w(*,ick) lt 15400,nbad)
-;if nbad gt 0 then stop
 			endfor
 		print,'Set input arrays to max # of good points=',ns
 		w = w(0:ns-1,0:nout-1)
@@ -242,11 +240,11 @@ print,file_list(ick),ns,ngd
 ;if ii eq 2 and jj ge 939 then stop 
 			endif
 			endfor
-
 		regbeg=[-13500.,-3800,13500]		;2012jun5: 3 order limit
 		regend=[-3800,13500,27000]
 		wbeg=7500.  &  wend=11800.		; endpoints for X-correl
-		if root eq 'icqw01' then wend=11450	; end of uncontam. WLs
+;2020Ot20	if root eq 'icqw01' then wend=11450	; end of uncontam. WLs
+		if root eq 'icqw01' then wend=11000	; end of uncontam. WLs
 		if filters(ifilt) eq 'G141' then begin
 			regbeg=[-19000.,-5100,19000]
 			regend=[-5100,19000,38000]	
@@ -275,11 +273,14 @@ print,file_list(ick),ns,ngd
 		  for j=0,nspec-1 do begin
 ; j is number of spec w/ data in region at 90% level. Works for wl=-1e20 flags.
 			if max(w(*,j)) ge (we-d10) and w(0,j)   	$
-				le (wb+d10) then jgood(j)=j	; Neg d10 OK
+				le (wb+d10) 				$
+				or (ns eq 128 and iord eq 1)	$ ;2020Oct19gaia
+				then jgood(j)=j	; Neg d10 OK
 ;if root eq 'ibwib6' then print,obs(j),max(w(*,j)),(we-d10),w(0,j),(wb+d10)
 ;if iord eq 1 then stop
 ;if ireg eq 3 and j eq 6 then stop
 			endfor
+;if ifilt eq 1 then stop
 		  if max(jgood) lt 0 then goto,nodata		; jgood=-1 init.
 		  igood=jgood(where(jgood ge 0))
 		  print,filters(ifilt),' order, spectra to X-correlate',$
@@ -425,9 +426,7 @@ onespec:
 		  	dlam=mode(wave(1:*)-wave(0:-2))/2
 			wave = [wave,wave(0:-2)+dlam]
 			wave = wave(sort(wave))
-;bad=where(wave gt 11450 and wave lt 15400,nbad)
 ;help,wave,iord,good,wave
-;if nbad gt 0 then stop
 			endif
 		  nsd = n_elements(wave)
 		  fsum = dblarr(nsd)

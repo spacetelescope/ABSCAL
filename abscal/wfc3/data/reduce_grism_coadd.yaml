@@ -16,7 +16,7 @@
 wend:
   - column: obset
     value: icqw01
-    param_value: 11450.0
+    param_value: 11000.0
     source: wfc_coadd.pro
     reason: end of uncontaminated WLs
 width:

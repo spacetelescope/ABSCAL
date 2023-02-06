@@ -7,13 +7,14 @@ pro pset
 ; 93MAY29-ADD !P.MULT=0
 ; 93JUL17-MAKE COMPATIBLE W/ STARTUP.PRO
 ; 98oct5 - comment out the title lines, so that titles remain after a pse
+; 2022dec = mod plot char & border thickness from 0 to 2
 ;-
 	!P.MULTI=0
 	!type = 4
-	!x.thick = 0
-	!y.thick = 0
-	!p.thick = 0
-	!p.charthick = 0
+	!x.thick = 4			; axis thickness fails???
+	!y.thick = 4
+	!p.thick = 1
+	!p.charthick = 4
 	!psym = 0
 	!linetype = 0
 	!noeras = 0

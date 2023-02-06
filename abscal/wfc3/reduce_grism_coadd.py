@@ -364,7 +364,8 @@ def coadd(input_table, **kwargs):
                 jgood = -np.ones((mask.shape[0]), dtype='int16')
                 for j in range(mask.shape[0]):
                     # j is # of spectra w/ data in region at 90% level.
-                    if (np.max(spec_wave[j,:]) >= (we-d10)) and (spec_wave[j,0] <= (wb+d10)):
+                    # The second clause (after the or) is a fix for Gaia from Oct. 19 2020
+                    if (np.max(spec_wave[j,:]) >= (we-d10)) and (spec_wave[j,0] <= (wb+d10)) or ((mask.shape[0] == 128) and (iord == 1)):
                         jgood[j] = j
                 if np.max(jgood) < 0:
                     msg = "{}: No Good Data in wavelength range ({},{}) "
