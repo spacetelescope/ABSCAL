@@ -119,7 +119,7 @@ def locate_image(input_table, **kwargs):
                 
                 # Set data edges to zero
                 data[:20,:] = 0.
-                data[-30:,:] = 0.
+                data[-10:,:] = 0.
                 data[:,:10] = 0.
                 data[:,-10:] = 0.
                 

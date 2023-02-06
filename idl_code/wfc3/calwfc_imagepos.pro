@@ -47,7 +47,6 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 ;
 ; set bad data to zeros
 ;
-	
 	fits_read,file,dq,extname='DQ'
 	bad = where((dq and 32) gt 0,nbad)
 	if nbad gt 0 then image(bad) = 0
@@ -55,7 +54,9 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 	crval1 = sxpar(h,'crval1')
 	crval2 = sxpar(h,'crval2')
 	orig = image
-	image(*,0:20)=0  &  image(*,nl-31:nl-1)=0	; top & bottom
+; 2021may17 - ie3f02amq_flt.fits is 128^2 & a target is at line 106:
+;	image(*,0:20)=0  &  image(*,nl-31:nl-1)=0	; top & bottom
+	image(*,0:20)=0  &  image(*,nl-11:nl-1)=0	; top & bottom
 	image(0:10,*)=0  &  image(ns-11:ns-1,*)=0	; left & right
 	extast,h,astr				; astr includes postargs
 	ra=sxpar(h,'RA_TARG')
@@ -72,6 +73,7 @@ pro calwfc_imagepos,file,xc,yc,crval1,crval2,xerr,yerr,			$
 		endif
 	if xstar ne 0 or ystar ne 0 then begin 
 		xappr=xstar  &  yappr=ystar  &  endif	; use input keywords
+; trim image to 35x35 to elim noise:
 	image(0:(xappr-35)>0,*) = 0	; use astrometry pos +/- 35px
 	image((xappr+35)<(ns-1):*,*) = 0
 	image(*,0:(yappr-35)>0) = 0
