@@ -21,6 +21,7 @@ PRO wfcobs,FILE,obs,grat,aper,star,selgrt,selapr,selstr
 ; EXAMPLE: wfcobs,FILE,obs,grat,aper,star,selgrt,selapr,selstr
 ; HISTORY: 04Feb5 - add nicmos capability
 ;	13apr19-match just the selstr char to elim *-COPY odd names
+;	2021may18 - solve the problem of 2 stars on same GAIA image
 ;-------------------------------------------------------
 selgrt=strupcase([selgrt])				; add 06jun27
 selapr=strupcase([selapr])				; belt AND suspenders
@@ -55,8 +56,12 @@ selstr=strupcase([selstr])
 		dum=gettok(st,' ')
 		GRAT(N)=gettok(st,' ')
 		APER(N)=STRTRIM(gettok(st,' '),2)
-		dum=gettok(st,' ')			;skip detector
+		dum=gettok(st,' ')			;skip type
 		star(N)=gettok(st,' ')
+; 2021may18 - solve the problem of 2 stars on same image:
+		if strmid(star(N),0,4) eq 'GAIA' then obs(n)=obs(n)+	$
+							strlowcase(star(N))
+		
 		if n_params(0) gt 6 then begin
 		   dum=where(selgrt(0) eq grat(n))  &  dum=dum(0)
 		   if ((selgrt(0) ne '') and (dum eq -1)) then goto, skipit
